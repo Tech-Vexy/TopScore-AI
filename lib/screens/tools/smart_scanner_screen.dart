@@ -1,11 +1,19 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../constants/colors.dart';
 import '../../services/ai_service.dart';
 import 'camera_screen.dart';
+
+enum ScannerMode {
+  homework,
+  text,
+  diagram,
+}
 
 class SmartScannerScreen extends StatefulWidget {
   final Uint8List? initialImage;
@@ -23,6 +31,7 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
   Uint8List? _imageBytes;
   String? _result;
   bool _isAnalyzing = false;
+  ScannerMode _selectedMode = ScannerMode.homework;
 
   @override
   void initState() {
@@ -87,13 +96,35 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
     });
 
     try {
-      final prompt = """
+      String prompt;
+      switch (_selectedMode) {
+        case ScannerMode.text:
+          prompt = """
+Extract all the text from this image exactly as it appears. 
+Do not summarize or solve. 
+Preserve the formatting where possible.
+If there is no text, say "No text found".
+""";
+          break;
+        case ScannerMode.diagram:
+          prompt = """
+Analyze this diagram or image.
+Explain what it represents in detail.
+Identify key components and their relationships.
+Use simple, educational language suitable for a student.
+""";
+          break;
+        case ScannerMode.homework:
+        default:
+          prompt = """
 Analyze this image for a student. 
 If it's a homework question, solve it step-by-step.
 If it's a diagram, explain it.
 If it's text, summarize it.
 Use simple, encouraging language.
 """;
+          break;
+      }
 
       final response = await _aiService.analyzeImage(_imageBytes!, prompt);
 
@@ -126,12 +157,14 @@ Use simple, encouraging language.
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Smart Scanner', style: TextStyle(color: AppColors.text)),
-        backgroundColor: Colors.white,
+        title: Text('Smart Scanner', style: TextStyle(color: theme.colorScheme.onSurface)),
+        backgroundColor: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
         elevation: 1,
-        iconTheme: const IconThemeData(color: AppColors.text),
+        iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
         actions: [
           if (_imageBytes != null)
             IconButton(
@@ -149,9 +182,9 @@ Use simple, encouraging language.
             Container(
               height: 300,
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey[300]!),
+                border: Border.all(color: theme.dividerColor.withOpacity(0.2)),
               ),
               clipBehavior: Clip.antiAlias,
               child: _imageBytes != null
@@ -171,12 +204,12 @@ Use simple, encouraging language.
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_a_photo_outlined, size: 64, color: Colors.grey[400]),
+                        Icon(Icons.add_a_photo_outlined, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.5)),
                         const SizedBox(height: 16),
                         Text(
                           'Take a photo of your homework\nor upload an image',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey[600]),
+                          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
                         ),
                         const SizedBox(height: 24),
                         Row(
@@ -187,7 +220,7 @@ Use simple, encouraging language.
                               icon: const Icon(Icons.camera_alt),
                               label: const Text('Camera'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
+                                backgroundColor: AppColors.googleBlue,
                                 foregroundColor: Colors.white,
                               ),
                             ),
@@ -196,6 +229,10 @@ Use simple, encouraging language.
                               onPressed: () => _pickImage(ImageSource.gallery),
                               icon: const Icon(Icons.photo_library),
                               label: const Text('Gallery'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.googleBlue,
+                                side: const BorderSide(color: AppColors.googleBlue),
+                              ),
                             ),
                           ],
                         ),
@@ -205,14 +242,64 @@ Use simple, encouraging language.
 
             const SizedBox(height: 24),
 
+            // Mode Selection
+            if (_imageBytes != null && !_isAnalyzing)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: SegmentedButton<ScannerMode>(
+                  segments: const [
+                    ButtonSegment<ScannerMode>(
+                      value: ScannerMode.homework,
+                      label: Text('Homework'),
+                      icon: Icon(Icons.school),
+                    ),
+                    ButtonSegment<ScannerMode>(
+                      value: ScannerMode.text,
+                      label: Text('Text'),
+                      icon: Icon(Icons.text_fields),
+                    ),
+                    ButtonSegment<ScannerMode>(
+                      value: ScannerMode.diagram,
+                      label: Text('Diagram'),
+                      icon: Icon(Icons.image),
+                    ),
+                  ],
+                  selected: {_selectedMode},
+                  onSelectionChanged: (Set<ScannerMode> newSelection) {
+                    setState(() {
+                      _selectedMode = newSelection.first;
+                      _result = null; // Clear result when mode changes
+                    });
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.resolveWith<Color>(
+                      (Set<MaterialState> states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return AppColors.googleBlue.withOpacity(0.2);
+                        }
+                        return Colors.transparent;
+                      },
+                    ),
+                    foregroundColor: MaterialStateProperty.resolveWith<Color>(
+                      (Set<MaterialState> states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return AppColors.googleBlue;
+                        }
+                        return theme.colorScheme.onSurface;
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
             // Analyze Button
             if (_imageBytes != null && !_isAnalyzing && _result == null)
               ElevatedButton.icon(
                 onPressed: _analyzeImage,
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('Analyze with AI'),
+                icon: Icon(_selectedMode == ScannerMode.text ? Icons.copy_all : Icons.auto_awesome),
+                label: Text(_selectedMode == ScannerMode.text ? 'Extract Text' : 'Analyze with AI'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.googleBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -222,21 +309,37 @@ Use simple, encouraging language.
             // Result Area
             if (_result != null) ...[
               const SizedBox(height: 24),
-              const Text(
-                "Analysis Result",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.text,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Analysis Result",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  if (_selectedMode == ScannerMode.text)
+                    IconButton(
+                      icon: const Icon(Icons.copy, color: AppColors.googleBlue),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: _result!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Text copied to clipboard')),
+                        );
+                      },
+                      tooltip: 'Copy Text',
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[200]!),
+                  border: Border.all(color: theme.dividerColor.withOpacity(0.2)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -245,18 +348,27 @@ Use simple, encouraging language.
                     ),
                   ],
                 ),
-                child: MarkdownBody(
-                  data: _result!,
-                  styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(fontSize: 16, height: 1.5),
-                    h1: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    h2: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    code: TextStyle(
-                      backgroundColor: Colors.grey[100],
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ),
+                child: _selectedMode == ScannerMode.text
+                    ? SelectableText(
+                        _result!,
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          height: 1.5,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      )
+                    : MarkdownBody(
+                        data: _result!,
+                        styleSheet: MarkdownStyleSheet(
+                          p: TextStyle(fontSize: 16, height: 1.5, color: theme.colorScheme.onSurface),
+                          h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                          h2: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                          code: GoogleFonts.firaCode(
+                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
               ),
             ],
           ],

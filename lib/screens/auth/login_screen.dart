@@ -31,6 +31,9 @@ class _LoginScreenState extends State<LoginScreen> {
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Login failed: ${e.toString()}")),
@@ -42,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = Provider.of<AuthProvider>(context).isLoading;
-    final size = MediaQuery.of(context).size;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: Container(
@@ -50,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppColors.background, AppColors.surface],
+            colors: [theme.scaffoldBackgroundColor, theme.colorScheme.surface],
           ),
         ),
         child: SafeArea(
@@ -102,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         "Welcome back to learning together",
                         style: TextStyle(
                           fontSize: 16,
-                          color: AppColors.textSecondary,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
                           fontWeight: FontWeight.w400,
                         ),
                         textAlign: TextAlign.center,
@@ -112,6 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
                         decoration: InputDecoration(
                           labelText: "Email Address",
                           prefixIcon: const Icon(Icons.email_outlined),
@@ -120,14 +124,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.textLight),
+                            borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: AppColors.primary, width: 2),
                           ),
                           filled: true,
-                          fillColor: AppColors.surface,
+                          fillColor: theme.inputDecorationTheme.fillColor,
                         ),
                         validator: (value) => value != null && value.contains('@') ? null : "Enter a valid email",
                       ),
@@ -136,6 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: true,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
                         decoration: InputDecoration(
                           labelText: "Password",
                           prefixIcon: const Icon(Icons.lock_outlined),
@@ -144,14 +149,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.textLight),
+                            borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: AppColors.primary, width: 2),
                           ),
                           filled: true,
-                          fillColor: AppColors.surface,
+                          fillColor: theme.inputDecorationTheme.fillColor,
                         ),
                         validator: (value) => value != null && value.length >= 6 ? null : "Password must be at least 6 characters",
                       ),
@@ -202,18 +207,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Divider
                       Row(
                         children: [
-                          Expanded(child: Divider(color: AppColors.textLight)),
+                          Expanded(child: Divider(color: theme.dividerColor)),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
                               "OR",
                               style: TextStyle(
-                                color: AppColors.textSecondary,
+                                color: theme.colorScheme.onSurface.withOpacity(0.6),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
-                          Expanded(child: Divider(color: AppColors.textLight)),
+                          Expanded(child: Divider(color: theme.dividerColor)),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -224,6 +229,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: isLoading ? null : () async {
                             try {
                               await Provider.of<AuthProvider>(context, listen: false).signInWithGoogle();
+                              if (mounted) {
+                                Navigator.of(context).popUntil((route) => route.isFirst);
+                              }
                             } catch (e) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -248,16 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 20,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(2),
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Color(0xFF4285F4), // Google Blue
-                                      Color(0xFF34A853), // Google Green
-                                      Color(0xFFFBBC05), // Google Yellow
-                                      Color(0xFFEA4335), // Google Red
-                                    ],
-                                  ),
+                                  gradient: AppColors.googleGradient,
                                 ),
                                 child: Center(
                                   child: Text(
@@ -272,17 +271,17 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          label: const Text(
+                          label: Text(
                             "Continue with Google",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF3C4043), // Google's text color
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            side: BorderSide(color: Color(0xFFDADCE0)), // Google's border color
+                            backgroundColor: theme.cardColor,
+                            side: BorderSide(color: theme.dividerColor),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -299,7 +298,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: RichText(
                             text: TextSpan(
                               text: "Don't have an account? ",
-                              style: TextStyle(color: AppColors.textSecondary),
+                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
                               children: [
                                 TextSpan(
                                   text: "Sign Up",

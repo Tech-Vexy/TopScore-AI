@@ -6,7 +6,6 @@ import '../../constants/colors.dart';
 import 'pdf_viewer_screen.dart';
 import 'smart_scanner_screen.dart';
 import 'calculator_screen.dart';
-import 'chat_screen.dart';
 
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
@@ -58,15 +57,16 @@ class ToolsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Text(
+        Text(
           "Student Tools",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppColors.text,
+            color: theme.colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -81,14 +81,15 @@ class ToolsScreen extends StatelessWidget {
               context,
               title: "PDF Reader",
               icon: Icons.picture_as_pdf_rounded,
-              color: Colors.red,
+              color: AppColors.googleRed,
               onTap: () => _pickAndOpenPdf(context),
+              theme: theme,
             ),
             _buildToolCard(
               context,
               title: "Smart Scanner",
               icon: Icons.center_focus_strong_rounded,
-              color: Colors.purple,
+              color: AppColors.googleYellow,
               onTap: () {
                 Navigator.push(
                   context,
@@ -97,12 +98,13 @@ class ToolsScreen extends StatelessWidget {
                   ),
                 );
               },
+              theme: theme,
             ),
             _buildToolCard(
               context,
               title: "Calculator",
               icon: Icons.calculate_rounded,
-              color: Colors.blue,
+              color: AppColors.googleBlue,
               onTap: () {
                 Navigator.push(
                   context,
@@ -111,20 +113,7 @@ class ToolsScreen extends StatelessWidget {
                   ),
                 );
               },
-            ),
-            _buildToolCard(
-              context,
-              title: "Ask Teacher Joy",
-              icon: Icons.chat_bubble_rounded,
-              color: Colors.green,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ChatScreen(),
-                  ),
-                );
-              },
+              theme: theme,
             ),
           ],
         ),
@@ -138,9 +127,11 @@ class ToolsScreen extends StatelessWidget {
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    required ThemeData theme,
   }) {
     return Card(
       elevation: 2,
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
@@ -159,9 +150,10 @@ class ToolsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
+                color: theme.colorScheme.onSurface,
               ),
             ),
           ],

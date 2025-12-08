@@ -49,6 +49,9 @@ class _SignupScreenState extends State<SignupScreen> {
           educationLevel: _role == 'student' ? _educationLevel : null,
           grade: _role == 'student' ? _grade : null,
         );
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Sign up failed: ${e.toString()}")),
@@ -60,6 +63,7 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = Provider.of<AuthProvider>(context).isLoading;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: Container(
@@ -67,7 +71,7 @@ class _SignupScreenState extends State<SignupScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppColors.background, AppColors.surface],
+            colors: [theme.scaffoldBackgroundColor, theme.colorScheme.surface],
           ),
         ),
         child: SafeArea(
@@ -119,7 +123,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         "Start your learning journey today",
                         style: TextStyle(
                           fontSize: 16,
-                          color: AppColors.textSecondary,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
                           fontWeight: FontWeight.w400,
                         ),
                         textAlign: TextAlign.center,
@@ -128,6 +132,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       // Full Name Field
                       TextFormField(
                         controller: _nameController,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
                         decoration: InputDecoration(
                           labelText: "Full Name",
                           prefixIcon: const Icon(Icons.person_outlined),
@@ -136,14 +141,14 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.textLight),
+                            borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: AppColors.primary, width: 2),
                           ),
                           filled: true,
-                          fillColor: AppColors.surface,
+                          fillColor: theme.inputDecorationTheme.fillColor,
                         ),
                         validator: (value) => value != null && value.isNotEmpty ? null : "Enter your name",
                       ),
@@ -152,6 +157,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
                         decoration: InputDecoration(
                           labelText: "Email Address",
                           prefixIcon: const Icon(Icons.email_outlined),
@@ -160,14 +166,14 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.textLight),
+                            borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: AppColors.primary, width: 2),
                           ),
                           filled: true,
-                          fillColor: AppColors.surface,
+                          fillColor: theme.inputDecorationTheme.fillColor,
                         ),
                         validator: (value) => value != null && value.contains('@') ? null : "Enter a valid email",
                       ),
@@ -176,6 +182,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: true,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
                         decoration: InputDecoration(
                           labelText: "Password",
                           prefixIcon: const Icon(Icons.lock_outlined),
@@ -184,14 +191,14 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.textLight),
+                            borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: AppColors.primary, width: 2),
                           ),
                           filled: true,
-                          fillColor: AppColors.surface,
+                          fillColor: theme.inputDecorationTheme.fillColor,
                         ),
                         validator: (value) => value != null && value.length >= 6 ? null : "Password must be at least 6 characters",
                       ),
@@ -199,6 +206,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       // Role Selection
                       DropdownButtonFormField<String>(
                         initialValue: _role,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
+                        dropdownColor: theme.cardColor,
                         decoration: InputDecoration(
                           labelText: "I am a",
                           prefixIcon: const Icon(Icons.group_outlined),
@@ -207,19 +216,19 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.textLight),
+                            borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: AppColors.primary, width: 2),
                           ),
                           filled: true,
-                          fillColor: AppColors.surface,
+                          fillColor: theme.inputDecorationTheme.fillColor,
                         ),
-                        items: const [
-                          DropdownMenuItem(value: 'student', child: Text("Student")),
-                          DropdownMenuItem(value: 'teacher', child: Text("Teacher")),
-                          DropdownMenuItem(value: 'parent', child: Text("Parent")),
+                        items: [
+                          DropdownMenuItem(value: 'student', child: Text("Student", style: TextStyle(color: theme.colorScheme.onSurface))),
+                          DropdownMenuItem(value: 'teacher', child: Text("Teacher", style: TextStyle(color: theme.colorScheme.onSurface))),
+                          DropdownMenuItem(value: 'parent', child: Text("Parent", style: TextStyle(color: theme.colorScheme.onSurface))),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -256,6 +265,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         // Education Level
                         DropdownButtonFormField<String>(
                           initialValue: _educationLevel,
+                          style: TextStyle(color: theme.colorScheme.onSurface),
+                          dropdownColor: theme.cardColor,
                           decoration: InputDecoration(
                             labelText: "Level of Education (Optional)",
                             prefixIcon: const Icon(Icons.school_outlined),
@@ -264,17 +275,17 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.textLight),
+                              borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(color: AppColors.primary, width: 2),
                             ),
                             filled: true,
-                            fillColor: AppColors.surface,
+                            fillColor: theme.inputDecorationTheme.fillColor,
                           ),
                           items: _educationLevels.map((level) {
-                            return DropdownMenuItem(value: level, child: Text(level));
+                            return DropdownMenuItem(value: level, child: Text(level, style: TextStyle(color: theme.colorScheme.onSurface)));
                           }).toList(),
                           onChanged: (value) {
                             setState(() {
@@ -288,6 +299,8 @@ class _SignupScreenState extends State<SignupScreen> {
                           // Grade/Year
                           DropdownButtonFormField<int>(
                             initialValue: _grade,
+                            style: TextStyle(color: theme.colorScheme.onSurface),
+                            dropdownColor: theme.cardColor,
                             decoration: InputDecoration(
                               labelText: _educationLevel == 'Secondary' ? "Form (Optional)" : "Grade/Year (Optional)",
                               prefixIcon: const Icon(Icons.grade_outlined),
@@ -296,19 +309,19 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.textLight),
+                                borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(color: AppColors.primary, width: 2),
                               ),
                               filled: true,
-                              fillColor: AppColors.surface,
+                              fillColor: theme.inputDecorationTheme.fillColor,
                             ),
                             items: _getGradesForLevel(_educationLevel).map((grade) {
                               return DropdownMenuItem(
                                 value: grade, 
-                                child: Text(_educationLevel == 'Secondary' ? "Form $grade" : "Grade/Year $grade"),
+                                child: Text(_educationLevel == 'Secondary' ? "Form $grade" : "Grade/Year $grade", style: TextStyle(color: theme.colorScheme.onSurface)),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -366,18 +379,18 @@ class _SignupScreenState extends State<SignupScreen> {
                       // Divider
                       Row(
                         children: [
-                          Expanded(child: Divider(color: AppColors.textLight)),
+                          Expanded(child: Divider(color: theme.dividerColor)),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
                               "OR",
                               style: TextStyle(
-                                color: AppColors.textSecondary,
+                                color: theme.colorScheme.onSurface.withOpacity(0.6),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
-                          Expanded(child: Divider(color: AppColors.textLight)),
+                          Expanded(child: Divider(color: theme.dividerColor)),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -388,6 +401,9 @@ class _SignupScreenState extends State<SignupScreen> {
                           onPressed: isLoading ? null : () async {
                             try {
                               await Provider.of<AuthProvider>(context, listen: false).signInWithGoogle();
+                              if (mounted) {
+                                Navigator.of(context).popUntil((route) => route.isFirst);
+                              }
                             } catch (e) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -412,16 +428,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                 width: 20,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(2),
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Color(0xFF4285F4), // Google Blue
-                                      Color(0xFF34A853), // Google Green
-                                      Color(0xFFFBBC05), // Google Yellow
-                                      Color(0xFFEA4335), // Google Red
-                                    ],
-                                  ),
+                                  gradient: AppColors.googleGradient,
                                 ),
                                 child: Center(
                                   child: Text(
@@ -436,17 +443,17 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                             ),
                           ),
-                          label: const Text(
+                          label: Text(
                             "Continue with Google",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF3C4043), // Google's text color
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            side: BorderSide(color: Color(0xFFDADCE0)), // Google's border color
+                            backgroundColor: theme.cardColor,
+                            side: BorderSide(color: theme.dividerColor),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -463,7 +470,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: RichText(
                             text: TextSpan(
                               text: "Already have an account? ",
-                              style: TextStyle(color: AppColors.textSecondary),
+                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
                               children: [
                                 TextSpan(
                                   text: "Sign In",

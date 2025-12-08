@@ -75,10 +75,14 @@ class FirestoreService {
     return _firestore
         .collection('support_tickets')
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => SupportTicket.fromMap(doc.data(), doc.id))
-            .toList());
+        .map((snapshot) {
+      final tickets = snapshot.docs
+          .map((doc) => SupportTicket.fromMap(doc.data(), doc.id))
+          .toList();
+      // Sort client-side to avoid composite index requirement
+      tickets.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return tickets;
+    });
   }
 }

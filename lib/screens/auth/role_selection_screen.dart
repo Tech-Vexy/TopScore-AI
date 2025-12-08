@@ -12,6 +12,7 @@ class RoleSelectionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final isLoading = authProvider.isLoading;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: Container(
@@ -19,7 +20,7 @@ class RoleSelectionScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppColors.background, AppColors.surface],
+            colors: [theme.scaffoldBackgroundColor, theme.colorScheme.surface],
           ),
         ),
         child: SafeArea(
@@ -42,7 +43,7 @@ class RoleSelectionScreen extends StatelessWidget {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
+                              color: theme.primaryColor.withOpacity(0.3),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -60,7 +61,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color: theme.primaryColor,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -69,7 +70,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         "Tell us how you'll be using ${AppStrings.appName}",
                         style: TextStyle(
                           fontSize: 16,
-                          color: AppColors.textSecondary,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -96,10 +97,10 @@ class RoleSelectionScreen extends StatelessWidget {
                   title: "Parent",
                   description: "Monitor your child's progress",
                   icon: Icons.family_restroom_rounded,
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppColors.accent, Colors.grey[700]!],
+                    colors: [AppColors.googleGreen, Color(0xFF0B8043)],
                   ),
                   onPressed: isLoading ? null : () => authProvider.completeGoogleSignup('parent'),
                 ),
@@ -108,11 +109,11 @@ class RoleSelectionScreen extends StatelessWidget {
                     margin: const EdgeInsets.only(top: 32),
                     child: Column(
                       children: [
-                        CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.googleBlue),
                         ),
                         const SizedBox(height: 16),
-                        Text(
+                        const Text(
                           "Setting up your account...",
                           style: TextStyle(
                             color: AppColors.textSecondary,

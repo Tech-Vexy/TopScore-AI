@@ -83,7 +83,7 @@ class _SupportScreenState extends State<SupportScreen> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Ticket created successfully'),
-                                  backgroundColor: Colors.green,
+                                  backgroundColor: AppColors.googleGreen,
                                 ),
                               );
                             }
@@ -93,7 +93,7 @@ class _SupportScreenState extends State<SupportScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Error creating ticket: $e'),
-                                backgroundColor: Colors.red,
+                                backgroundColor: AppColors.googleRed,
                               ),
                             );
                           }
@@ -108,7 +108,7 @@ class _SupportScreenState extends State<SupportScreen> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.surface,
                       ),
                     )
                   : const Text('Submit'),
@@ -122,19 +122,22 @@ class _SupportScreenState extends State<SupportScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).userModel;
+    final theme = Theme.of(context);
 
     if (user == null) {
-      return const Center(child: Text('Please log in to view support tickets'));
+      return Center(child: Text('Please log in to view support tickets', style: TextStyle(color: theme.colorScheme.onSurface)));
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Column(
         children: [
           // Header
           Container(
             padding: const EdgeInsets.all(24),
-            color: AppColors.surface,
+            decoration: const BoxDecoration(
+              gradient: AppColors.primaryGradient,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -146,14 +149,14 @@ class _SupportScreenState extends State<SupportScreen> {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.text,
+                        color: Colors.white,
                       ),
                     ),
                     SizedBox(height: 4),
                     Text(
                       'We are here to help',
                       style: TextStyle(
-                        color: Colors.grey,
+                        color: Colors.white,
                         fontSize: 14,
                       ),
                     ),
@@ -164,8 +167,8 @@ class _SupportScreenState extends State<SupportScreen> {
                   icon: const Icon(Icons.add),
                   label: const Text('New Ticket'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primary,
                   ),
                 ),
               ],
@@ -183,21 +186,22 @@ class _SupportScreenState extends State<SupportScreen> {
 
                 if (snapshot.hasError) {
                   if (snapshot.error.toString().contains('permission-denied')) {
-                     return const Center(child: Text('Access denied. Please contact support.'));
+                     return Center(child: Text('Access denied. Please contact support.', style: TextStyle(color: theme.colorScheme.onSurface)));
                   }
                   if (snapshot.error.toString().contains('unavailable') || 
                       snapshot.error.toString().contains('BLOCKED_BY_CLIENT')) {
-                     return const Center(
+                     return Center(
                        child: Padding(
-                         padding: EdgeInsets.all(16.0),
+                         padding: const EdgeInsets.all(16.0),
                          child: Text(
                            'Connection blocked. Please disable ad blockers or check your internet connection.',
                            textAlign: TextAlign.center,
+                           style: TextStyle(color: theme.colorScheme.onSurface),
                          ),
                        ),
                      );
                   }
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: theme.colorScheme.onSurface)));
                 }
 
                 final tickets = snapshot.data ?? [];
@@ -207,11 +211,11 @@ class _SupportScreenState extends State<SupportScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.support_agent, size: 64, color: Colors.grey[300]),
+                        Icon(Icons.support_agent, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.3)),
                         const SizedBox(height: 16),
                         Text(
                           'No support tickets yet',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 16),
                         ),
                         const SizedBox(height: 8),
                         TextButton(
@@ -231,9 +235,10 @@ class _SupportScreenState extends State<SupportScreen> {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       elevation: 0,
+                      color: theme.cardColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.grey[200]!),
+                        side: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
                       ),
                       child: ExpansionTile(
                         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -251,9 +256,10 @@ class _SupportScreenState extends State<SupportScreen> {
                         ),
                         title: Text(
                           ticket.subject,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
                         subtitle: Column(
@@ -262,7 +268,7 @@ class _SupportScreenState extends State<SupportScreen> {
                             const SizedBox(height: 4),
                             Text(
                               DateFormat('MMM d, y • h:mm a').format(ticket.createdAt),
-                              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
                             ),
                             const SizedBox(height: 4),
                             Container(
@@ -288,19 +294,19 @@ class _SupportScreenState extends State<SupportScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Your Message:',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.grey,
+                                    color: theme.colorScheme.onSurface.withOpacity(0.6),
                                     fontSize: 12,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(ticket.message),
+                                Text(ticket.message, style: TextStyle(color: theme.colorScheme.onSurface)),
                                 if (ticket.reply != null) ...[
                                   const SizedBox(height: 16),
-                                  const Divider(),
+                                  Divider(color: theme.dividerColor),
                                   const SizedBox(height: 8),
                                   const Row(
                                     children: [
@@ -317,7 +323,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(ticket.reply!),
+                                  Text(ticket.reply!, style: TextStyle(color: theme.colorScheme.onSurface)),
                                 ],
                               ],
                             ),
@@ -338,11 +344,11 @@ class _SupportScreenState extends State<SupportScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'resolved':
-        return Colors.green;
+        return AppColors.googleGreen;
       case 'closed':
-        return Colors.grey;
+        return AppColors.textSecondary;
       default:
-        return Colors.orange;
+        return AppColors.googleYellow;
     }
   }
 

@@ -122,6 +122,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -131,7 +132,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     if (_errorMessage != null) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
-        body: Center(child: Text('Error: $_errorMessage')),
+        body: Center(child: Text('Error: $_errorMessage', style: TextStyle(color: theme.colorScheme.onSurface))),
       );
     }
 
@@ -139,11 +140,11 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       appBar: AppBar(
         title: Text(
           widget.title,
-          style: const TextStyle(color: AppColors.text),
+          style: TextStyle(color: theme.colorScheme.onSurface),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
         elevation: 1,
-        iconTheme: const IconThemeData(color: AppColors.text),
+        iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
         actions: [
           IconButton(
             icon: const Icon(Icons.center_focus_strong_rounded),

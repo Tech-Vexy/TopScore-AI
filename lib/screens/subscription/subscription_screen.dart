@@ -74,7 +74,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Payment Successful! Subscription activated.'),
-              backgroundColor: AppColors.success,
+              backgroundColor: AppColors.googleGreen,
             ),
           );
           Navigator.pop(context);
@@ -87,7 +87,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Payment failed: $e'),
-            backgroundColor: AppColors.error,
+            backgroundColor: AppColors.googleRed,
           ),
         );
       }
@@ -102,9 +102,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Upgrade to Premium'),
+        title: Text('Upgrade to Premium', style: TextStyle(color: theme.colorScheme.onSurface)),
+        backgroundColor: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
+        elevation: 0,
+        iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -116,15 +121,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+                color: AppColors.googleBlue,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Get access to all revision materials, exams, and schemes of work.',
               style: TextStyle(
                 fontSize: 16,
-                color: AppColors.textSecondary,
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
             const SizedBox(height: 24),
@@ -133,29 +138,39 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
+              style: TextStyle(color: theme.colorScheme.onSurface),
+              decoration: InputDecoration(
                 labelText: 'M-Pesa Phone Number',
                 hintText: '0712345678',
-                prefixIcon: Icon(Icons.phone_android),
+                hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
+                prefixIcon: const Icon(Icons.phone_android, color: AppColors.googleGreen),
+                border: const OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: theme.dividerColor),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.googleGreen, width: 2),
+                ),
               ),
             ),
             const SizedBox(height: 24),
 
             // Plans
-            ..._plans.map((plan) => _buildPlanCard(plan)),
+            ..._plans.map((plan) => _buildPlanCard(plan, theme)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPlanCard(Map<String, dynamic> plan) {
+  Widget _buildPlanCard(Map<String, dynamic> plan, ThemeData theme) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
+      elevation: 0,
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.primary.withOpacity(0.2)),
+        side: BorderSide(color: AppColors.googleBlue.withOpacity(0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -167,9 +182,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               children: [
                 Text(
                   plan['name'],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 Text(
@@ -177,7 +193,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                    color: AppColors.googleBlue,
                   ),
                 ),
               ],
@@ -185,12 +201,20 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             const SizedBox(height: 8),
             Text(
               plan['description'],
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.googleGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 onPressed: _isLoading ? null : () => _initiatePayment(plan),
                 child: _isLoading
                     ? const SizedBox(
@@ -201,7 +225,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text('Pay with M-Pesa'),
+                    : const Text('Pay with M-Pesa', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],

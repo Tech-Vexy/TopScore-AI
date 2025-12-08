@@ -52,15 +52,15 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     });
   }
 
-  Widget _buildButton(String text, {Color? color, Color? textColor}) {
+  Widget _buildButton(String text, ThemeData theme, {Color? color, Color? textColor}) {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.all(8),
         child: ElevatedButton(
           onPressed: () => _onPressed(text),
           style: ElevatedButton.styleFrom(
-            backgroundColor: color ?? Colors.white,
-            foregroundColor: textColor ?? AppColors.text,
+            backgroundColor: color ?? theme.cardColor,
+            foregroundColor: textColor ?? theme.colorScheme.onSurface,
             padding: const EdgeInsets.all(24),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -78,12 +78,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Calculator', style: TextStyle(color: AppColors.text)),
-        backgroundColor: Colors.white,
+        title: Text('Calculator', style: TextStyle(color: theme.colorScheme.onSurface)),
+        backgroundColor: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
         elevation: 1,
-        iconTheme: const IconThemeData(color: AppColors.text),
+        iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
       ),
       body: Column(
         children: [
@@ -98,15 +100,15 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                 children: [
                   Text(
                     _expression,
-                    style: const TextStyle(fontSize: 32, color: Colors.grey),
+                    style: TextStyle(fontSize: 32, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     _result,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.text,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -118,58 +120,58 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
               ),
               child: Column(
                 children: [
                   Row(
                     children: [
-                      _buildButton('sin', color: AppColors.surfaceVariant),
-                      _buildButton('cos', color: AppColors.surfaceVariant),
-                      _buildButton('tan', color: AppColors.surfaceVariant),
-                      _buildButton('sqrt', color: AppColors.surfaceVariant),
-                      _buildButton('^', color: AppColors.surfaceVariant),
+                      _buildButton('sin', theme, color: theme.cardColor),
+                      _buildButton('cos', theme, color: theme.cardColor),
+                      _buildButton('tan', theme, color: theme.cardColor),
+                      _buildButton('sqrt', theme, color: theme.cardColor),
+                      _buildButton('^', theme, color: theme.cardColor),
                     ],
                   ),
                   Row(
                     children: [
-                      _buildButton('C', color: Colors.red[100], textColor: Colors.red),
-                      _buildButton('(', color: AppColors.surfaceVariant),
-                      _buildButton(')', color: AppColors.surfaceVariant),
-                      _buildButton('÷', color: AppColors.primary, textColor: Colors.white),
+                      _buildButton('C', theme, color: AppColors.googleRed.withOpacity(0.1), textColor: AppColors.googleRed),
+                      _buildButton('(', theme, color: theme.cardColor),
+                      _buildButton(')', theme, color: theme.cardColor),
+                      _buildButton('÷', theme, color: AppColors.googleBlue, textColor: Colors.white),
                     ],
                   ),
                   Row(
                     children: [
-                      _buildButton('7'),
-                      _buildButton('8'),
-                      _buildButton('9'),
-                      _buildButton('×', color: AppColors.primary, textColor: Colors.white),
+                      _buildButton('7', theme),
+                      _buildButton('8', theme),
+                      _buildButton('9', theme),
+                      _buildButton('×', theme, color: AppColors.googleBlue, textColor: Colors.white),
                     ],
                   ),
                   Row(
                     children: [
-                      _buildButton('4'),
-                      _buildButton('5'),
-                      _buildButton('6'),
-                      _buildButton('-', color: AppColors.primary, textColor: Colors.white),
+                      _buildButton('4', theme),
+                      _buildButton('5', theme),
+                      _buildButton('6', theme),
+                      _buildButton('-', theme, color: AppColors.googleBlue, textColor: Colors.white),
                     ],
                   ),
                   Row(
                     children: [
-                      _buildButton('1'),
-                      _buildButton('2'),
-                      _buildButton('3'),
-                      _buildButton('+', color: AppColors.primary, textColor: Colors.white),
+                      _buildButton('1', theme),
+                      _buildButton('2', theme),
+                      _buildButton('3', theme),
+                      _buildButton('+', theme, color: AppColors.googleBlue, textColor: Colors.white),
                     ],
                   ),
                   Row(
                     children: [
-                      _buildButton('0'),
-                      _buildButton('.'),
-                      _buildButton('⌫', color: Colors.orange[100], textColor: Colors.orange),
-                      _buildButton('=', color: AppColors.secondary, textColor: Colors.white),
+                      _buildButton('0', theme),
+                      _buildButton('.', theme),
+                      _buildButton('⌫', theme, color: AppColors.googleYellow.withOpacity(0.1), textColor: AppColors.googleYellow),
+                      _buildButton('=', theme, color: AppColors.googleGreen, textColor: Colors.white),
                     ],
                   ),
                 ],

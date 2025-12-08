@@ -1,8 +1,8 @@
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'dart:convert';
 import 'dart:typed_data';
-import 'package:math_expressions/math_expressions.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/status.dart' as status;
 import 'firestore_service.dart';
-import 'llm_orchestrator.dart';
 
 // Data models for structured responses
 class AIResponse {
@@ -50,169 +50,61 @@ class VisualExample {
 }
 
 class AIService {
-  static const String _apiKey = 'AIzaSyCIw8v22ZRqAeOmZzcHnitCxLLWlz9R8aI';
+  // Use 10.0.2.2 for Android emulator, localhost for iOS/Web
+  // static const String _wsUrl = 'ws://10.0.2.2:8080/ws'; 
+  static const String _wsUrl = 'ws://localhost:8080/ws';
   
-  late final LLMOrchestrator _orchestrator;
+  WebSocketChannel? _channel;
   final FirestoreService _firestoreService = FirestoreService();
 
-  AIService({List<Content>? history}) {
-    final tools = [
-      Tool(functionDeclarations: [
-        FunctionDeclaration(
-          'search_resources',
-          'Search for educational resources like notes, exams, and schemes of work.',
-          Schema(
-            SchemaType.object,
-            properties: {
-              'grade': Schema(SchemaType.integer, description: 'The grade level (1-8 for Primary, 9-12 for Secondary/Form 1-4)'),
-              'subject': Schema(SchemaType.string, description: 'The subject name (e.g., Mathematics, English)'),
-            },
-            requiredProperties: ['grade'],
-          ),
-        ),
-        FunctionDeclaration(
-          'calculate',
-          'Perform a mathematical calculation.',
-          Schema(
-            SchemaType.object,
-            properties: {
-              'expression': Schema(SchemaType.string, description: 'The mathematical expression to evaluate (e.g., "2 + 2", "sin(30)")'),
-            },
-            requiredProperties: ['expression'],
-          ),
-        ),
-      ]),
-    ];
+  AIService() {
+    _connect();
+  }
 
-    final model = GenerativeModel(
-      model: 'gemini-2.5-flash',
-      apiKey: _apiKey,
-      tools: tools,
-      systemInstruction: Content.system("""
-You are Teacher Joy, a warm, patient, and highly supportive Kenyan tutor for students aged 8–18.
-
-PERSONALITY:
-- Extremely encouraging, never discouraging
-- Patient and understanding when students struggle
-- Celebrates every small win
-
-CAPABILITIES:
-- You can search for study resources (notes, exams) using the 'search_resources' tool.
-- You can perform calculations using the 'calculate' tool.
-- Always use these tools when the student asks for resources or math help.
-
-CONTEXT AWARENESS:
-- You will be provided with the student's Grade and Education Level (e.g., Primary, Secondary).
-- ADAPT your language and complexity based on this level.
-  - For Primary (Grade 1-8): Use very simple language, short sentences, and concrete examples.
-  - For Secondary (Form 1-4): Use more academic language but keep it accessible.
-- If the grade is low (e.g., Grade 1-3), be extra gentle and simple.
-
-COMMUNICATION RULES:
-- Use clear, simple English (90% of subjects are in English)
-- Keep responses to 2-4 sentences maximum
-- Always end with ONE simple follow-up question
-- Use relatable Kenyan examples: football, farming, matatu rides, M-Pesa, ugali, safari ants
-
-VISUALIZATION SUPPORT:
-When explaining concepts, suggest visual aids by adding markers:
-- [DIAGRAM: description] for visual diagrams
-- [STEPS: 1. step one, 2. step two] for step-by-step processes
-- [MATH: equation] for mathematical expressions
-- [COMPARE: item1 vs item2] for comparisons
-- [EXAMPLE: scenario] for real-world examples
-
-RESPONSE TEMPLATES:
-When incorrect: "That's okay! You're learning. [Explain correct answer briefly]. Let's try another one: [simpler question]"
-When correct: "Excellent work! Well done! You're getting stronger. [Follow-up question]"
-When confused: "No worries! Let me explain it differently. [Simpler explanation with example]"
-"""),
-    );
-
-    _orchestrator = LLMOrchestrator(
-      model: model,
-      history: history,
-      toolHandlers: {
-        'search_resources': _searchResources,
-        'calculate': _calculate,
-      },
-    );
+  void _connect() {
+    try {
+      _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
+    } catch (e) {
+      print('Error connecting to WebSocket: $e');
+    }
   }
 
   Future<AIResponse> sendMessage(String message, {Map<String, dynamic>? context, Uint8List? attachmentBytes, String? mimeType}) async {
     try {
-      String prompt = message;
+      if (_channel == null) _connect();
+
+      final Map<String, dynamic> payload = {
+        'type': 'message',
+        'content': message,
+      };
+
       if (context != null) {
-        String contextStr = "[Context:";
-        if (context['grade'] != null) contextStr += " Grade ${context['grade']},";
-        if (context['educationLevel'] != null) contextStr += " Level ${context['educationLevel']},";
-        if (context['subject'] != null) contextStr += " Subject: ${context['subject']}";
-        contextStr += "]";
-        prompt = "$contextStr $message";
-      }
-      
-      Content content;
-      if (attachmentBytes != null && mimeType != null) {
-        if (mimeType.startsWith('text/')) {
-           // For text files, decode and append to prompt
-           String textContent = String.fromCharCodes(attachmentBytes);
-           content = Content.text("$prompt\n\n[Attached File Content]:\n$textContent");
-        } else {
-           // For images and PDFs
-           content = Content.multi([
-            TextPart(prompt),
-            DataPart(mimeType, attachmentBytes),
-          ]);
-        }
-      } else if (attachmentBytes != null) {
-        // Fallback for legacy image calls
-        content = Content.multi([
-          TextPart(prompt),
-          DataPart('image/jpeg', attachmentBytes),
-        ]);
-      } else {
-        content = Content.text(prompt);
+        payload['context'] = context;
       }
 
-      final response = await _orchestrator.sendMessage(content);
-      final responseText = response.text ?? "I'm having trouble thinking right now. Can you ask again?";
+      if (attachmentBytes != null) {
+        payload['attachment'] = base64Encode(attachmentBytes);
+        payload['mimeType'] = mimeType ?? 'image/jpeg';
+      }
+
+      _channel!.sink.add(jsonEncode(payload));
+
+      // Wait for the response from the stream
+      // Note: This assumes a simple request-response pattern. 
+      // For a robust app, you'd want a message ID to correlate responses.
+      final responsePayload = await _channel!.stream.first;
+      final data = jsonDecode(responsePayload);
+      
+      final responseText = data['text'] ?? "I'm having trouble thinking right now. Can you ask again?";
       
       return _parseResponseWithVisualization(responseText);
     } catch (e) {
       print('Error in sendMessage: $e');
+      // Reconnect on error
+      _connect();
       return AIResponse(
-        text: "Oh no! My connection is a bit shaky. Please try again.",
+        text: "Oh no! My connection is a bit shaky. Please try again. ($e)",
       );
-    }
-  }
-
-  Future<Map<String, Object?>> _searchResources(Map<String, Object?> args) async {
-    final grade = (args['grade'] as num).toInt();
-    final subject = args['subject'] as String?;
-    
-    try {
-      final resources = await _firestoreService.getResources(grade, subject: subject);
-      if (resources.isEmpty) {
-        return {'result': 'No resources found for Grade $grade ${subject != null ? 'in $subject' : ''}.'};
-      }
-      return {
-        'result': resources.map((r) => '${r.title} (${r.type}) - ${r.downloadUrl}').join('\n')
-      };
-    } catch (e) {
-      return {'error': e.toString()};
-    }
-  }
-
-  Future<Map<String, Object?>> _calculate(Map<String, Object?> args) async {
-    final expression = args['expression'] as String;
-    try {
-      GrammarParser p = GrammarParser();
-      Expression exp = p.parse(expression.replaceAll('×', '*').replaceAll('÷', '/'));
-      ContextModel cm = ContextModel();
-      double eval = exp.evaluate(EvaluationType.REAL, cm);
-      return {'result': eval};
-    } catch (e) {
-      return {'error': 'Invalid expression: $e'};
     }
   }
 
@@ -235,11 +127,10 @@ STEPS:
 3. [Third step]
 DATA: [Any numbers, values, or key facts in simple format]
 """;
-
-      final response = await _orchestrator.sendMessage(Content.text(prompt));
-      final responseText = response.text ?? "";
       
-      return _parseVisualExample(responseText, concept);
+      // Reuse sendMessage for simplicity
+      final response = await sendMessage(prompt);
+      return _parseVisualExample(response.text, concept);
     } catch (e) {
       print('Error in requestVisualization: $e');
       return VisualExample(
@@ -267,10 +158,8 @@ For each example, provide:
 Make it fun and easy to visualize!
 """;
 
-      final response = await _orchestrator.sendMessage(Content.text(prompt));
-      final responseText = response.text ?? "";
-      
-      return _parseMultipleExamples(responseText);
+      final response = await sendMessage(prompt);
+      return _parseMultipleExamples(response.text);
     } catch (e) {
       print('Error in getExamplesWithDiagrams: $e');
       return [];
@@ -279,15 +168,8 @@ Make it fun and easy to visualize!
 
   Future<String> analyzeImage(Uint8List imageBytes, String prompt) async {
     try {
-      final content = [
-        Content.multi([
-          TextPart(prompt),
-          DataPart('image/jpeg', imageBytes),
-        ])
-      ];
-
-      final response = await _orchestrator.generateContent(content);
-      return response.text ?? "I couldn't analyze the image. Please try again.";
+      final response = await sendMessage(prompt, attachmentBytes: imageBytes, mimeType: 'image/jpeg');
+      return response.text;
     } catch (e) {
       return "Error analyzing image: $e";
     }
@@ -392,6 +274,7 @@ Make it fun and easy to visualize!
 
   // Reset chat session
   void resetChat() {
-    _orchestrator.reset();
+    _channel?.sink.close();
+    _connect();
   }
 }

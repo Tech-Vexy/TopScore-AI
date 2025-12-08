@@ -163,10 +163,11 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).userModel;
+    final theme = Theme.of(context);
     
     return Scaffold(
-      backgroundColor: AppColors.background,
-      endDrawer: _buildDrawer(user),
+      backgroundColor: theme.scaffoldBackgroundColor,
+      endDrawer: _buildDrawer(user, theme),
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton.extended(
               onPressed: () {
@@ -195,7 +196,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                           children: [
                             if (_currentView != 'levels')
                               IconButton(
-                                icon: const Icon(Icons.arrow_back, color: AppColors.text),
+                                icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
                                 onPressed: _navigateBack,
                               )
                             else
@@ -203,8 +204,8 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
 
                             Text(
                               _headerTitle,
-                              style: const TextStyle(
-                                color: AppColors.text,
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 24,
                               ),
@@ -212,7 +213,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
 
                             Builder(
                               builder: (context) => IconButton(
-                                icon: const Icon(Icons.menu, color: AppColors.text),
+                                icon: Icon(Icons.menu, color: theme.colorScheme.onSurface),
                                 onPressed: () => Scaffold.of(context).openEndDrawer(),
                               ),
                             ),
@@ -225,14 +226,15 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
+                            color: theme.colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: TextField(
+                            style: TextStyle(color: theme.colorScheme.onSurface),
                             decoration: InputDecoration(
                               hintText: 'Search resources...',
-                              hintStyle: TextStyle(color: Colors.grey[500]),
-                              prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
+                              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                              prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
@@ -244,7 +246,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
 
                       // Main Content
                       Expanded(
-                        child: _buildCurrentView(),
+                        child: _buildCurrentView(theme),
                       ),
                     ],
                   )
@@ -267,8 +269,9 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             }
           });
         },
+        backgroundColor: theme.cardColor,
         selectedItemColor: AppColors.primary,
-        unselectedItemColor: Colors.grey,
+        unselectedItemColor: theme.colorScheme.onSurface.withOpacity(0.6),
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
         items: const [
@@ -293,8 +296,9 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     );
   }
 
-  Widget _buildDrawer(UserModel? user) {
+  Widget _buildDrawer(UserModel? user, ThemeData theme) {
     return Drawer(
+      backgroundColor: theme.scaffoldBackgroundColor,
       child: Column(
         children: [
           UserAccountsDrawerHeader(
@@ -307,7 +311,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             ),
             accountEmail: Text(user?.email ?? ''),
             currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
+              backgroundColor: theme.cardColor,
               child: Text(
                 user?.displayName?.substring(0, 1).toUpperCase() ?? 'G',
                 style: const TextStyle(
@@ -319,8 +323,8 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.home_rounded),
-            title: const Text('Home'),
+            leading: Icon(Icons.home_rounded, color: theme.iconTheme.color),
+            title: Text('Home', style: TextStyle(color: theme.colorScheme.onSurface)),
             onTap: () {
               Navigator.pop(context);
               setState(() {
@@ -349,22 +353,22 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.person_rounded),
-            title: const Text('Profile'),
+            leading: Icon(Icons.person_rounded, color: theme.iconTheme.color),
+            title: Text('Profile', style: TextStyle(color: theme.colorScheme.onSurface)),
             onTap: () {
               Navigator.pop(context);
               // Navigate to profile
             },
           ),
           ListTile(
-            leading: const Icon(Icons.settings_rounded),
-            title: const Text('Settings'),
+            leading: Icon(Icons.settings_rounded, color: theme.iconTheme.color),
+            title: Text('Settings', style: TextStyle(color: theme.colorScheme.onSurface)),
             onTap: () {
               Navigator.pop(context);
               // Navigate to settings
             },
           ),
-          const Divider(),
+          Divider(color: theme.dividerColor),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: AppColors.error),
             title: const Text('Logout', style: TextStyle(color: AppColors.error)),
@@ -378,37 +382,37 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     );
   }
 
-  Widget _buildCurrentView() {
+  Widget _buildCurrentView(ThemeData theme) {
     switch (_currentView) {
       case 'levels':
-        return _buildLevelsView();
+        return _buildLevelsView(theme);
       case 'grades':
-        return _buildGradesView();
+        return _buildGradesView(theme);
       case 'types':
-        return _buildTypesView();
+        return _buildTypesView(theme);
       case 'list':
-        return _buildResourceListView();
+        return _buildResourceListView(theme);
       default:
-        return _buildLevelsView();
+        return _buildLevelsView(theme);
     }
   }
 
-  Widget _buildLevelsView() {
+  Widget _buildLevelsView(ThemeData theme) {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Text(
+        Text(
           "Categories",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppColors.text,
+            color: theme.colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: theme.cardColor,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -427,16 +431,17 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     title: Text(
                       entry.key,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.4)),
                     onTap: () => _navigateToGrades(entry.key, entry.value),
                   ),
                   if (!isLast)
-                    const Divider(height: 1, indent: 20, endIndent: 20),
+                    Divider(height: 1, indent: 20, endIndent: 20, color: theme.dividerColor),
                 ],
               );
             }).toList(),
@@ -445,19 +450,19 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         
         const SizedBox(height: 32),
         
-        const Text(
+        Text(
           "Featured Resources",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppColors.text,
+            color: theme.colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
         // Placeholder for featured resources
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: theme.cardColor,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -469,11 +474,11 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           ),
           child: Column(
             children: [
-              _buildFeaturedItem("KCSE 2023 Biology Paper 1"),
-              const Divider(height: 1, indent: 20, endIndent: 20),
-              _buildFeaturedItem("KCSE 2022 Mathematics Paper 2"),
-              const Divider(height: 1, indent: 20, endIndent: 20),
-              _buildFeaturedItem("KCSE 2021 English Paper 3"),
+              _buildFeaturedItem("KCSE 2023 Biology Paper 1", theme),
+              Divider(height: 1, indent: 20, endIndent: 20, color: theme.dividerColor),
+              _buildFeaturedItem("KCSE 2022 Mathematics Paper 2", theme),
+              Divider(height: 1, indent: 20, endIndent: 20, color: theme.dividerColor),
+              _buildFeaturedItem("KCSE 2021 English Paper 3", theme),
             ],
           ),
         ),
@@ -481,38 +486,52 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     );
   }
 
-  Widget _buildFeaturedItem(String title) {
+  Widget _buildFeaturedItem(String title, ThemeData theme) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
+          color: theme.colorScheme.onSurface,
         ),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+      trailing: Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.4)),
       onTap: () {
         // Handle featured item tap
       },
     );
   }
 
-  Widget _buildGradesView() {
+  Color _getGoogleColor(int index) {
+    final colors = [
+      AppColors.googleBlue,
+      AppColors.googleRed,
+      AppColors.googleYellow,
+      AppColors.googleGreen,
+    ];
+    return colors[index % colors.length];
+  }
+
+  Widget _buildGradesView(ThemeData theme) {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: _currentGrades.map((grade) {
+      children: _currentGrades.asMap().entries.map((entry) {
+        final index = entry.key;
+        final grade = entry.value;
         return _buildCategoryCard(
           title: _getGradeLabel(grade),
           icon: Icons.class_,
-          color: AppColors.secondary,
+          color: _getGoogleColor(index),
           onTap: () => _navigateToTypes(grade),
+          theme: theme,
         );
       }).toList(),
     );
   }
 
-  Widget _buildTypesView() {
+  Widget _buildTypesView(ThemeData theme) {
     int index = 1;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -521,12 +540,13 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           number: index++,
           title: "${_getGradeLabel(_selectedGrade!).toUpperCase()} ${entry.key.toUpperCase()}",
           onTap: () => _navigateToResources(entry.key, entry.value),
+          theme: theme,
         );
       }).toList(),
     );
   }
 
-  Widget _buildResourceListView() {
+  Widget _buildResourceListView(ThemeData theme) {
     return Consumer<ResourceProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading) {
@@ -550,11 +570,11 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.folder_open, size: 64, color: Colors.grey[400]),
+                Icon(Icons.folder_open, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.4)),
                 const SizedBox(height: 16),
                 Text(
                   'No resources found for this category',
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
                 ),
               ],
             ),
@@ -566,7 +586,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           itemCount: resources.length,
           itemBuilder: (context, index) {
             final resource = resources[index];
-            return _buildResourceCard(resource);
+            return _buildResourceCard(resource, theme);
           },
         );
       },
@@ -578,10 +598,12 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    required ThemeData theme,
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
@@ -602,13 +624,14 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.4)),
             ],
           ),
         ),
@@ -620,14 +643,15 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     required int number,
     required String title,
     required VoidCallback onTap,
+    required ThemeData theme,
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
-      color: Colors.grey[50],
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.grey[300]!),
+        side: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
       ),
       child: InkWell(
         onTap: onTap,
@@ -638,19 +662,20 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             children: [
               Text(
                 "$number.",
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: AppColors.googleBlue,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -661,10 +686,11 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     );
   }
 
-  Widget _buildResourceCard(ResourceModel resource) {
+  Widget _buildResourceCard(ResourceModel resource, ThemeData theme) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
@@ -696,12 +722,12 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.googleBlue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   _getResourceIcon(resource.type),
-                  color: AppColors.primary,
+                  color: AppColors.googleBlue,
                 ),
               ),
               const SizedBox(width: 16),
@@ -711,20 +737,21 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                   children: [
                     Text(
                       resource.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        _buildTag(resource.subject, AppColors.info),
+                        _buildTag(resource.subject, AppColors.googleBlue),
                         const SizedBox(width: 8),
-                        _buildTag(_getGradeLabel(resource.grade), AppColors.secondary),
+                        _buildTag(_getGradeLabel(resource.grade), AppColors.googleRed),
                         if (resource.year != null) ...[
                           const SizedBox(width: 8),
-                          _buildTag('${resource.year}', AppColors.textSecondary),
+                          _buildTag('${resource.year}', theme.colorScheme.onSurface.withOpacity(0.6)),
                         ],
                       ],
                     ),
@@ -736,7 +763,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                   final isSubscribed = auth.userModel?.isSubscribed ?? false;
                   return Icon(
                     isSubscribed ? Icons.download_rounded : Icons.lock_rounded,
-                    color: isSubscribed ? AppColors.textSecondary : AppColors.error,
+                    color: isSubscribed ? AppColors.googleGreen : AppColors.googleRed,
                   );
                 },
               ),

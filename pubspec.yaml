@@ -46,13 +46,20 @@ dependencies:
   percent_indicator: ^4.2.3
   fluttertoast: ^9.0.0
   intl: ^0.20.2
+  uuid: ^4.5.2
+  record: ^6.1.2
+  audioplayers: ^6.5.1
+  google_fonts: ^6.3.3
+  flutter_math_fork: ^0.7.4
+  flutter_tts: ^4.2.3
+  universal_io: ^2.3.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   nutrient_flutter: ^5.2.0
   file_picker: ^10.3.7
-  js: ^0.7.2
+  js: ^0.6.4
   web: ^1.1.1
   image_picker: ^1.2.1
   math_expressions: ^3.1.0
@@ -60,6 +67,8 @@ dependencies:
   googleapis: ^15.0.0
   extension_google_sign_in_as_googleapis_auth: ^2.0.13
   camera: ^0.11.3
+  web_socket_channel: ^3.0.3
+  markdown: ^7.3.0
 
 dev_dependencies:
   flutter_test:
