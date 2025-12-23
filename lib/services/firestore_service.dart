@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/resource_model.dart';
 import '../models/user_model.dart';
 import '../models/support_ticket_model.dart';
@@ -7,14 +8,44 @@ class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<List<ResourceModel>> getResources(int grade, {String? subject}) async {
-    Query query = _firestore.collection('resources').where('grade', isEqualTo: grade);
-    
+    Query query = _firestore
+        .collection('resources')
+        .where('grade', isEqualTo: grade);
+
     if (subject != null) {
       query = query.where('subject', isEqualTo: subject);
     }
 
     QuerySnapshot snapshot = await query.get();
-    return snapshot.docs.map((doc) => ResourceModel.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+    return snapshot.docs
+        .map(
+          (doc) =>
+              ResourceModel.fromMap(doc.data() as Map<String, dynamic>, doc.id),
+        )
+        .toList();
+  }
+
+  Future<List<ResourceModel>> getRecentDriveResources(int limit) async {
+    try {
+      Query query = _firestore
+          .collection('resources')
+          .where('source', isEqualTo: 'google_drive')
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      QuerySnapshot snapshot = await query.get();
+      return snapshot.docs
+          .map(
+            (doc) => ResourceModel.fromMap(
+              doc.data() as Map<String, dynamic>,
+              doc.id,
+            ),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint("Error fetching recent drive resources: $e");
+      return [];
+    }
   }
 
   Future<void> createUser(UserModel user) async {
@@ -23,36 +54,44 @@ class FirestoreService {
 
   Future<UserModel?> getUser(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+      DocumentSnapshot doc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get();
       if (doc.exists) {
         return UserModel.fromMap(doc.data() as Map<String, dynamic>, uid);
       }
       return null;
     } catch (e) {
-      print("Error getting user: $e");
+      debugPrint("Error getting user: $e");
       // If permission denied, we might want to return null or rethrow
       // For now, let's return null so the app doesn't crash, but the user might need to sign in again or we handle it in AuthProvider
       if (e.toString().contains('permission-denied')) {
-        print("PERMISSION DENIED: Please check your Firestore Security Rules.");
+        debugPrint(
+          "PERMISSION DENIED: Please check your Firestore Security Rules.",
+        );
       }
       rethrow;
     }
   }
 
   Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
-    await _firestore.collection('users').doc(uid).set(data, SetOptions(merge: true));
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .set(data, SetOptions(merge: true));
   }
 
   // Chat History
-  Future<void> saveChatMessage(String userId, Map<String, dynamic> messageData) async {
+  Future<void> saveChatMessage(
+    String userId,
+    Map<String, dynamic> messageData,
+  ) async {
     await _firestore
         .collection('users')
         .doc(userId)
         .collection('chat_history')
-        .add({
-          ...messageData,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+        .add({...messageData, 'timestamp': FieldValue.serverTimestamp()});
   }
 
   Future<List<Map<String, dynamic>>> getChatHistory(String userId) async {
@@ -62,7 +101,7 @@ class FirestoreService {
         .collection('chat_history')
         .orderBy('timestamp', descending: false)
         .get();
-    
+
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
@@ -77,12 +116,12 @@ class FirestoreService {
         .where('userId', isEqualTo: userId)
         .snapshots()
         .map((snapshot) {
-      final tickets = snapshot.docs
-          .map((doc) => SupportTicket.fromMap(doc.data(), doc.id))
-          .toList();
-      // Sort client-side to avoid composite index requirement
-      tickets.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return tickets;
-    });
+          final tickets = snapshot.docs
+              .map((doc) => SupportTicket.fromMap(doc.data(), doc.id))
+              .toList();
+          // Sort client-side to avoid composite index requirement
+          tickets.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return tickets;
+        });
   }
 }

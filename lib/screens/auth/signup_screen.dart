@@ -21,12 +21,23 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _educationLevel;
   int? _grade;
 
-  final List<String> _educationLevels = ['Primary', 'Secondary', 'University', 'Other'];
-  
+  final List<String> _educationLevels = [
+    'Primary',
+    'Secondary',
+    'University',
+    'Other',
+  ];
+
   List<int> _getGradesForLevel(String? level) {
-    if (level == 'Primary') return List.generate(8, (i) => i + 1); // 1-8
-    if (level == 'Secondary') return List.generate(4, (i) => i + 1); // 1-4 (Form 1-4)
-    if (level == 'University') return List.generate(6, (i) => i + 1); // 1-6
+    if (level == 'Primary') {
+      return List.generate(8, (i) => i + 1); // 1-8
+    }
+    if (level == 'Secondary') {
+      return List.generate(4, (i) => i + 1); // 1-4 (Form 1-4)
+    }
+    if (level == 'University') {
+      return List.generate(6, (i) => i + 1); // 1-6
+    }
     return [];
   }
 
@@ -53,9 +64,11 @@ class _SignupScreenState extends State<SignupScreen> {
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Sign up failed: ${e.toString()}")),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Sign up failed: ${e.toString()}")),
+          );
+        }
       }
     }
   }
@@ -77,7 +90,10 @@ class _SignupScreenState extends State<SignupScreen> {
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 32.0,
+              ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: 400),
                 child: Form(
@@ -95,7 +111,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
+                              color: AppColors.primary.withValues(alpha: 0.3),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -123,7 +139,9 @@ class _SignupScreenState extends State<SignupScreen> {
                         "Start your learning journey today",
                         style: TextStyle(
                           fontSize: 16,
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.7,
+                          ),
                           fontWeight: FontWeight.w400,
                         ),
                         textAlign: TextAlign.center,
@@ -141,16 +159,29 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
+                            borderSide: BorderSide(
+                              color:
+                                  theme
+                                      .inputDecorationTheme
+                                      .enabledBorder
+                                      ?.borderSide
+                                      .color ??
+                                  AppColors.textLight,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                           filled: true,
                           fillColor: theme.inputDecorationTheme.fillColor,
                         ),
-                        validator: (value) => value != null && value.isNotEmpty ? null : "Enter your name",
+                        validator: (value) => value != null && value.isNotEmpty
+                            ? null
+                            : "Enter your name",
                       ),
                       const SizedBox(height: 20),
                       // Email Field
@@ -166,16 +197,30 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
+                            borderSide: BorderSide(
+                              color:
+                                  theme
+                                      .inputDecorationTheme
+                                      .enabledBorder
+                                      ?.borderSide
+                                      .color ??
+                                  AppColors.textLight,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                           filled: true,
                           fillColor: theme.inputDecorationTheme.fillColor,
                         ),
-                        validator: (value) => value != null && value.contains('@') ? null : "Enter a valid email",
+                        validator: (value) =>
+                            value != null && value.contains('@')
+                            ? null
+                            : "Enter a valid email",
                       ),
                       const SizedBox(height: 20),
                       // Password Field
@@ -191,16 +236,29 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
+                            borderSide: BorderSide(
+                              color:
+                                  theme
+                                      .inputDecorationTheme
+                                      .enabledBorder
+                                      ?.borderSide
+                                      .color ??
+                                  AppColors.textLight,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                           filled: true,
                           fillColor: theme.inputDecorationTheme.fillColor,
                         ),
-                        validator: (value) => value != null && value.length >= 6 ? null : "Password must be at least 6 characters",
+                        validator: (value) => value != null && value.length >= 6
+                            ? null
+                            : "Password must be at least 6 characters",
                       ),
                       const SizedBox(height: 20),
                       // Role Selection
@@ -216,19 +274,54 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
+                            borderSide: BorderSide(
+                              color:
+                                  theme
+                                      .inputDecorationTheme
+                                      .enabledBorder
+                                      ?.borderSide
+                                      .color ??
+                                  AppColors.textLight,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                           filled: true,
                           fillColor: theme.inputDecorationTheme.fillColor,
                         ),
                         items: [
-                          DropdownMenuItem(value: 'student', child: Text("Student", style: TextStyle(color: theme.colorScheme.onSurface))),
-                          DropdownMenuItem(value: 'teacher', child: Text("Teacher", style: TextStyle(color: theme.colorScheme.onSurface))),
-                          DropdownMenuItem(value: 'parent', child: Text("Parent", style: TextStyle(color: theme.colorScheme.onSurface))),
+                          DropdownMenuItem(
+                            value: 'student',
+                            child: Text(
+                              "Student",
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'teacher',
+                            child: Text(
+                              "Teacher",
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'parent',
+                            child: Text(
+                              "Parent",
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -241,13 +334,19 @@ class _SignupScreenState extends State<SignupScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.info_outline, color: AppColors.primary, size: 20),
+                              Icon(
+                                Icons.info_outline,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -275,17 +374,36 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
+                              borderSide: BorderSide(
+                                color:
+                                    theme
+                                        .inputDecorationTheme
+                                        .enabledBorder
+                                        ?.borderSide
+                                        .color ??
+                                    AppColors.textLight,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
                             ),
                             filled: true,
                             fillColor: theme.inputDecorationTheme.fillColor,
                           ),
                           items: _educationLevels.map((level) {
-                            return DropdownMenuItem(value: level, child: Text(level, style: TextStyle(color: theme.colorScheme.onSurface)));
+                            return DropdownMenuItem(
+                              value: level,
+                              child: Text(
+                                level,
+                                style: TextStyle(
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                            );
                           }).toList(),
                           onChanged: (value) {
                             setState(() {
@@ -294,34 +412,59 @@ class _SignupScreenState extends State<SignupScreen> {
                             });
                           },
                         ),
-                        if (_educationLevel != null && _educationLevel != 'Other') ...[
+                        if (_educationLevel != null &&
+                            _educationLevel != 'Other') ...[
                           const SizedBox(height: 20),
                           // Grade/Year
                           DropdownButtonFormField<int>(
                             initialValue: _grade,
-                            style: TextStyle(color: theme.colorScheme.onSurface),
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
+                            ),
                             dropdownColor: theme.cardColor,
                             decoration: InputDecoration(
-                              labelText: _educationLevel == 'Secondary' ? "Form (Optional)" : "Grade/Year (Optional)",
+                              labelText: _educationLevel == 'Secondary'
+                                  ? "Form (Optional)"
+                                  : "Grade/Year (Optional)",
                               prefixIcon: const Icon(Icons.grade_outlined),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: theme.inputDecorationTheme.enabledBorder?.borderSide.color ?? AppColors.textLight),
+                                borderSide: BorderSide(
+                                  color:
+                                      theme
+                                          .inputDecorationTheme
+                                          .enabledBorder
+                                          ?.borderSide
+                                          .color ??
+                                      AppColors.textLight,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.primary, width: 2),
+                                borderSide: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
                               ),
                               filled: true,
                               fillColor: theme.inputDecorationTheme.fillColor,
                             ),
-                            items: _getGradesForLevel(_educationLevel).map((grade) {
+                            items: _getGradesForLevel(_educationLevel).map((
+                              grade,
+                            ) {
                               return DropdownMenuItem(
-                                value: grade, 
-                                child: Text(_educationLevel == 'Secondary' ? "Form $grade" : "Grade/Year $grade", style: TextStyle(color: theme.colorScheme.onSurface)),
+                                value: grade,
+                                child: Text(
+                                  _educationLevel == 'Secondary'
+                                      ? "Form $grade"
+                                      : "Grade/Year $grade",
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -341,7 +484,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
+                              color: AppColors.primary.withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             ),
@@ -385,7 +528,9 @@ class _SignupScreenState extends State<SignupScreen> {
                             child: Text(
                               "OR",
                               style: TextStyle(
-                                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -398,21 +543,34 @@ class _SignupScreenState extends State<SignupScreen> {
                       SizedBox(
                         height: 56,
                         child: OutlinedButton.icon(
-                          onPressed: isLoading ? null : () async {
-                            try {
-                              await Provider.of<AuthProvider>(context, listen: false).signInWithGoogle();
-                              if (mounted) {
-                                Navigator.of(context).popUntil((route) => route.isFirst);
-                              }
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("Google Sign In failed: ${e.toString()}"),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                          },
+                          onPressed: isLoading
+                              ? null
+                              : () async {
+                                  try {
+                                    await Provider.of<AuthProvider>(
+                                      context,
+                                      listen: false,
+                                    ).signInWithGoogle();
+                                    if (mounted) {
+                                      Navigator.of(
+                                        this.context,
+                                      ).popUntil((route) => route.isFirst);
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        this.context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            "Google Sign In failed: ${e.toString()}",
+                                          ),
+                                          backgroundColor: AppColors.error,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
                           icon: Container(
                             height: 20,
                             width: 20,
@@ -423,24 +581,25 @@ class _SignupScreenState extends State<SignupScreen> {
                               'assets/images/google_logo.png',
                               height: 20,
                               width: 20,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                height: 20,
-                                width: 20,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(2),
-                                  gradient: AppColors.googleGradient,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'G',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    height: 20,
+                                    width: 20,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(2),
+                                      gradient: AppColors.googleGradient,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'G',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
                             ),
                           ),
                           label: Text(
@@ -458,7 +617,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 1,
-                            shadowColor: Colors.black.withOpacity(0.1),
+                            shadowColor: Colors.black.withValues(alpha: 0.1),
                           ),
                         ),
                       ),
@@ -470,7 +629,11 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: RichText(
                             text: TextSpan(
                               text: "Already have an account? ",
-                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.7,
+                                ),
+                              ),
                               children: [
                                 TextSpan(
                                   text: "Sign In",

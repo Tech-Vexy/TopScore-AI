@@ -4,13 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:nutrient_flutter/nutrient_flutter.dart';
-import '../../constants/colors.dart';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:screenshot/screenshot.dart';
 import 'smart_scanner_screen.dart';
 import 'package:web/web.dart' as web;
 import 'dart:js_interop';
+import '../../constants/colors.dart';
 
 class PdfViewerScreen extends StatefulWidget {
   final String? url;
@@ -26,7 +25,10 @@ class PdfViewerScreen extends StatefulWidget {
     this.file,
     this.bytes,
     required this.title,
-  }) : assert(url != null || assetPath != null || file != null || bytes != null, 'One source must be provided');
+  }) : assert(
+         url != null || assetPath != null || file != null || bytes != null,
+         'One source must be provided',
+       );
 
   @override
   State<PdfViewerScreen> createState() => _PdfViewerScreenState();
@@ -47,7 +49,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   Future<void> _prepareDocument() async {
     try {
       String? path;
-      
+
       if (kIsWeb) {
         if (widget.bytes != null) {
           final blob = web.Blob([widget.bytes!.toJS].toJS);
@@ -63,7 +65,10 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           path = widget.file!.path;
         } else if (widget.assetPath != null) {
           final byteData = await rootBundle.load(widget.assetPath!);
-          final file = await _createTempFile(byteData.buffer.asUint8List(), 'asset_doc.pdf');
+          final file = await _createTempFile(
+            byteData.buffer.asUint8List(),
+            'asset_doc.pdf',
+          );
           path = file.path;
         } else if (widget.bytes != null) {
           final file = await _createTempFile(widget.bytes!, 'memory_doc.pdf');
@@ -71,7 +76,10 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         } else if (widget.url != null) {
           final response = await http.get(Uri.parse(widget.url!));
           if (response.statusCode == 200) {
-            final file = await _createTempFile(response.bodyBytes, 'downloaded_doc.pdf');
+            final file = await _createTempFile(
+              response.bodyBytes,
+              'downloaded_doc.pdf',
+            );
             path = file.path;
           } else {
             throw Exception('Failed to download PDF');
@@ -114,9 +122,11 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error capturing screen: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error capturing screen: $e')));
+      }
     }
   }
 
@@ -124,15 +134,18 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_errorMessage != null) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
-        body: Center(child: Text('Error: $_errorMessage', style: TextStyle(color: theme.colorScheme.onSurface))),
+        body: Center(
+          child: Text(
+            'Error: $_errorMessage',
+            style: TextStyle(color: theme.colorScheme.onSurface),
+          ),
+        ),
       );
     }
 
@@ -142,7 +155,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           widget.title,
           style: TextStyle(color: theme.colorScheme.onSurface),
         ),
-        backgroundColor: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
+        backgroundColor:
+            theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
         elevation: 1,
         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
         actions: [
@@ -152,6 +166,15 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             onPressed: _captureAndScan,
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _captureAndScan,
+        backgroundColor: AppColors.primary,
+        tooltip: 'Smart Scan Page',
+        child: const Icon(
+          Icons.center_focus_strong_rounded,
+          color: Colors.white,
+        ),
       ),
       body: Screenshot(
         controller: _screenshotController,

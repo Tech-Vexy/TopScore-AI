@@ -4,14 +4,13 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/resource_provider.dart';
 import '../../models/resource_model.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../constants/colors.dart';
 
 import '../../models/user_model.dart';
 import '../subscription/subscription_screen.dart';
 import 'ai_tutor_screen.dart';
 import '../tools/pdf_viewer_screen.dart';
-import '../tools/tools_screen.dart';
-import '../support/support_screen.dart';
 
 class ResourcesScreen extends StatefulWidget {
   const ResourcesScreen({super.key});
@@ -24,13 +23,13 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
   // Navigation State
   String _currentView = 'levels'; // levels, grades, types, list
   String _headerTitle = 'Learning Resources';
-  int _selectedIndex = 0; // Bottom Navigation Index
-  
+
   // Selection State
   String? _selectedLevelTitle;
   List<int> _currentGrades = [];
   int? _selectedGrade;
   String? _selectedType;
+  final TextEditingController _searchController = TextEditingController();
 
   // Data Definitions
   final Map<String, List<int>> _educationLevels = {
@@ -91,6 +90,14 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       } else if (_currentView == 'grades') {
         _currentView = 'levels';
         _headerTitle = 'Learning Resources';
+      } else if (_currentView == 'search') {
+        _currentView = 'levels';
+        _headerTitle = 'Learning Resources';
+        _searchController.clear();
+        Provider.of<ResourceProvider>(
+          context,
+          listen: false,
+        ).clearDriveSearch();
       }
     });
   }
@@ -107,8 +114,10 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     if (_selectedGrade != null) {
       // Note: We are fetching all resources for the grade and filtering by type in the UI
       // for now, as the provider might not support type filtering yet.
-      Provider.of<ResourceProvider>(context, listen: false)
-          .fetchResources(_selectedGrade!);
+      Provider.of<ResourceProvider>(
+        context,
+        listen: false,
+      ).fetchResources(_selectedGrade!);
     }
   }
 
@@ -116,15 +125,15 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     final Uri url = Uri.parse(urlString);
     // Use external application mode for Google Drive links to ensure they open correctly
     // in the Drive app or browser, rather than an in-app webview.
-    final mode = urlString.contains('drive.google.com') 
-        ? LaunchMode.externalApplication 
+    final mode = urlString.contains('drive.google.com')
+        ? LaunchMode.externalApplication
         : LaunchMode.platformDefault;
-        
+
     if (!await launchUrl(url, mode: mode)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch $urlString')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not launch $urlString')));
       }
     }
   }
@@ -164,134 +173,137 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).userModel;
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       endDrawer: _buildDrawer(user, theme),
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                setState(() {
-                  _selectedIndex = 1;
-                });
-              },
-              icon: const Icon(Icons.auto_awesome),
-              label: const Text('Ask AI'),
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            )
-          : null,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AiTutorScreen()),
+          );
+        },
+        icon: const Icon(Icons.auto_awesome),
+        label: const Text('Ask AI'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
-            child: _selectedIndex == 0
-                ? Column(
+            child: Column(
+              children: [
+                // Custom Header (replaces AppBar)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Custom Header (replaces AppBar)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            if (_currentView != 'levels')
-                              IconButton(
-                                icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
-                                onPressed: _navigateBack,
-                              )
-                            else
-                              const SizedBox(width: 48), // Spacer for alignment
+                      if (_currentView != 'levels')
+                        IconButton(
+                          icon: Icon(
+                            Icons.arrow_back,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          onPressed: _navigateBack,
+                        )
+                      else
+                        const SizedBox(width: 48), // Spacer for alignment
 
-                            Text(
-                              _headerTitle,
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 24,
-                              ),
-                            ),
-
-                            Builder(
-                              builder: (context) => IconButton(
-                                icon: Icon(Icons.menu, color: theme.colorScheme.onSurface),
-                                onPressed: () => Scaffold.of(context).openEndDrawer(),
-                              ),
-                            ),
-                          ],
+                      Text(
+                        _headerTitle,
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
                         ),
                       ),
 
-                      // Search Bar
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
+                      Builder(
+                        builder: (context) => IconButton(
+                          icon: Icon(
+                            Icons.menu,
+                            color: theme.colorScheme.onSurface,
                           ),
-                          child: TextField(
-                            style: TextStyle(color: theme.colorScheme.onSurface),
-                            decoration: InputDecoration(
-                              hintText: 'Search resources...',
-                              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
-                              prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withOpacity(0.6)),
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                            ),
-                          ),
+                          onPressed: () => Scaffold.of(context).openEndDrawer(),
                         ),
-                      ),
-
-                      // Main Content
-                      Expanded(
-                        child: _buildCurrentView(theme),
                       ),
                     ],
-                  )
-                : _selectedIndex == 1
-                    ? const AiTutorScreen()
-                    : _selectedIndex == 2
-                        ? const ToolsScreen()
-                        : const SupportScreen(),
+                  ),
+                ),
+
+                // Search Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 8.0,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
+                      decoration: InputDecoration(
+                        hintText: 'Search Google Drive & Resources...',
+                        hintStyle: TextStyle(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _navigateBack();
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 15,
+                          horizontal: 20,
+                        ),
+                      ),
+                      onSubmitted: (query) {
+                        if (query.isNotEmpty) {
+                          setState(() {
+                            _currentView = 'search';
+                            _headerTitle = 'Results for "$query"';
+                          });
+                          final authProvider = Provider.of<AuthProvider>(
+                            context,
+                            listen: false,
+                          );
+                          Provider.of<ResourceProvider>(
+                            context,
+                            listen: false,
+                          ).searchDriveFiles(query, authProvider.googleSignIn);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+
+                // Main Content
+                Expanded(child: _buildCurrentView(theme)),
+              ],
+            ),
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-            if (index == 0) {
-              _currentView = 'levels';
-              _headerTitle = 'Learning Resources';
-            }
-          });
-        },
-        backgroundColor: theme.cardColor,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: theme.colorScheme.onSurface.withOpacity(0.6),
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.school_rounded),
-            label: 'AI Tutor',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view_rounded),
-            label: 'Tools',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.support_agent_rounded),
-            label: 'Support',
-          ),
-        ],
       ),
     );
   }
@@ -324,7 +336,10 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           ),
           ListTile(
             leading: Icon(Icons.home_rounded, color: theme.iconTheme.color),
-            title: Text('Home', style: TextStyle(color: theme.colorScheme.onSurface)),
+            title: Text(
+              'Home',
+              style: TextStyle(color: theme.colorScheme.onSurface),
+            ),
             onTap: () {
               Navigator.pop(context);
               setState(() {
@@ -354,7 +369,10 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           ),
           ListTile(
             leading: Icon(Icons.person_rounded, color: theme.iconTheme.color),
-            title: Text('Profile', style: TextStyle(color: theme.colorScheme.onSurface)),
+            title: Text(
+              'Profile',
+              style: TextStyle(color: theme.colorScheme.onSurface),
+            ),
             onTap: () {
               Navigator.pop(context);
               // Navigate to profile
@@ -362,7 +380,10 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           ),
           ListTile(
             leading: Icon(Icons.settings_rounded, color: theme.iconTheme.color),
-            title: Text('Settings', style: TextStyle(color: theme.colorScheme.onSurface)),
+            title: Text(
+              'Settings',
+              style: TextStyle(color: theme.colorScheme.onSurface),
+            ),
             onTap: () {
               Navigator.pop(context);
               // Navigate to settings
@@ -371,7 +392,10 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           Divider(color: theme.dividerColor),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: AppColors.error),
-            title: const Text('Logout', style: TextStyle(color: AppColors.error)),
+            title: const Text(
+              'Logout',
+              style: TextStyle(color: AppColors.error),
+            ),
             onTap: () {
               Navigator.pop(context);
               Provider.of<AuthProvider>(context, listen: false).signOut();
@@ -392,6 +416,8 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         return _buildTypesView(theme);
       case 'list':
         return _buildResourceListView(theme);
+      case 'search':
+        return _buildSearchResultsView(theme);
       default:
         return _buildLevelsView(theme);
     }
@@ -416,7 +442,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -428,7 +454,10 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
               return Column(
                 children: [
                   ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
                     title: Text(
                       entry.key,
                       style: TextStyle(
@@ -437,19 +466,28 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                         color: theme.colorScheme.onSurface,
                       ),
                     ),
-                    trailing: Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+                    trailing: Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
                     onTap: () => _navigateToGrades(entry.key, entry.value),
                   ),
                   if (!isLast)
-                    Divider(height: 1, indent: 20, endIndent: 20, color: theme.dividerColor),
+                    Divider(
+                      height: 1,
+                      indent: 20,
+                      endIndent: 20,
+                      color: theme.dividerColor,
+                    ),
                 ],
               );
             }).toList(),
           ),
         ),
-        
+
         const SizedBox(height: 32),
-        
+
         Text(
           "Featured Resources",
           style: TextStyle(
@@ -466,7 +504,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -475,9 +513,19 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           child: Column(
             children: [
               _buildFeaturedItem("KCSE 2023 Biology Paper 1", theme),
-              Divider(height: 1, indent: 20, endIndent: 20, color: theme.dividerColor),
+              Divider(
+                height: 1,
+                indent: 20,
+                endIndent: 20,
+                color: theme.dividerColor,
+              ),
               _buildFeaturedItem("KCSE 2022 Mathematics Paper 2", theme),
-              Divider(height: 1, indent: 20, endIndent: 20, color: theme.dividerColor),
+              Divider(
+                height: 1,
+                indent: 20,
+                endIndent: 20,
+                color: theme.dividerColor,
+              ),
               _buildFeaturedItem("KCSE 2021 English Paper 3", theme),
             ],
           ),
@@ -497,7 +545,11 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           color: theme.colorScheme.onSurface,
         ),
       ),
-      trailing: Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+      trailing: Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+      ),
       onTap: () {
         // Handle featured item tap
       },
@@ -538,7 +590,8 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       children: _resourceTypes.entries.map((entry) {
         return _buildListItem(
           number: index++,
-          title: "${_getGradeLabel(_selectedGrade!).toUpperCase()} ${entry.key.toUpperCase()}",
+          title:
+              "${_getGradeLabel(_selectedGrade!).toUpperCase()} ${entry.key.toUpperCase()}",
           onTap: () => _navigateToResources(entry.key, entry.value),
           theme: theme,
         );
@@ -559,10 +612,16 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           // Simple mapping or loose matching for demo purposes
           // If the resource type in DB is 'notes', and selected is 'notes', match.
           // If DB has 'past_paper' and selected is 'exam', match.
-          if (_selectedType == 'exam' && (r.type == 'past_paper' || r.type == 'mock')) return true;
-          if (_selectedType == 'notes' && (r.type == 'notes' || r.type == 'topical')) return true;
+          if (_selectedType == 'exam' &&
+              (r.type == 'past_paper' || r.type == 'mock')) {
+            return true;
+          }
+          if (_selectedType == 'notes' &&
+              (r.type == 'notes' || r.type == 'topical')) {
+            return true;
+          }
           // Fallback: show all if type doesn't match strictly, or implement strict types in DB
-          return r.type.contains(_selectedType!) || _selectedType == 'scheme'; 
+          return r.type.contains(_selectedType!) || _selectedType == 'scheme';
         }).toList();
 
         if (resources.isEmpty) {
@@ -570,11 +629,17 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.folder_open, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+                Icon(
+                  Icons.folder_open,
+                  size: 64,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'No resources found for this category',
-                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
               ],
             ),
@@ -615,7 +680,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 24),
@@ -631,7 +696,11 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                   ),
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
             ],
           ),
         ),
@@ -651,7 +720,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       color: theme.cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
+        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.2)),
       ),
       child: InkWell(
         onTap: onTap,
@@ -694,7 +763,10 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
-          final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+          final user = Provider.of<AuthProvider>(
+            context,
+            listen: false,
+          ).userModel;
           if (user != null && user.isSubscribed) {
             if (resource.downloadUrl.toLowerCase().contains('.pdf')) {
               Navigator.push(
@@ -722,7 +794,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: AppColors.googleBlue.withOpacity(0.1),
+                  color: AppColors.googleBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -748,10 +820,16 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                       children: [
                         _buildTag(resource.subject, AppColors.googleBlue),
                         const SizedBox(width: 8),
-                        _buildTag(_getGradeLabel(resource.grade), AppColors.googleRed),
+                        _buildTag(
+                          _getGradeLabel(resource.grade),
+                          AppColors.googleRed,
+                        ),
                         if (resource.year != null) ...[
                           const SizedBox(width: 8),
-                          _buildTag('${resource.year}', theme.colorScheme.onSurface.withOpacity(0.6)),
+                          _buildTag(
+                            '${resource.year}',
+                            theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
                         ],
                       ],
                     ),
@@ -763,7 +841,9 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                   final isSubscribed = auth.userModel?.isSubscribed ?? false;
                   return Icon(
                     isSubscribed ? Icons.download_rounded : Icons.lock_rounded,
-                    color: isSubscribed ? AppColors.googleGreen : AppColors.googleRed,
+                    color: isSubscribed
+                        ? AppColors.googleGreen
+                        : AppColors.googleRed,
                   );
                 },
               ),
@@ -774,11 +854,107 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     );
   }
 
+  Widget _buildSearchResultsView(ThemeData theme) {
+    return Consumer<ResourceProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (provider.driveSearchResults.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 64,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No results found',
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              "Google Drive Results",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...provider.driveSearchResults.map((file) {
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                color: theme.cardColor,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: theme.dividerColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.googleBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const FaIcon(
+                      FontAwesomeIcons.googleDrive,
+                      color: AppColors.googleBlue,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    file.name ?? 'Untitled',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  subtitle: Text(
+                    file.mimeType ?? 'Unknown type',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  trailing: const Icon(Icons.open_in_new, size: 16),
+                  onTap: () {
+                    if (file.webViewLink != null) {
+                      _launchUrl(file.webViewLink!);
+                    }
+                  },
+                ),
+              );
+            }),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildTag(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(

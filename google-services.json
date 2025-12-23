@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "974459699084",
+    "project_id": "elimisha-90787",
+    "storage_bucket": "elimisha-90787.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:974459699084:android:26d53a933598930a68a0a9",
+        "android_client_info": {
+          "package_name": "com.elimisha.elimisha"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "974459699084-3upotvccrivu1qcvneft7fi0op2ljnte.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_t14ixbvACi7Bk2wiEQ6lWOG7MFd61iI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "974459699084-3upotvccrivu1qcvneft7fi0op2ljnte.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "974459699084-db6lj666h0rr2khucbv3ig53t0jlloqp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.elimisha.elimisha"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

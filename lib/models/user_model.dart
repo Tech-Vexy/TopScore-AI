@@ -11,6 +11,7 @@ class UserModel {
   final List<String>? subjects;
   final bool isSubscribed;
   final DateTime? subscriptionExpiry;
+  final String? preferredLanguage;
 
   UserModel({
     required this.uid,
@@ -23,6 +24,7 @@ class UserModel {
     this.subjects,
     this.isSubscribed = false,
     this.subscriptionExpiry,
+    this.preferredLanguage,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> data, String uid) {
@@ -34,11 +36,14 @@ class UserModel {
       role: data['role'],
       educationLevel: data['educationLevel'],
       grade: data['grade'],
-      subjects: data['subjects'] != null ? List<String>.from(data['subjects']) : null,
-      isSubscribed: data['isSubscribed'] ?? false,
-      subscriptionExpiry: data['subscriptionExpiry'] != null 
-          ? (data['subscriptionExpiry'] as Timestamp).toDate() 
+      subjects: data['subjects'] != null
+          ? List<String>.from(data['subjects'])
           : null,
+      isSubscribed: data['isSubscribed'] ?? false,
+      subscriptionExpiry: data['subscriptionExpiry'] != null
+          ? (data['subscriptionExpiry'] as Timestamp).toDate()
+          : null,
+      preferredLanguage: data['preferred_language'],
     );
   }
 
@@ -53,11 +58,12 @@ class UserModel {
       'subjects': subjects,
       'isSubscribed': isSubscribed,
       'subscriptionExpiry': subscriptionExpiry,
+      'preferred_language': preferredLanguage,
     };
   }
 
   @override
   String toString() {
-    return 'UserModel(uid: $uid, email: $email, displayName: $displayName, role: $role)';
+    return 'UserModel(uid: $uid, email: $email, displayName: $displayName, role: $role, lang: $preferredLanguage)';
   }
 }

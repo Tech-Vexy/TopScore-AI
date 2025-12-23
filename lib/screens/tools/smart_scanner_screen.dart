@@ -1,19 +1,15 @@
-import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/colors.dart';
 import '../../services/ai_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'camera_screen.dart';
 
-enum ScannerMode {
-  homework,
-  text,
-  diagram,
-}
+enum ScannerMode { homework, text, diagram }
 
 class SmartScannerScreen extends StatefulWidget {
   final Uint8List? initialImage;
@@ -26,8 +22,9 @@ class SmartScannerScreen extends StatefulWidget {
 class _SmartScannerScreenState extends State<SmartScannerScreen> {
   final ImagePicker _picker = ImagePicker();
   final AIService _aiService = AIService();
-  
-  XFile? _imageFile;
+
+  XFile? _pickedFile;
+
   Uint8List? _imageBytes;
   String? _result;
   bool _isAnalyzing = false;
@@ -51,15 +48,17 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
       if (pickedFile != null) {
         final bytes = await pickedFile.readAsBytes();
         setState(() {
-          _imageFile = pickedFile;
+          _pickedFile = pickedFile;
           _imageBytes = bytes;
           _result = null;
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error opening camera: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error opening camera: $e')));
+      }
     }
   }
 
@@ -75,15 +74,17 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
       if (pickedFile != null) {
         final bytes = await pickedFile.readAsBytes();
         setState(() {
-          _imageFile = pickedFile;
+          _pickedFile = pickedFile;
           _imageBytes = bytes;
           _result = null;
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
+      }
     }
   }
 
@@ -96,16 +97,37 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
     });
 
     try {
+      // 1. Attempt to extract text using ML Kit (for all modes)
+      String extractedText = "";
+      if (!kIsWeb && _pickedFile != null) {
+        try {
+          final inputImage = InputImage.fromFilePath(_pickedFile!.path);
+          final textRecognizer = TextRecognizer(
+            script: TextRecognitionScript.latin,
+          );
+          final RecognizedText recognizedText = await textRecognizer
+              .processImage(inputImage);
+          await textRecognizer.close();
+          extractedText = recognizedText.text;
+        } catch (e) {
+          debugPrint("ML Kit OCR error: $e");
+        }
+      }
+
+      // 2. Handle Text Mode (Return generic OCR result)
+      if (_selectedMode == ScannerMode.text) {
+        if (mounted) {
+          setState(() {
+            _result = extractedText.isEmpty ? "No text found." : extractedText;
+            _isAnalyzing = false;
+          });
+        }
+        return;
+      }
+
+      // 3. Handle Homework/Diagram Mode (AI analysis)
       String prompt;
       switch (_selectedMode) {
-        case ScannerMode.text:
-          prompt = """
-Extract all the text from this image exactly as it appears. 
-Do not summarize or solve. 
-Preserve the formatting where possible.
-If there is no text, say "No text found".
-""";
-          break;
         case ScannerMode.diagram:
           prompt = """
 Analyze this diagram or image.
@@ -126,6 +148,19 @@ Use simple, encouraging language.
           break;
       }
 
+      // Append extracted text to prompt if available
+      if (extractedText.isNotEmpty) {
+        prompt +=
+            """
+
+I have also extracted the following text from the image for your reference:
+===
+$extractedText
+===
+Please use this text to ensure accuracy if the image text is difficult to read.
+""";
+      }
+
       final response = await _aiService.analyzeImage(_imageBytes!, prompt);
 
       if (mounted) {
@@ -140,16 +175,15 @@ Use simple, encouraging language.
           _result = "Error analyzing image. Please try again.";
           _isAnalyzing = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
   void _clearImage() {
     setState(() {
-      _imageFile = null;
       _imageBytes = null;
       _result = null;
     });
@@ -161,8 +195,12 @@ Use simple, encouraging language.
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Smart Scanner', style: TextStyle(color: theme.colorScheme.onSurface)),
-        backgroundColor: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
+        title: Text(
+          'Smart Scanner',
+          style: TextStyle(color: theme.colorScheme.onSurface),
+        ),
+        backgroundColor:
+            theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
         elevation: 1,
         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
         actions: [
@@ -184,7 +222,9 @@ Use simple, encouraging language.
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.dividerColor.withOpacity(0.2)),
+                border: Border.all(
+                  color: theme.dividerColor.withValues(alpha: 0.2),
+                ),
               ),
               clipBehavior: Clip.antiAlias,
               child: _imageBytes != null
@@ -196,7 +236,9 @@ Use simple, encouraging language.
                           Container(
                             color: Colors.black45,
                             child: const Center(
-                              child: CircularProgressIndicator(color: Colors.white),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                       ],
@@ -204,12 +246,22 @@ Use simple, encouraging language.
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_a_photo_outlined, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                        Icon(
+                          Icons.add_a_photo_outlined,
+                          size: 64,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'Take a photo of your homework\nor upload an image',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 24),
                         Row(
@@ -231,7 +283,9 @@ Use simple, encouraging language.
                               label: const Text('Gallery'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.googleBlue,
-                                side: const BorderSide(color: AppColors.googleBlue),
+                                side: const BorderSide(
+                                  color: AppColors.googleBlue,
+                                ),
                               ),
                             ),
                           ],
@@ -272,22 +326,22 @@ Use simple, encouraging language.
                     });
                   },
                   style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                      (Set<MaterialState> states) {
-                        if (states.contains(MaterialState.selected)) {
-                          return AppColors.googleBlue.withOpacity(0.2);
-                        }
-                        return Colors.transparent;
-                      },
-                    ),
-                    foregroundColor: MaterialStateProperty.resolveWith<Color>(
-                      (Set<MaterialState> states) {
-                        if (states.contains(MaterialState.selected)) {
-                          return AppColors.googleBlue;
-                        }
-                        return theme.colorScheme.onSurface;
-                      },
-                    ),
+                    backgroundColor: WidgetStateProperty.resolveWith<Color>((
+                      Set<WidgetState> states,
+                    ) {
+                      if (states.contains(WidgetState.selected)) {
+                        return AppColors.googleBlue.withValues(alpha: 0.2);
+                      }
+                      return Colors.transparent;
+                    }),
+                    foregroundColor: WidgetStateProperty.resolveWith<Color>((
+                      Set<WidgetState> states,
+                    ) {
+                      if (states.contains(WidgetState.selected)) {
+                        return AppColors.googleBlue;
+                      }
+                      return theme.colorScheme.onSurface;
+                    }),
                   ),
                 ),
               ),
@@ -296,13 +350,24 @@ Use simple, encouraging language.
             if (_imageBytes != null && !_isAnalyzing && _result == null)
               ElevatedButton.icon(
                 onPressed: _analyzeImage,
-                icon: Icon(_selectedMode == ScannerMode.text ? Icons.copy_all : Icons.auto_awesome),
-                label: Text(_selectedMode == ScannerMode.text ? 'Extract Text' : 'Analyze with AI'),
+                icon: Icon(
+                  _selectedMode == ScannerMode.text
+                      ? Icons.copy_all
+                      : Icons.auto_awesome,
+                ),
+                label: Text(
+                  _selectedMode == ScannerMode.text
+                      ? 'Extract Text'
+                      : 'Analyze with AI',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.googleBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textStyle: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
 
@@ -326,7 +391,9 @@ Use simple, encouraging language.
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: _result!));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Text copied to clipboard')),
+                          const SnackBar(
+                            content: Text('Text copied to clipboard'),
+                          ),
                         );
                       },
                       tooltip: 'Copy Text',
@@ -339,10 +406,12 @@ Use simple, encouraging language.
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.dividerColor.withOpacity(0.2)),
+                  border: Border.all(
+                    color: theme.dividerColor.withValues(alpha: 0.2),
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -360,11 +429,24 @@ Use simple, encouraging language.
                     : MarkdownBody(
                         data: _result!,
                         styleSheet: MarkdownStyleSheet(
-                          p: TextStyle(fontSize: 16, height: 1.5, color: theme.colorScheme.onSurface),
-                          h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
-                          h2: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                          p: TextStyle(
+                            fontSize: 16,
+                            height: 1.5,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          h1: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          h2: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
                           code: GoogleFonts.firaCode(
-                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHighest,
                             color: theme.colorScheme.onSurface,
                           ),
                         ),

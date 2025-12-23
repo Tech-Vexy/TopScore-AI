@@ -65,19 +65,23 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (response['success']) {
         // 2. Simulate waiting for user to enter PIN and callback
         await Future.delayed(const Duration(seconds: 3));
-        
+
         // 3. Update User Subscription (In real app, this happens via webhook)
         if (mounted) {
-          await Provider.of<AuthProvider>(context, listen: false)
-              .updateSubscription(plan['duration']);
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Payment Successful! Subscription activated.'),
-              backgroundColor: AppColors.googleGreen,
-            ),
-          );
-          Navigator.pop(context);
+          await Provider.of<AuthProvider>(
+            context,
+            listen: false,
+          ).updateSubscription(plan['duration']);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment Successful! Subscription activated.'),
+                backgroundColor: AppColors.googleGreen,
+              ),
+            );
+            Navigator.pop(context);
+          }
         }
       } else {
         throw Exception(response['message']);
@@ -106,8 +110,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Upgrade to Premium', style: TextStyle(color: theme.colorScheme.onSurface)),
-        backgroundColor: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
+        title: Text(
+          'Upgrade to Premium',
+          style: TextStyle(color: theme.colorScheme.onSurface),
+        ),
+        backgroundColor:
+            theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
         elevation: 0,
         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
       ),
@@ -129,11 +137,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               'Get access to all revision materials, exams, and schemes of work.',
               style: TextStyle(
                 fontSize: 16,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Phone Number Input
             TextField(
               controller: _phoneController,
@@ -142,14 +150,22 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               decoration: InputDecoration(
                 labelText: 'M-Pesa Phone Number',
                 hintText: '0712345678',
-                hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
-                prefixIcon: const Icon(Icons.phone_android, color: AppColors.googleGreen),
+                hintStyle: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                prefixIcon: const Icon(
+                  Icons.phone_android,
+                  color: AppColors.googleGreen,
+                ),
                 border: const OutlineInputBorder(),
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(color: theme.dividerColor),
                 ),
                 focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.googleGreen, width: 2),
+                  borderSide: BorderSide(
+                    color: AppColors.googleGreen,
+                    width: 2,
+                  ),
                 ),
               ),
             ),
@@ -170,7 +186,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       color: theme.cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.googleBlue.withOpacity(0.2)),
+        side: BorderSide(color: AppColors.googleBlue.withValues(alpha: 0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -201,7 +217,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             const SizedBox(height: 8),
             Text(
               plan['description'],
-              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -225,7 +243,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text('Pay with M-Pesa', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    : const Text(
+                        'Pay with M-Pesa',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],

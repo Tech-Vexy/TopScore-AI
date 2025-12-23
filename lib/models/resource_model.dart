@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ResourceModel {
   final String id;
   final String title;
@@ -9,6 +11,8 @@ class ResourceModel {
   final String downloadUrl;
   final int fileSize;
   final bool premium;
+  final String? source;
+  final DateTime? createdAt;
 
   ResourceModel({
     required this.id,
@@ -21,6 +25,8 @@ class ResourceModel {
     required this.downloadUrl,
     required this.fileSize,
     required this.premium,
+    this.source,
+    this.createdAt,
   });
 
   factory ResourceModel.fromMap(Map<String, dynamic> data, String id) {
@@ -35,6 +41,10 @@ class ResourceModel {
       downloadUrl: data['downloadUrl'] ?? '',
       fileSize: data['fileSize'] ?? 0,
       premium: data['premium'] ?? false,
+      source: data['source'],
+      createdAt: data['createdAt'] is Timestamp
+          ? (data['createdAt'] as Timestamp).toDate()
+          : null,
     );
   }
 }

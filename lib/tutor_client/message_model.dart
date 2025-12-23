@@ -5,6 +5,8 @@ class ChatMessage {
   final DateTime timestamp;
   final String? audioUrl;
   final String? imageUrl;
+  final int?
+  feedback; // 1 for thumbs up, -1 for thumbs down, null for no feedback
 
   ChatMessage({
     required this.id,
@@ -13,5 +15,6 @@ class ChatMessage {
     required this.timestamp,
     this.audioUrl,
     this.imageUrl,
+    this.feedback,
   });
 }

@@ -3,14 +3,22 @@ import 'login_screen.dart';
 import 'signup_screen.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
+  final bool initialIsLogin;
+
+  const AuthScreen({super.key, this.initialIsLogin = true});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  bool _isLogin = true;
+  late bool _isLogin;
+
+  @override
+  void initState() {
+    super.initState();
+    _isLogin = widget.initialIsLogin;
+  }
 
   void _toggleAuth() {
     setState(() {

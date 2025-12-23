@@ -68,7 +68,10 @@ class _SupportScreenState extends State<SupportScreen> {
                       if (formKey.currentState?.validate() ?? false) {
                         setState(() => isLoading = true);
                         try {
-                          final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+                          final user = Provider.of<AuthProvider>(
+                            context,
+                            listen: false,
+                          ).userModel;
                           if (user != null) {
                             final ticket = SupportTicket(
                               id: '', // Firestore generates ID
@@ -79,8 +82,8 @@ class _SupportScreenState extends State<SupportScreen> {
                             );
                             await _firestoreService.createSupportTicket(ticket);
                             if (mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              Navigator.pop(this.context);
+                              ScaffoldMessenger.of(this.context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Ticket created successfully'),
                                   backgroundColor: AppColors.googleGreen,
@@ -90,7 +93,7 @@ class _SupportScreenState extends State<SupportScreen> {
                           }
                         } catch (e) {
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ScaffoldMessenger.of(this.context).showSnackBar(
                               SnackBar(
                                 content: Text('Error creating ticket: $e'),
                                 backgroundColor: AppColors.googleRed,
@@ -125,7 +128,12 @@ class _SupportScreenState extends State<SupportScreen> {
     final theme = Theme.of(context);
 
     if (user == null) {
-      return Center(child: Text('Please log in to view support tickets', style: TextStyle(color: theme.colorScheme.onSurface)));
+      return Center(
+        child: Text(
+          'Please log in to view support tickets',
+          style: TextStyle(color: theme.colorScheme.onSurface),
+        ),
+      );
     }
 
     return Scaffold(
@@ -155,10 +163,7 @@ class _SupportScreenState extends State<SupportScreen> {
                     SizedBox(height: 4),
                     Text(
                       'We are here to help',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 14),
                     ),
                   ],
                 ),
@@ -174,7 +179,7 @@ class _SupportScreenState extends State<SupportScreen> {
               ],
             ),
           ),
-          
+
           // Ticket List
           Expanded(
             child: StreamBuilder<List<SupportTicket>>(
@@ -186,22 +191,32 @@ class _SupportScreenState extends State<SupportScreen> {
 
                 if (snapshot.hasError) {
                   if (snapshot.error.toString().contains('permission-denied')) {
-                     return Center(child: Text('Access denied. Please contact support.', style: TextStyle(color: theme.colorScheme.onSurface)));
+                    return Center(
+                      child: Text(
+                        'Access denied. Please contact support.',
+                        style: TextStyle(color: theme.colorScheme.onSurface),
+                      ),
+                    );
                   }
-                  if (snapshot.error.toString().contains('unavailable') || 
+                  if (snapshot.error.toString().contains('unavailable') ||
                       snapshot.error.toString().contains('BLOCKED_BY_CLIENT')) {
-                     return Center(
-                       child: Padding(
-                         padding: const EdgeInsets.all(16.0),
-                         child: Text(
-                           'Connection blocked. Please disable ad blockers or check your internet connection.',
-                           textAlign: TextAlign.center,
-                           style: TextStyle(color: theme.colorScheme.onSurface),
-                         ),
-                       ),
-                     );
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'Connection blocked. Please disable ad blockers or check your internet connection.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: theme.colorScheme.onSurface),
+                        ),
+                      ),
+                    );
                   }
-                  return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: theme.colorScheme.onSurface)));
+                  return Center(
+                    child: Text(
+                      'Error: ${snapshot.error}',
+                      style: TextStyle(color: theme.colorScheme.onSurface),
+                    ),
+                  );
                 }
 
                 final tickets = snapshot.data ?? [];
@@ -211,11 +226,22 @@ class _SupportScreenState extends State<SupportScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.support_agent, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+                        Icon(
+                          Icons.support_agent,
+                          size: 64,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.3,
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No support tickets yet',
-                          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 16),
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                            fontSize: 16,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         TextButton(
@@ -238,14 +264,21 @@ class _SupportScreenState extends State<SupportScreen> {
                       color: theme.cardColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
+                        side: BorderSide(
+                          color: theme.dividerColor.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: ExpansionTile(
-                        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        tilePadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         leading: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(ticket.status).withOpacity(0.1),
+                            color: _getStatusColor(
+                              ticket.status,
+                            ).withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -267,14 +300,26 @@ class _SupportScreenState extends State<SupportScreen> {
                           children: [
                             const SizedBox(height: 4),
                             Text(
-                              DateFormat('MMM d, y • h:mm a').format(ticket.createdAt),
-                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
+                              DateFormat(
+                                'MMM d, y • h:mm a',
+                              ).format(ticket.createdAt),
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
+                                fontSize: 12,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: _getStatusColor(ticket.status).withOpacity(0.1),
+                                color: _getStatusColor(
+                                  ticket.status,
+                                ).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -298,19 +343,29 @@ class _SupportScreenState extends State<SupportScreen> {
                                   'Your Message:',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
                                     fontSize: 12,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(ticket.message, style: TextStyle(color: theme.colorScheme.onSurface)),
+                                Text(
+                                  ticket.message,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
                                 if (ticket.reply != null) ...[
                                   const SizedBox(height: 16),
                                   Divider(color: theme.dividerColor),
                                   const SizedBox(height: 8),
                                   const Row(
                                     children: [
-                                      Icon(Icons.support_agent, size: 16, color: AppColors.primary),
+                                      Icon(
+                                        Icons.support_agent,
+                                        size: 16,
+                                        color: AppColors.primary,
+                                      ),
                                       SizedBox(width: 8),
                                       Text(
                                         'Support Reply:',
@@ -323,7 +378,12 @@ class _SupportScreenState extends State<SupportScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(ticket.reply!, style: TextStyle(color: theme.colorScheme.onSurface)),
+                                  Text(
+                                    ticket.reply!,
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
                                 ],
                               ],
                             ),

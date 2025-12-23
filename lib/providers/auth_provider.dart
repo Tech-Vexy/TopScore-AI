@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
@@ -28,7 +29,7 @@ class AuthProvider with ChangeNotifier {
     try {
       // Listen to auth state changes
       _authService.authStateChanges.listen((User? user) async {
-        print("Auth state changed: ${user?.uid}");
+        debugPrint("Auth state changed: ${user?.uid}");
         if (user != null) {
           await _fetchUserData(user.uid);
           if (_userModel == null) {
@@ -49,7 +50,7 @@ class AuthProvider with ChangeNotifier {
         }
       }
     } catch (e) {
-      print("Error during auth initialization: $e");
+      debugPrint("Error during auth initialization: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -58,11 +59,11 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _fetchUserData(String uid) async {
     try {
-      print("Fetching user data for UID: $uid");
+      debugPrint("Fetching user data for UID: $uid");
       _userModel = await _firestoreService.getUser(uid);
-      print("User data fetched: ${_userModel?.toString()}");
+      debugPrint("User data fetched: ${_userModel?.toString()}");
     } catch (e) {
-      print("Error fetching user data: $e");
+      debugPrint("Error fetching user data: $e");
     }
   }
 
@@ -71,7 +72,10 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      UserCredential? cred = await _authService.signInWithEmail(email, password);
+      UserCredential? cred = await _authService.signInWithEmail(
+        email,
+        password,
+      );
       if (cred != null && cred.user != null) {
         await _fetchUserData(cred.user!.uid);
       }
@@ -88,22 +92,22 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print("Starting Google Sign In...");
+      debugPrint("Starting Google Sign In...");
       User? user = await _authService.signInWithGoogle();
-      print("Google Sign In result: ${user?.uid}");
-      
+      debugPrint("Google Sign In result: ${user?.uid}");
+
       if (user != null) {
         await _fetchUserData(user.uid);
-        
+
         if (_userModel == null) {
-          print("User model is null, needs role selection");
+          debugPrint("User model is null, needs role selection");
           _needsRoleSelection = true;
         } else {
-          print("User model found: ${_userModel?.role}");
+          debugPrint("User model found: ${_userModel?.role}");
         }
       }
     } catch (e) {
-      print("Google Sign In Error: $e");
+      debugPrint("Google Sign In Error: $e");
       rethrow;
     } finally {
       _isLoading = false;
@@ -114,35 +118,46 @@ class AuthProvider with ChangeNotifier {
   Future<void> completeGoogleSignup(String role) async {
     _isLoading = true;
     notifyListeners();
-    
+
     try {
       User? user = _authService.currentUser;
       if (user != null) {
-          UserModel newUser = UserModel(
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            role: role,
-          );
-          await _firestoreService.createUser(newUser);
-          _userModel = newUser;
-          _needsRoleSelection = false;
+        UserModel newUser = UserModel(
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          role: role,
+        );
+        await _firestoreService.createUser(newUser);
+        _userModel = newUser;
+        _needsRoleSelection = false;
       }
     } catch (e) {
-      print("Error completing signup: $e");
+      debugPrint("Error completing signup: $e");
       rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
-  Future<void> signUp(String email, String password, String role, String name, {String? educationLevel, int? grade}) async {
+
+  Future<void> signUp(
+    String email,
+    String password,
+    String role,
+    String name, {
+    String? educationLevel,
+    int? grade,
+  }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      UserCredential? cred = await _authService.signUpWithEmail(email, password);
+      UserCredential? cred = await _authService.signUpWithEmail(
+        email,
+        password,
+      );
       if (cred != null && cred.user != null) {
         UserModel newUser = UserModel(
           uid: cred.user!.uid,
@@ -169,12 +184,23 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteAccount() async {
+    try {
+      await _authService.deleteAccount();
+      _userModel = null;
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error deleting account: $e");
+      rethrow;
+    }
+  }
+
   Future<void> updateSubscription(int days) async {
     if (_userModel == null) return;
 
     try {
       final expiryDate = DateTime.now().add(Duration(days: days));
-      
+
       await _firestoreService.updateUserProfile(_userModel!.uid, {
         'isSubscribed': true,
         'subscriptionExpiry': Timestamp.fromDate(expiryDate),
@@ -183,7 +209,24 @@ class AuthProvider with ChangeNotifier {
       // Refresh user data
       await _fetchUserData(_userModel!.uid);
     } catch (e) {
-      print("Error updating subscription: $e");
+      debugPrint("Error updating subscription: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> updateLanguage(String languageCode) async {
+    if (_userModel == null) return;
+
+    try {
+      await _firestoreService.updateUserProfile(_userModel!.uid, {
+        'preferred_language': languageCode,
+      });
+
+      // Refresh user data
+      await _fetchUserData(_userModel!.uid);
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error updating language: $e");
       rethrow;
     }
   }

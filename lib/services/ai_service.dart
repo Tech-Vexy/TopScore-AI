@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/status.dart' as status;
-import 'firestore_service.dart';
 
 // Data models for structured responses
 class AIResponse {
@@ -51,11 +49,10 @@ class VisualExample {
 
 class AIService {
   // Use 10.0.2.2 for Android emulator, localhost for iOS/Web
-  // static const String _wsUrl = 'ws://10.0.2.2:8080/ws'; 
+  // static const String _wsUrl = 'ws://10.0.2.2:8080/ws';
   static const String _wsUrl = 'ws://localhost:8080/ws';
-  
+
   WebSocketChannel? _channel;
-  final FirestoreService _firestoreService = FirestoreService();
 
   AIService() {
     _connect();
@@ -65,11 +62,16 @@ class AIService {
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
     } catch (e) {
-      print('Error connecting to WebSocket: $e');
+      debugPrint('Error connecting to WebSocket: $e');
     }
   }
 
-  Future<AIResponse> sendMessage(String message, {Map<String, dynamic>? context, Uint8List? attachmentBytes, String? mimeType}) async {
+  Future<AIResponse> sendMessage(
+    String message, {
+    Map<String, dynamic>? context,
+    Uint8List? attachmentBytes,
+    String? mimeType,
+  }) async {
     try {
       if (_channel == null) _connect();
 
@@ -90,16 +92,18 @@ class AIService {
       _channel!.sink.add(jsonEncode(payload));
 
       // Wait for the response from the stream
-      // Note: This assumes a simple request-response pattern. 
+      // Note: This assumes a simple request-response pattern.
       // For a robust app, you'd want a message ID to correlate responses.
       final responsePayload = await _channel!.stream.first;
       final data = jsonDecode(responsePayload);
-      
-      final responseText = data['text'] ?? "I'm having trouble thinking right now. Can you ask again?";
-      
+
+      final responseText =
+          data['text'] ??
+          "I'm having trouble thinking right now. Can you ask again?";
+
       return _parseResponseWithVisualization(responseText);
     } catch (e) {
-      print('Error in sendMessage: $e');
+      debugPrint('Error in sendMessage: $e');
       // Reconnect on error
       _connect();
       return AIResponse(
@@ -110,11 +114,13 @@ class AIService {
 
   // Request specific visualization for a concept
   Future<VisualExample> requestVisualization(
-    String concept, 
-    {required String subject, required int grade}
-  ) async {
+    String concept, {
+    required String subject,
+    required int grade,
+  }) async {
     try {
-      final prompt = """
+      final prompt =
+          """
 Create a visual example for: $concept
 Subject: $subject, Grade: $grade
 
@@ -127,12 +133,12 @@ STEPS:
 3. [Third step]
 DATA: [Any numbers, values, or key facts in simple format]
 """;
-      
+
       // Reuse sendMessage for simplicity
       final response = await sendMessage(prompt);
       return _parseVisualExample(response.text, concept);
     } catch (e) {
-      print('Error in requestVisualization: $e');
+      debugPrint('Error in requestVisualization: $e');
       return VisualExample(
         title: concept,
         description: "Let's explore this concept together!",
@@ -142,11 +148,13 @@ DATA: [Any numbers, values, or key facts in simple format]
 
   // Get examples with diagrams
   Future<List<VisualExample>> getExamplesWithDiagrams(
-    String topic,
-    {required int count, required String subject}
-  ) async {
+    String topic, {
+    required int count,
+    required String subject,
+  }) async {
     try {
-      final prompt = """
+      final prompt =
+          """
 Give me $count visual examples for: $topic (Subject: $subject)
 
 For each example, provide:
@@ -161,14 +169,18 @@ Make it fun and easy to visualize!
       final response = await sendMessage(prompt);
       return _parseMultipleExamples(response.text);
     } catch (e) {
-      print('Error in getExamplesWithDiagrams: $e');
+      debugPrint('Error in getExamplesWithDiagrams: $e');
       return [];
     }
   }
 
   Future<String> analyzeImage(Uint8List imageBytes, String prompt) async {
     try {
-      final response = await sendMessage(prompt, attachmentBytes: imageBytes, mimeType: 'image/jpeg');
+      final response = await sendMessage(
+        prompt,
+        attachmentBytes: imageBytes,
+        mimeType: 'image/jpeg',
+      );
       return response.text;
     } catch (e) {
       return "Error analyzing image: $e";
@@ -191,7 +203,11 @@ Make it fun and easy to visualize!
     if (responseText.contains('[STEPS:')) {
       final match = RegExp(r'\[STEPS: ([^\]]+)\]').firstMatch(responseText);
       if (match != null) {
-        final steps = match.group(1)!.split(RegExp(r'\d+\.')).where((s) => s.trim().isNotEmpty).toList();
+        final steps = match
+            .group(1)!
+            .split(RegExp(r'\d+\.'))
+            .where((s) => s.trim().isNotEmpty)
+            .toList();
         return AIResponse(
           text: responseText.replaceAll(match.group(0)!, '').trim(),
           visualizationType: VisualizationType.stepByStep,
@@ -228,16 +244,19 @@ Make it fun and easy to visualize!
   VisualExample _parseVisualExample(String responseText, String fallbackTitle) {
     final titleMatch = RegExp(r'TITLE: (.+)').firstMatch(responseText);
     final descMatch = RegExp(r'DESCRIPTION: (.+)').firstMatch(responseText);
-    final stepsMatch = RegExp(r'STEPS:([\s\S]+?)(?=DATA:|$)').firstMatch(responseText);
-    
+    final stepsMatch = RegExp(
+      r'STEPS:([\s\S]+?)(?=DATA:|$)',
+    ).firstMatch(responseText);
+
     final steps = <String>[];
     if (stepsMatch != null) {
       final stepsText = stepsMatch.group(1)!;
       steps.addAll(
-        stepsText.split('\n')
-          .where((line) => line.trim().isNotEmpty)
-          .map((line) => line.replaceAll(RegExp(r'^\d+\.\s*'), '').trim())
-          .toList()
+        stepsText
+            .split('\n')
+            .where((line) => line.trim().isNotEmpty)
+            .map((line) => line.replaceAll(RegExp(r'^\d+\.\s*'), '').trim())
+            .toList(),
       );
     }
 
@@ -251,24 +270,28 @@ Make it fun and easy to visualize!
   List<VisualExample> _parseMultipleExamples(String responseText) {
     final examples = <VisualExample>[];
     final sections = responseText.split(RegExp(r'Example \d+:|##'));
-    
+
     for (var section in sections) {
       if (section.trim().isEmpty) continue;
-      
-      final lines = section.split('\n').where((l) => l.trim().isNotEmpty).toList();
+
+      final lines = section
+          .split('\n')
+          .where((l) => l.trim().isNotEmpty)
+          .toList();
       if (lines.isEmpty) continue;
-      
+
       final title = lines.first.replaceAll(RegExp(r'^\*+\s*'), '').trim();
       final description = lines.length > 1 ? lines[1].trim() : '';
-      final steps = lines.skip(2).map((l) => l.replaceAll(RegExp(r'^\d+\.\s*[-•]\s*'), '').trim()).toList();
-      
-      examples.add(VisualExample(
-        title: title,
-        description: description,
-        steps: steps,
-      ));
+      final steps = lines
+          .skip(2)
+          .map((l) => l.replaceAll(RegExp(r'^\d+\.\s*[-•]\s*'), '').trim())
+          .toList();
+
+      examples.add(
+        VisualExample(title: title, description: description, steps: steps),
+      );
     }
-    
+
     return examples;
   }
 
