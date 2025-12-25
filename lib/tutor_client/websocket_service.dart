@@ -157,19 +157,19 @@ class WebSocketService {
         },
         onError: (error) {
           _isConnected = false;
-          _messageController.add({
-            'type': 'error',
-            'content': 'Connection error',
-          });
           _isConnectedController.add(false);
+          // Silently reconnect in background
+          Future.delayed(const Duration(seconds: 2), () {
+            if (!_isConnected) connect();
+          });
         },
         onDone: () {
           _isConnected = false;
-          _messageController.add({
-            'type': 'error',
-            'content': 'Sorry, Seems the AI Tutor offline',
-          });
           _isConnectedController.add(false);
+          // Silently reconnect in background
+          Future.delayed(const Duration(seconds: 2), () {
+            if (!_isConnected) connect();
+          });
         },
       );
     } catch (e) {

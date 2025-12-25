@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
+import 'dart:math';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -192,7 +194,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _wsService.setThreadId(newId);
     _saveLastThreadId(newId);
 
-    // Add new thread to the list
+    // Add new thread to the list and clear messages
     setState(() {
       _messages.clear();
       _threads.insert(0, {
@@ -202,9 +204,17 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     });
 
+    // Only close drawer on mobile/tablet, not on desktop sidebar
     if (closeDrawer && (_scaffoldKey.currentState?.isDrawerOpen ?? false)) {
       Navigator.pop(context); // Close drawer
     }
+    
+    // Focus on message input after creating new chat
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _messageFocusNode.requestFocus();
+      }
+    });
   }
 
   void _updateThreadTitle(String firstMessage) {
@@ -225,7 +235,10 @@ class _ChatScreenState extends State<ChatScreen> {
     if (data['type'] == 'token' ||
         data['type'] == 'message' ||
         data['type'] == 'chunk') {
-      _tokenQueue.add(data['content']);
+      final content = data['content'] as String? ?? '';
+      // Debug: Log incoming chunk to identify if backend sends full text or deltas
+      developer.log('CHUNK RECEIVED (${content.length} chars): ${content.substring(0, min(50, content.length))}...', name: 'ChatScreen');
+      _tokenQueue.add(content);
       if (_typingTimer == null || !_typingTimer!.isActive) {
         _startStreaming();
       }
@@ -243,6 +256,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() {
       switch (data['type']) {
+        case 'title_updated':
+          // AI-generated title from server - replace temporary title
+          final newTitle = data['title'];
+          if (newTitle != null && newTitle.toString().isNotEmpty) {
+            final threadIndex = _threads.indexWhere(
+              (t) => t['thread_id'] == _wsService.threadId,
+            );
+            if (threadIndex != -1) {
+              _threads[threadIndex]['title'] = newTitle;
+              _threads[threadIndex]['updated_at'] = DateTime.now().toIso8601String();
+            }
+            developer.log('Title updated by AI: $newTitle', name: 'ChatScreen');
+          }
+          break;
         case 'status':
           _statusMessage = data['content'];
           if (_statusMessage?.contains("Searching Google Drive") ?? false) {
@@ -256,7 +283,13 @@ class _ChatScreenState extends State<ChatScreen> {
           _playAudioFromBase64(data['content']);
           break;
         case 'error':
-          _addSystemMessage(data['content']);
+          // Only show errors that are NOT connection-related
+          final errorMsg = data['content']?.toString().toLowerCase() ?? '';
+          if (!errorMsg.contains('connection') && 
+              !errorMsg.contains('offline') && 
+              !errorMsg.contains('reconnect')) {
+            _addSystemMessage(data['content']);
+          }
           break;
       }
     });
@@ -302,6 +335,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _appendStreamingText(String token) {
     _statusMessage = null;
+    
+    // Backend sends FULL TEXT (not chunks), so we replace directly
+    // No accumulation needed - token IS the full response so far
+    
     if (_currentStreamingMessageId == null) {
       // Start a new AI message
       final newMessage = ChatMessage(
@@ -314,7 +351,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _currentStreamingMessageId = newMessage.id;
       _isTyping = true;
     } else {
-      // Append to existing message
+      // REPLACE with incoming text (backend sends full accumulated text)
       final index = _messages.indexWhere(
         (m) => m.id == _currentStreamingMessageId,
       );
@@ -322,7 +359,7 @@ class _ChatScreenState extends State<ChatScreen> {
         final oldMsg = _messages[index];
         _messages[index] = ChatMessage(
           id: oldMsg.id,
-          text: oldMsg.text + token,
+          text: token, // Direct replacement - no accumulation
           isUser: oldMsg.isUser,
           timestamp: oldMsg.timestamp,
           audioUrl: oldMsg.audioUrl,
@@ -1297,7 +1334,7 @@ class _ChatScreenState extends State<ChatScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: InkWell(
-            onTap: _startNewChat,
+            onTap: () => _startNewChat(closeDrawer: false),
             borderRadius: BorderRadius.circular(24),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

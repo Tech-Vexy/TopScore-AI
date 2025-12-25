@@ -48,7 +48,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>We need camera access to scan your homework.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>We need microphone access for video recording.</string>
+	<string>We need microphone access for video recording and voice chat.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>We need speech recognition to convert your voice to text.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need photo library access to pick images.</string>
 </dict>
