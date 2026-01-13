@@ -1,0 +1,24 @@
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/topscore_logo.jpg"
+  min_sdk_android: 21
+  
+  # Adaptive Icons (Android 8+)
+  adaptive_icon_background: "#FFFFFF" 
+  adaptive_icon_foreground: "assets/images/topscore_logo.jpg"
+
+  web:
+    generate: true
+    image_path: "assets/images/topscore_logo.jpg"
+    background_color: "#FFFFFF" # Background for web splash/icon
+    theme_color: "#FFFFFF"
+    
+  windows:
+    generate: true
+    image_path: "assets/images/topscore_logo.jpg"
+    icon_size: 48
+    
+  macos:
+    generate: true
+    image_path: "assets/images/topscore_logo.jpg"

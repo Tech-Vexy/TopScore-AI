@@ -1,273 +1,255 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../../constants/colors.dart';
-import 'pdf_viewer_screen.dart';
-import 'smart_scanner_screen.dart';
+
+// --- IMPORT YOUR TOOL SCREENS HERE ---
 import 'calculator_screen.dart';
+import 'smart_scanner_screen.dart';
+import 'flashcard_generator_screen.dart';
+import 'timetable_screen.dart';
+import 'science_lab_screen.dart';
+import 'periodic_table_screen.dart';
+import '../files_screen.dart'; // Corrected path for sibling of parent
+
+class ToolCardData {
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final String routeId;
+
+  const ToolCardData({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.color,
+    required this.routeId,
+  });
+}
 
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
 
-  Future<void> _pickAndOpenPdf(BuildContext context) async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-      );
-
-      if (result != null) {
-        if (kIsWeb) {
-          final bytes = result.files.first.bytes;
-          if (bytes != null && context.mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PdfViewerScreen(
-                  bytes: bytes,
-                  title: result.files.first.name,
-                ),
-              ),
-            );
-          }
-        } else {
-          final path = result.files.single.path;
-          if (path != null && context.mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PdfViewerScreen(
-                  file: File(path),
-                  title: result.files.first.name,
-                ),
-              ),
-            );
-          }
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error opening PDF: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Define your tools here
+    const List<ToolCardData> tools = [
+      ToolCardData(
+        title: "Science Lab",
+        description: "Virtual experiments",
+        icon: Icons.science_rounded,
+        color: Color(0xFF6C63FF),
+        routeId: 'science_lab',
+      ),
+      ToolCardData(
+        title: "Periodic Table",
+        description: "Elements & Properties",
+        icon: Icons.grid_4x4_rounded,
+        color: Color(0xFFE91E63),
+        routeId: 'periodic_table',
+      ),
+      ToolCardData(
+        title: "Doc Scanner",
+        description: "Digitize notes instantly",
+        icon: Icons.document_scanner_rounded,
+        color: Color(0xFF4ECDC4),
+        routeId: 'scanner',
+      ),
+      ToolCardData(
+        title: "Scientific Calc",
+        description: "Solve complex math",
+        icon: Icons.calculate_rounded,
+        color: Color(0xFF4A90E2),
+        routeId: 'calculator',
+      ),
+      ToolCardData(
+        title: "AI Flashcards",
+        description: "Generate study cards",
+        icon: Icons.flash_on_rounded,
+        color: Color(0xFFA389F4),
+        routeId: 'flashcards',
+      ),
+      ToolCardData(
+        title: "Smart Timetable",
+        description: "Plan your week",
+        icon: Icons.calendar_month_rounded,
+        color: Color(0xFFFFD93D),
+        routeId: 'timetable',
+      ),
+      ToolCardData(
+        title: "PDF Library",
+        description: "Open & read documents",
+        icon: Icons.picture_as_pdf_rounded,
+        color: Color(0xFFFF6B6B),
+        routeId: 'library',
+      ),
+    ];
+
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surface,
+        automaticallyImplyLeading: false,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: FaIcon(
-            FontAwesomeIcons.arrowLeft,
-            size: 18,
-            color: isDark ? AppColors.textDark : AppColors.text,
+        title: Text(
+          "Smart Toolkit",
+          style: GoogleFonts.nunito(
+            color: theme.colorScheme.onSurface,
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
           ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.cardPurple.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const FaIcon(
-                FontAwesomeIcons.toolbox,
-                size: 16,
-                color: AppColors.cardPurple,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Smart Tools',
-              style: GoogleFonts.roboto(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: isDark ? AppColors.textDark : AppColors.text,
-              ),
-            ),
-          ],
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // Header Section
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryPurple.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                const FaIcon(
-                  FontAwesomeIcons.screwdriverWrench,
-                  size: 36,
-                  color: AppColors.accentTeal,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  "Productivity Tools",
-                  style: GoogleFonts.roboto(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // --- HEADER BANNER ---
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2E3192), Color(0xFF1BFFFF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Essential tools to boost your study efficiency",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.roboto(
-                    fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 28),
-
-          Text(
-            "Available Tools",
-            style: GoogleFonts.roboto(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textDark : AppColors.text,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Tools Grid
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 0.95,
-            children: [
-              _buildToolCard(
-                context,
-                title: "PDF Reader",
-                description: "Open and read PDF documents",
-                icon: FontAwesomeIcons.filePdf,
-                color: AppColors.cardPink,
-                onTap: () => _pickAndOpenPdf(context),
-                isDark: isDark,
-              ),
-              _buildToolCard(
-                context,
-                title: "Smart Scanner",
-                description: "Scan documents with AI",
-                icon: FontAwesomeIcons.cameraRetro,
-                color: AppColors.cardOrange,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SmartScannerScreen(),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF2E3192).withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
                     ),
-                  );
-                },
-                isDark: isDark,
-              ),
-              _buildToolCard(
-                context,
-                title: "Calculator",
-                description: "Scientific calculator",
-                icon: FontAwesomeIcons.calculator,
-                color: AppColors.cardBlue,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const CalculatorScreen(),
-                    ),
-                  );
-                },
-                isDark: isDark,
-              ),
-              _buildToolCard(
-                context,
-                title: "More Coming",
-                description: "Stay tuned!",
-                icon: FontAwesomeIcons.wandMagicSparkles,
-                color: AppColors.cardTeal,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'More tools coming soon!',
-                        style: GoogleFonts.roboto(),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Productivity Hub",
+                            style: GoogleFonts.nunito(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Everything you need to boost your study efficiency in one place.",
+                            style: GoogleFonts.nunito(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ),
+                        ],
                       ),
-                      backgroundColor: AppColors.accentTeal,
                     ),
-                  );
-                },
-                isDark: isDark,
+                    const SizedBox(width: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.build,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
+
+          // --- RESPONSIVE GRID ---
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 200,
+                childAspectRatio: 0.85,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                return _buildToolCard(context, tools[index]);
+              }, childCount: tools.length),
+            ),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
       ),
     );
   }
 
-  Widget _buildToolCard(
-    BuildContext context, {
-    required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
+  Widget _buildToolCard(BuildContext context, ToolCardData tool) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        // --- FIXED NAVIGATION LOGIC ---
+        // 1. Identify the screen first
+        Widget? targetScreen;
+
+        switch (tool.routeId) {
+          case 'calculator':
+            targetScreen = const CalculatorScreen();
+            break;
+          case 'scanner':
+            targetScreen = const SmartScannerScreen();
+            break;
+          case 'flashcards':
+            targetScreen = const FlashcardGeneratorScreen();
+            break;
+          case 'timetable':
+            targetScreen = const TimetableScreen();
+            break;
+          case 'science_lab':
+            targetScreen = const ScienceLabScreen();
+            break;
+          case 'periodic_table':
+            targetScreen = const PeriodicTableScreen();
+            break;
+          case 'library':
+            targetScreen = const FilesScreen();
+            break;
+        }
+
+        // 2. Safe Navigation Check
+        if (targetScreen != null) {
+          // Capture in a final local variable to ensure non-nullability in closure
+          final Widget destination = targetScreen;
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => destination),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Feature ${tool.title} coming soon!")),
+          );
+        }
+      },
       child: Container(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceElevatedDark : AppColors.surface,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.15),
-              blurRadius: 15,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
             ),
           ],
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
-                : Colors.black.withValues(alpha: 0.03),
-          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -275,33 +257,33 @@ class ToolsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(16),
+                color: tool.color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
               ),
-              child: FaIcon(icon, size: 28, color: color),
+              child: Icon(tool.icon, color: tool.color, size: 32),
             ),
             const SizedBox(height: 16),
             Text(
-              title,
-              style: GoogleFonts.roboto(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: isDark ? AppColors.textDark : AppColors.text,
-              ),
+              tool.title,
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              description,
-              style: GoogleFonts.roboto(
-                fontSize: 12,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondary,
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              tool.description,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
           ],
         ),

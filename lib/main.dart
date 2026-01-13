@@ -2,25 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
 import 'providers/auth_provider.dart';
 import 'providers/resource_provider.dart';
 import 'providers/download_provider.dart';
+import 'providers/settings_provider.dart';
+import 'providers/navigation_provider.dart';
+
 import 'screens/auth/role_selection_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/landing_page.dart';
-import 'constants/colors.dart';
+import 'screens/teacher/teacher_home_screen.dart';
+import 'screens/parent/parent_home_screen.dart';
+import 'screens/subscription/subscription_screen.dart';
+
 import 'firebase_options.dart';
+import 'services/notification_service.dart';
+import 'services/offline_service.dart';
+import 'config/app_theme.dart'; // <--- Import the new theme file
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Load environment variables
   await dotenv.load(fileName: ".env");
-  
+
   // Initialize Firebase
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
 
   // Enable offline persistence
   try {
@@ -31,7 +47,42 @@ void main() async {
     debugPrint("Firestore persistence error: $e");
   }
 
-  runApp(MyApp());
+  // Init Notifications
+  try {
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+    await setupInteractedMessage();
+  } catch (e) {
+    debugPrint("Notification Init Error: $e");
+  }
+
+  // Init Offline Storage
+  try {
+    await OfflineService().init();
+  } catch (e) {
+    debugPrint("Offline Init Error: $e");
+  }
+
+  runApp(const MyApp());
+}
+
+Future<void> setupInteractedMessage() async {
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance
+      .getInitialMessage();
+  if (initialMessage != null) {
+    _handleMessage(initialMessage);
+  }
+  FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
+}
+
+void _handleMessage(RemoteMessage message) {
+  if (message.data['screen'] == 'subscription_page') {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+    );
+  } else if (message.data['screen'] == 'daily_challenge') {
+    debugPrint("Daily Challenge Notification Clicked");
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -44,72 +95,28 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
         ChangeNotifierProvider(create: (_) => ResourceProvider()),
         ChangeNotifierProvider(create: (_) => DownloadProvider()..init()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => NavigationProvider()),
       ],
-      child: MaterialApp(
-        title: 'TopScore AI',
-        debugShowCheckedModeBanner: false,
-        themeMode: ThemeMode.system,
-        
-        // Light Theme
-        theme: ThemeData.light().copyWith(
-          scaffoldBackgroundColor: Colors.white,
-          cardColor: const Color(0xFFF0F4F9),
-          colorScheme: ColorScheme.light(
-            primary: AppColors.primary,
-            secondary: AppColors.secondary,
-            surface: const Color(0xFFF0F4F9),
-            onSurface: Colors.black87,
-            primaryContainer: const Color(0xFFE1E5EA),
-          ),
-          iconTheme: const IconThemeData(color: Colors.black54),
-        ),
+      child: Consumer<SettingsProvider>(
+        builder: (context, settings, _) {
+          return MaterialApp(
+            title: 'TopScore AI',
+            navigatorKey: navigatorKey,
+            debugShowCheckedModeBanner: false,
 
-        // Dark Theme
-        darkTheme: ThemeData.dark().copyWith(
-          scaffoldBackgroundColor: const Color(0xFF131314),
-          cardColor: const Color(0xFF1E1F20),
-          colorScheme: ColorScheme.dark(
-            primary: AppColors.accentTeal,
-            secondary: AppColors.secondaryViolet,
-            surface: const Color(0xFF1E1F20),
-            onSurface: Colors.white,
-            primaryContainer: const Color(0xFF28292A),
-          ),
-          iconTheme: const IconThemeData(color: Colors.white70),
-        ),
-        
-        // Center content with max width constraint
-        builder: (context, child) {
-          final mediaQuery = MediaQuery.of(context);
-          final screenWidth = mediaQuery.size.width;
-          const maxContentWidth = 1200.0;
+            // --- UNIFORM THEMING CONFIGURATION ---
+            theme: AppTheme.lightTheme, // Use centralized Light Theme
+            darkTheme: AppTheme.darkTheme, // Use centralized Dark Theme
+            themeMode: settings.themeMode, // Respects System/User Preference
 
-          if (screenWidth > maxContentWidth) {
-            return Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: Center(
-                child: Container(
-                  width: maxContentWidth,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context).brightness == Brightness.dark 
-                            ? Colors.black.withValues(alpha: 0.3) 
-                            : AppColors.primaryPurple.withValues(alpha: 0.08),
-                        blurRadius: 40,
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: child,
-                ),
-              ),
-            );
-          }
-          return child!;
+            home: const AuthWrapper(),
+            routes: {
+              '/landing': (context) => const LandingPage(),
+              '/home': (context) => const HomeScreen(),
+            },
+          );
         },
-        home: const AuthWrapper(),
       ),
     );
   }
@@ -120,66 +127,28 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        debugPrint("=== AuthWrapper Debug ===");
-        debugPrint("isLoading: ${authProvider.isLoading}");
-        debugPrint("needsRoleSelection: ${authProvider.needsRoleSelection}");
-        debugPrint("userModel: ${authProvider.userModel}");
-        debugPrint("========================");
+    final authProvider = Provider.of<AuthProvider>(context);
 
-        if (authProvider.isLoading) {
-          debugPrint("Rendering loading screen");
-          return Scaffold(
-            body: Container(
-              decoration: const BoxDecoration(gradient: AppColors.heroGradient),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Animated loading indicator
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const CircularProgressIndicator(
-                        color: AppColors.accentTeal,
-                        strokeWidth: 3,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      "Loading...",
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
+    if (authProvider.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-        if (authProvider.needsRoleSelection) {
-          debugPrint("Rendering role selection screen");
-          return const RoleSelectionScreen();
-        }
+    if (authProvider.userModel == null) {
+      return const LandingPage();
+    }
 
-        if (authProvider.userModel != null) {
-          debugPrint(
-            "Rendering home screen for user: ${authProvider.userModel!.displayName}",
-          );
-          return const HomeScreen();
-        }
+    if (authProvider.needsRoleSelection) {
+      return const RoleSelectionScreen();
+    }
 
-        debugPrint("Rendering landing page");
-        return const LandingPage();
-      },
-    );
+    // Role-based routing
+    final role = authProvider.userModel?.role;
+    if (role == 'teacher') {
+      return const TeacherHomeScreen();
+    } else if (role == 'parent') {
+      return const ParentHomeScreen();
+    }
+
+    return const HomeScreen();
   }
 }

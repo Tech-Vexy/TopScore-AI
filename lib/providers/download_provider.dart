@@ -33,7 +33,7 @@ class DownloadProvider with ChangeNotifier {
         _downloadProgress[resource.id] = progress;
         notifyListeners();
       });
-      
+
       // Refresh list after download
       _downloads = await _downloadService.listDownloads();
       _downloadProgress.remove(resource.id);
@@ -54,11 +54,11 @@ class DownloadProvider with ChangeNotifier {
   bool isDownloaded(String resourceId) {
     return _downloads.any((task) => task.resourceId == resourceId);
   }
-  
+
   bool isDownloading(String resourceId) {
     return _downloadProgress.containsKey(resourceId);
   }
-  
+
   double getProgress(String resourceId) {
     return _downloadProgress[resourceId] ?? 0.0;
   }

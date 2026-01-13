@@ -1,7 +1,10 @@
 class MpesaService {
-  Future<Map<String, dynamic>> initiatePayment(String phoneNumber, double amount) async {
+  Future<Map<String, dynamic>> initiatePayment(
+    String phoneNumber,
+    double amount,
+  ) async {
     // Simulate API call
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 2));
     return {
       'success': true,
       'message': 'STK Push sent to $phoneNumber',

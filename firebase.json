@@ -5,6 +5,35 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "venv",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log"
+      ]
+    }
+  ],
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
   "flutter": {
     "platforms": {
       "android": {
@@ -20,9 +49,7 @@
           "configurations": {
             "android": "1:974459699084:android:26d53a933598930a68a0a9",
             "ios": "1:974459699084:ios:057b53220829afbd68a0a9",
-            "macos": "1:974459699084:ios:057b53220829afbd68a0a9",
-            "web": "1:974459699084:web:8d47fa11d39ca31968a0a9",
-            "windows": "1:974459699084:web:58540bef6bd21d6768a0a9"
+            "web": "1:974459699084:web:e057b53220829afbd68a0a9"
           }
         }
       }

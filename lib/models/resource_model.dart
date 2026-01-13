@@ -13,6 +13,10 @@ class ResourceModel {
   final bool premium;
   final String? source;
   final DateTime? createdAt;
+  final String? ragStatus; // 'pending', 'processing', 'ready', 'error'
+  final String? storagePath;
+  final String? uploadedBy;
+  final String? ragError;
 
   ResourceModel({
     required this.id,
@@ -27,7 +31,14 @@ class ResourceModel {
     required this.premium,
     this.source,
     this.createdAt,
+    this.ragStatus,
+    this.storagePath,
+    this.uploadedBy,
+    this.ragError,
+    this.isFolder = false,
   });
+
+  final bool isFolder;
 
   factory ResourceModel.fromMap(Map<String, dynamic> data, String id) {
     return ResourceModel(
@@ -45,6 +56,30 @@ class ResourceModel {
       createdAt: data['createdAt'] is Timestamp
           ? (data['createdAt'] as Timestamp).toDate()
           : null,
+      ragStatus: data['ragStatus'] ?? 'pending',
+      storagePath: data['storagePath'],
+      uploadedBy: data['uploadedBy'],
+      ragError: data['ragError'],
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'type': type,
+      'subject': subject,
+      'grade': grade,
+      'year': year,
+      'curriculum': curriculum,
+      'downloadUrl': downloadUrl,
+      'fileSize': fileSize,
+      'premium': premium,
+      'source': source,
+      'createdAt': createdAt,
+      'ragStatus': ragStatus,
+      'storagePath': storagePath,
+      'uploadedBy': uploadedBy,
+      'ragError': ragError,
+    };
   }
 }

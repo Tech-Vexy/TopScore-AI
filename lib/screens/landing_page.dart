@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'dart:ui' as ui; // Needed for ImageFilter
 import '../constants/colors.dart';
 import 'auth/auth_screen.dart';
 
@@ -16,13 +17,49 @@ class _LandingPageState extends State<LandingPage>
   late PageController _pageController;
   int _currentPage = 0;
 
-  // Total pages: Welcome + 4 features + CTA
-  final int _totalPages = 6;
+  // --- CONTENT DATA ---
+  final List<OnboardingContent> _pages = [
+    OnboardingContent(
+      title: "TopScore AI",
+      subtitle: "Your Personal AI Tutor.\nLearn Smarter, Not Harder.",
+      icon: FontAwesomeIcons.graduationCap,
+      color: AppColors.accentTeal,
+      isWelcome: true,
+    ),
+    OnboardingContent(
+      title: "Instant Answers",
+      subtitle:
+          "Stuck on a problem? Snap a photo or type it in. Our AI explains concepts in seconds.",
+      icon: FontAwesomeIcons.bolt,
+      color: Colors.amber,
+    ),
+    OnboardingContent(
+      title: "Curated Library",
+      subtitle:
+          "Access thousands of past papers, notes, and quizzes tailored to your syllabus.",
+      icon: FontAwesomeIcons.bookOpenReader,
+      color: const Color(0xFF6C63FF),
+    ),
+    OnboardingContent(
+      title: "Smart Tools",
+      subtitle:
+          "From scientific calculators to study schedulers, we have the tools you need to excel.",
+      icon: FontAwesomeIcons.screwdriverWrench,
+      color: const Color(0xFFFF6B6B),
+    ),
+    OnboardingContent(
+      title: "Ready to Excel?",
+      subtitle: "Join thousands of students achieving their goals today.",
+      icon: FontAwesomeIcons.rocket,
+      color: const Color(0xFF4ECDC4),
+      isLast: true,
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 1.0, initialPage: 0);
+    _pageController = PageController();
   }
 
   @override
@@ -32,509 +69,369 @@ class _LandingPageState extends State<LandingPage>
   }
 
   void _goToNextPage() {
-    if (_currentPage < _totalPages - 1) {
+    if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.fastEaseInToSlowEaseOut,
       );
+    } else {
+      _goToAuthScreen(isLogin: false);
     }
   }
 
   void _goToAuthScreen({bool isLogin = true}) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => AuthScreen(initialIsLogin: isLogin),
-      ),
+      MaterialPageRoute(builder: (context) => const AuthScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    // Theme determination
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColors = isDark
+        ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
+        : [const Color(0xFFF8FAFC), const Color(0xFFE2E8F0)];
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: isDark ? AppColors.darkGradient : AppColors.heroGradient,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Skip button at top right
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Logo
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const FaIcon(
-                            FontAwesomeIcons.graduationCap,
-                            size: 18,
-                            color: AppColors.accentTeal,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'TopScore AI',
-                          style: GoogleFonts.roboto(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Skip button
-                    if (_currentPage < _totalPages - 1)
-                      TextButton(
-                        onPressed: () => _goToAuthScreen(isLogin: true),
-                        child: Text(
-                          'Skip',
-                          style: GoogleFonts.roboto(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-
-              // Main content - PageView
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                    });
-                  },
-                  children: [
-                    // Page 1: Welcome
-                    _buildWelcomePage(isDark),
-
-                    // Page 2-5: Features
-                    _buildFeaturePage(
-                      icon: FontAwesomeIcons.brain,
-                      color: AppColors.cardBlue,
-                      title: 'AI-Powered Tutor',
-                      description:
-                          'Get instant, personalized explanations for any topic. Our AI understands your learning style and adapts to help you learn better.',
-                      isDark: isDark,
-                    ),
-                    _buildFeaturePage(
-                      icon: FontAwesomeIcons.folderOpen,
-                      color: AppColors.cardGreen,
-                      title: 'Study Resources',
-                      description:
-                          'Access a vast library of notes, past papers, and quizzes curated by experts. Everything you need to excel in one place.',
-                      isDark: isDark,
-                    ),
-                    _buildFeaturePage(
-                      icon: FontAwesomeIcons.toolbox,
-                      color: AppColors.cardPurple,
-                      title: 'Smart Tools',
-                      description:
-                          'Use our document scanner, scientific calculator, and other productivity tools to boost your study efficiency.',
-                      isDark: isDark,
-                    ),
-                    _buildFeaturePage(
-                      icon: FontAwesomeIcons.clock,
-                      color: AppColors.cardTeal,
-                      title: 'Available 24/7',
-                      description:
-                          'Study anytime, anywhere. Your AI tutor never sleeps and is always ready to help you succeed.',
-                      isDark: isDark,
-                    ),
-
-                    // Page 6: CTA with Get Started button
-                    _buildCTAPage(isDark),
-                  ],
-                ),
-              ),
-
-              // Page indicator and navigation
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    // Page indicator dots
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(_totalPages, (index) {
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: _currentPage == index ? 28 : 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: _currentPage == index
-                                ? AppColors.accentTeal
-                                : Colors.white.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                        );
-                      }),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Navigation button
-                    if (_currentPage < _totalPages - 1)
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _goToNextPage,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accentTeal,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Next',
-                                style: GoogleFonts.roboto(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const FaIcon(
-                                FontAwesomeIcons.arrowRight,
-                                size: 16,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWelcomePage(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      body: Stack(
         children: [
-          // Animated logo container
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 800),
-            curve: Curves.easeOutBack,
-            builder: (context, value, child) {
-              return Transform.scale(scale: value, child: child);
-            },
+          // 1. BACKGROUND LAYER (Animated Orbs)
+          Positioned.fill(
             child: Container(
-              padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  width: 2,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: bgColors,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.accentTeal.withValues(alpha: 0.3),
-                    blurRadius: 40,
-                    spreadRadius: 0,
-                  ),
-                ],
-              ),
-              child: const FaIcon(
-                FontAwesomeIcons.graduationCap,
-                size: 72,
-                color: AppColors.accentTeal,
               ),
             ),
           ),
-          const SizedBox(height: 40),
+          // Ambient Orb 1 (Top Left)
+          Positioned(
+            top: -100,
+            left: -100,
+            child: _AnimatedOrb(
+              color: _pages[_currentPage].color.withValues(alpha: 0.3),
+            ),
+          ),
+          // Ambient Orb 2 (Bottom Right)
+          Positioned(
+            bottom: -50,
+            right: -50,
+            child: _AnimatedOrb(
+              color: AppColors.primaryPurple.withValues(alpha: 0.2),
+            ),
+          ),
 
-          // Title
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeOut,
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.translate(
-                  offset: Offset(0, 20 * (1 - value)),
-                  child: child,
-                ),
-              );
-            },
+          // 2. CONTENT LAYER
+          SafeArea(
             child: Column(
               children: [
-                Text(
-                  'Welcome to',
-                  style: GoogleFonts.roboto(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white.withValues(alpha: 0.8),
+                // --- TOP BAR (Skip Button) ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (_currentPage < _pages.length - 1)
+                        TextButton(
+                          onPressed: () => _goToAuthScreen(isLogin: true),
+                          style: TextButton.styleFrom(
+                            foregroundColor: isDark
+                                ? Colors.white70
+                                : Colors.black54,
+                          ),
+                          child: Text(
+                            'Skip',
+                            style: GoogleFonts.nunito(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'TopScore AI',
-                  style: GoogleFonts.roboto(
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: -1,
+
+                // --- PAGE VIEW ---
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) =>
+                        setState(() => _currentPage = index),
+                    itemCount: _pages.length,
+                    itemBuilder: (context, index) {
+                      return _OnboardingPage(
+                        content: _pages[index],
+                        isDark: isDark,
+                      );
+                    },
+                  ),
+                ),
+
+                // --- BOTTOM NAVIGATION AREA ---
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Page Indicators (Dots)
+                      Row(
+                        children: List.generate(_pages.length, (index) {
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.only(right: 6),
+                            height: 6,
+                            width: _currentPage == index ? 24 : 6,
+                            decoration: BoxDecoration(
+                              color: _currentPage == index
+                                  ? _pages[_currentPage].color
+                                  : (isDark ? Colors.white24 : Colors.black12),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          );
+                        }),
+                      ),
+
+                      // Circular Progress Button
+                      _CircularNavButton(
+                        progress: (_currentPage + 1) / _pages.length,
+                        color: _pages[_currentPage].color,
+                        isLastPage: _currentPage == _pages.length - 1,
+                        onTap: _goToNextPage,
+                        isDark: isDark,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+// --- WIDGETS ---
+
+class _OnboardingPage extends StatelessWidget {
+  final OnboardingContent content;
+  final bool isDark;
+
+  const _OnboardingPage({required this.content, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon Container with clean shadow
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 600),
+            tween: Tween(begin: 0.0, end: 1.0),
+            curve: Curves.elasticOut,
+            builder: (context, val, child) {
+              return Transform.scale(scale: val, child: child);
+            },
+            child: Container(
+              height: 100,
+              width: 100,
+              decoration: BoxDecoration(
+                color: content.color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: content.color.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: FaIcon(content.icon, size: 40, color: content.color),
+              ),
+            ),
+          ),
+          const SizedBox(height: 48),
+
+          // Title
+          Text(
+            content.title,
+            style: GoogleFonts.nunito(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : const Color(0xFF1E293B),
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // Subtitle
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 800),
-            curve: Curves.easeOut,
-            builder: (context, value, child) {
-              return Opacity(opacity: value, child: child);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                'Your Personal AI Tutor\nLearn Smarter, Not Harder',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.roboto(
-                  fontSize: 16,
-                  height: 1.6,
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
+          Text(
+            content.subtitle,
+            style: GoogleFonts.nunito(
+              fontSize: 18,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+              height: 1.5,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildFeaturePage({
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String description,
-    required bool isDark,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Feature icon with animated container
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeOutBack,
-            builder: (context, value, child) {
-              return Transform.scale(scale: value, child: child);
-            },
-            child: Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(
-                  color: color.withValues(alpha: 0.3),
-                  width: 2,
+class _CircularNavButton extends StatelessWidget {
+  final double progress;
+  final Color color;
+  final bool isLastPage;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _CircularNavButton({
+    required this.progress,
+    required this.color,
+    required this.isLastPage,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 70,
+        height: 70,
+        child: Stack(
+          children: [
+            // Progress Indicator
+            Center(
+              child: SizedBox(
+                width: 70,
+                height: 70,
+                child: CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                  backgroundColor: isDark ? Colors.white10 : Colors.black12,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.2),
-                    blurRadius: 40,
-                    spreadRadius: 0,
-                  ),
-                ],
-              ),
-              child: FaIcon(icon, size: 64, color: color),
-            ),
-          ),
-          const SizedBox(height: 48),
-
-          // Feature title
-          Text(
-            title,
-            style: GoogleFonts.roboto(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-
-          // Feature description
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              description,
-              style: GoogleFonts.roboto(
-                fontSize: 16,
-                height: 1.6,
-                color: Colors.white.withValues(alpha: 0.85),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCTAPage(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Rocket icon
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 800),
-            curve: Curves.easeOutBack,
-            builder: (context, value, child) {
-              return Transform.scale(
-                scale: value,
-                child: Transform.translate(
-                  offset: Offset(0, -20 * (1 - value)),
-                  child: child,
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                gradient: AppColors.accentGradient,
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.accentTeal.withValues(alpha: 0.4),
-                    blurRadius: 40,
-                    spreadRadius: 0,
-                  ),
-                ],
-              ),
-              child: const FaIcon(
-                FontAwesomeIcons.rocket,
-                size: 64,
-                color: Colors.white,
               ),
             ),
-          ),
-          const SizedBox(height: 48),
-
-          // CTA Title
-          Text(
-            'Ready to Excel?',
-            style: GoogleFonts.roboto(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-
-          // CTA Description
-          Text(
-            'Join thousands of students already achieving their academic goals with TopScore AI.',
-            style: GoogleFonts.roboto(
-              fontSize: 16,
-              height: 1.6,
-              color: Colors.white.withValues(alpha: 0.85),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 40),
-
-          // Get Started Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _goToAuthScreen(isLogin: false),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.primaryPurple,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Get Started Free',
-                    style: GoogleFonts.roboto(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+            // Button Center
+            Center(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
+                  ],
+                ),
+                child: Center(
+                  child: FaIcon(
+                    isLastPage
+                        ? FontAwesomeIcons.check
+                        : FontAwesomeIcons.arrowRight,
+                    size: 20,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 10),
-                  const FaIcon(FontAwesomeIcons.arrowRight, size: 16),
-                ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-
-          // Login link
-          TextButton(
-            onPressed: () => _goToAuthScreen(isLogin: true),
-            child: Text(
-              'Already have an account? Log in',
-              style: GoogleFonts.roboto(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.9),
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+}
+
+class _AnimatedOrb extends StatefulWidget {
+  final Color color;
+
+  const _AnimatedOrb({required this.color});
+
+  @override
+  State<_AnimatedOrb> createState() => _AnimatedOrbState();
+}
+
+class _AnimatedOrbState extends State<_AnimatedOrb>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: 1.0 + (_controller.value * 0.2), // Breathe effect
+          child: ImageFiltered(
+            imageFilter: ui.ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.color,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// --- DATA MODEL ---
+
+class OnboardingContent {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final bool isWelcome;
+  final bool isLast;
+
+  OnboardingContent({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    this.isWelcome = false,
+    this.isLast = false,
+  });
 }

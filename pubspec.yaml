@@ -1,130 +1,130 @@
-name: elimisha
-description: "A new Flutter project."
-# The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+name: topscore_ai  # Suggestion: Use snake_case for package names (Flutter standard)
+description: "A learning app for 844 and cbc students powered by AI."
+publish_to: 'none' 
 
-# The following defines the version and build number for your application.
-# A version number is three numbers separated by dots, like 1.2.43
-# followed by an optional build number separated by a +.
-# Both the version and the builder number may be overridden in flutter
-# build by specifying --build-name and --build-number, respectively.
-# In Android, build-name is used as versionName while build-number used as versionCode.
-# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
-# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
-# Read more about iOS versioning at
-# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-# In Windows, build-name is used as the major, minor, and patch parts
-# of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.10.0
 
-# Dependencies specify other packages that your package needs in order to work.
-# To automatically upgrade your package dependencies to the latest versions
-# consider running `flutter pub upgrade --major-versions`. Alternatively,
-# dependencies can be manually updated by changing the version numbers below to
-# the latest version available on pub.dev. To see which dependencies have newer
-# versions available, run `flutter pub outdated`.
+# -----------------------------------------------------------------------------
+# PLATFORM RESTRICTION
+# This tells Flutter to ignore Windows, macOS, and Linux support entirely.
+# -----------------------------------------------------------------------------
+platforms:
+  android:
+  ios:
+  web:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^4.2.1
-  firebase_auth: ^6.1.2
-  cloud_firestore: ^6.1.0
-  google_sign_in: ^6.2.2
-  provider: ^6.1.2
-  shared_preferences: ^2.3.5
-  http: ^1.3.0
-  path_provider: ^2.1.5
-  permission_handler: ^12.0.1
+
+  # --- Core Firebase (Aligned Versions) ---
+  firebase_core: ^3.1.0
+  firebase_auth: ^5.1.0
+  cloud_firestore: ^5.0.1
+  cloud_functions: ^5.0.0
+  firebase_storage: ^12.0.0
+  firebase_database: ^11.0.0
+  firebase_messaging: ^15.0.0
+
+  # --- Google & AI ---
+  google_sign_in: ^6.2.1
   google_generative_ai: ^0.4.6
-  flutter_markdown_plus: ^1.0.5
-  url_launcher: ^6.3.1
-  connectivity_plus: ^7.0.0
-  percent_indicator: ^4.2.3
-  fluttertoast: ^9.0.0
-  intl: ^0.20.2
-  uuid: ^4.5.2
-  record: ^6.1.2
-  audioplayers: ^6.5.1
-  google_fonts: ^6.3.3
-  flutter_math_fork: ^0.7.4
-  flutter_tts: ^4.2.3
-  share_plus: ^10.1.4
+  googleapis: ^13.1.0
+  extension_google_sign_in_as_googleapis_auth: ^2.0.12
+
+  # --- Modern Web Support (The Fix for your errors) ---
+  web: ^1.0.0               # Forces modern web support
+  js: ^0.7.1                # Aligns with speech_to_text
+  go_router: ^13.0.0
+  
+  # --- State & Utilities ---
+  provider: ^6.1.2
+  shared_preferences: ^2.2.3
+  http: ^1.2.1
+  path_provider: ^2.1.3
+  permission_handler: ^12.0.1
+  connectivity_plus: ^6.0.3
+  uuid: ^4.4.0
+  intl: ^0.19.0
+  flutter_dotenv: ^5.1.0
+  url_launcher: ^6.3.2
+  
+  # UPDATED: share_plus 10+ supports 'web ^1.0.0'
+  share_plus: ^10.0.0       
+  
   universal_io: ^2.3.1
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-  nutrient_flutter: ^5.2.0
-  file_picker: ^10.3.7
-  web: ^1.1.1
-  image_picker: ^1.2.1
-  speech_to_text: ^7.3.0
-  math_expressions: ^3.1.0
+  # --- UI Components ---
+  percent_indicator: ^4.2.3
+  fluttertoast: ^8.2.4
+  google_fonts: ^6.2.1
+  cupertino_icons: ^1.0.6
+  font_awesome_flutter: ^10.7.0
+  flip_card: ^0.7.0
+  confetti: ^0.8.0
+  fl_chart: ^0.68.0
+  cached_network_image: ^3.4.1
+  flutter_staggered_grid_view: ^0.7.0
+  web_socket_channel: ^3.0.0
+
+  # --- Media & Input ---
+  record: ^6.1.2
+  audioplayers: ^6.0.0
+  flutter_tts: ^4.0.2
+  camera: ^0.11.0
+  image_picker: ^1.1.1
+  
+  # UPDATED: pasteboard 0.4.0+ supports 'web ^1.0.0'
+  pasteboard: ^0.4.0        
+  
+  # UPDATED: speech_to_text 7+ aligns better with modern JS/Web
+  speech_to_text: ^7.0.0    
+
+  # --- Math & Markdown ---
+  flutter_math_fork: ^0.7.2
+  math_expressions: ^2.5.0
+  flutter_markdown: ^0.7.2
+  markdown: ^7.2.2
+
+  # --- Files & PDF ---
+
+  syncfusion_flutter_pdfviewer: ^32.1.22
+  syncfusion_flutter_core: ^32.1.22
+  # For the "Lens" UI
+  croppy: ^1.4.1
+  # For copying images - simpler package that works
+  clipboard: ^3.0.14
+  file_picker: ^8.0.3
+  pdf: ^3.11.0
+
+  
+  # Mobile Only (Must wrap in kIsWeb check)
+  cunning_document_scanner: ^1.2.0 
+  google_mlkit_text_recognition: ^0.13.0 
+  open_file: ^3.3.2
   screenshot: ^3.0.0
-  googleapis: ^15.0.0
-  extension_google_sign_in_as_googleapis_auth: ^2.0.13
-  camera: ^0.11.3
-  web_socket_channel: ^3.0.3
-  markdown: ^7.3.0
-  font_awesome_flutter: ^10.8.0
-  google_mlkit_text_recognition: ^0.15.0
-  firebase_database: ^12.1.1
-  firebase_storage: ^13.0.5
-  flutter_dotenv: ^5.1.0
+
+  # --- Storage ---
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  youtube_player_flutter: ^9.1.3
+  flutter_local_notifications: ^19.5.0
+  video_player: ^2.8.6
+  chewie: ^1.8.1
+  timezone: ^0.10.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.10
 
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^6.0.0
-
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
-# The following section is specific to Flutter packages.
 flutter:
-
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
   uses-material-design: true
-
-  # To add assets to your application, add an assets section, like this:
+  
   assets:
     - assets/images/
     - .env
-
-  # An image asset can refer to one or more resolution-specific "variants", see
-  # https://flutter.dev/to/resolution-aware-images
-
-  # For details regarding adding assets from package dependencies, see
-  # https://flutter.dev/to/asset-from-package
-
-  # To add custom fonts to your application, add a fonts section here,
-  # in this "flutter" section. Each entry in this list should have a
-  # "family" key with the font family name, and a "fonts" key with a
-  # list giving the asset and other descriptors for the font. For
-  # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
-  #
-  # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package

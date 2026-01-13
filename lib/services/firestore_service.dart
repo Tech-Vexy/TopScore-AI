@@ -82,6 +82,39 @@ class FirestoreService {
         .set(data, SetOptions(merge: true));
   }
 
+  Future<List<UserModel>> getChildren(List<String> childrenIds) async {
+    if (childrenIds.isEmpty) return [];
+
+    try {
+      // Create chunks of 10 IDs to avoid Firestore 'in' limit of 10
+      List<List<String>> chunks = [];
+      for (var i = 0; i < childrenIds.length; i += 10) {
+        chunks.add(
+          childrenIds.sublist(
+            i,
+            i + 10 > childrenIds.length ? childrenIds.length : i + 10,
+          ),
+        );
+      }
+
+      List<UserModel> children = [];
+      for (var chunk in chunks) {
+        final snapshot = await _firestore
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+
+        children.addAll(
+          snapshot.docs.map((doc) => UserModel.fromMap(doc.data(), doc.id)),
+        );
+      }
+      return children;
+    } catch (e) {
+      debugPrint("Error fetching children: $e");
+      return [];
+    }
+  }
+
   // Chat History
   Future<void> saveChatMessage(
     String userId,
@@ -123,5 +156,26 @@ class FirestoreService {
           tickets.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           return tickets;
         });
+  }
+
+  // Activity Tracking
+  Future<void> trackFileOpen({
+    required String userId,
+    required String fileName,
+    required String filePath,
+    String? fileType,
+  }) async {
+    try {
+      await _firestore.collection('user_activity').add({
+        'userId': userId,
+        'action': 'open_file',
+        'fileName': fileName,
+        'filePath': filePath,
+        'fileType': fileType ?? 'unknown',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint("Error tracking file open: $e");
+    }
   }
 }

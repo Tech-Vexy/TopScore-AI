@@ -50,7 +50,7 @@ class VisualExample {
 class AIService {
   // Use 10.0.2.2 for Android emulator, localhost for iOS/Web
   // static const String _wsUrl = 'ws://10.0.2.2:8080/ws';
-  static const String _wsUrl = 'ws://localhost:8080/ws';
+  static const String _wsUrl = 'wss://agent.topscoreapp.ai/ws';
 
   WebSocketChannel? _channel;
 

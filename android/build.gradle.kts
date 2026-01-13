@@ -1,45 +1,20 @@
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
-val newBuildDir: Directory =
-    rootProject.layout.buildDirectory
-        .dir("../../build")
-        .get()
+val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 
 subprojects {
-    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-    project.layout.buildDirectory.value(newSubprojectBuildDir)
+    project.layout.buildDirectory.value(rootProject.layout.buildDirectory.dir(project.name))
 }
+
 subprojects {
-    project.evaluationDependsOn(":app")
+    afterEvaluate {
+        project.extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.apply {
+            if (namespace == null) {
+                namespace = project.group.toString()
+            }
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
-}
-plugins {
-    id("com.android.application")
-
-    // Add the dependency for the Google services Gradle plugin
-    id("com.google.gms.google-services") version "4.4.4" apply false
-
-}
-
-dependencies {
-    // Import the Firebase BoM
-    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
-
-
-    // TODO: Add the dependencies for Firebase products you want to use
-    // When using the BoM, don't specify versions in Firebase dependencies
-    implementation("com.google.firebase:firebase-analytics")
-
-
-    // Add the dependencies for any other desired Firebase products
-    // https://firebase.google.com/docs/android/setup#available-libraries
 }

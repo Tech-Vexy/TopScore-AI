@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../constants/colors.dart';
-import '../../constants/strings.dart';
 
 class SignupScreen extends StatefulWidget {
-  final VoidCallback onToggle;
-  const SignupScreen({super.key, required this.onToggle});
+  final String role; // 'student', 'teacher', or 'parent'
+
+  const SignupScreen({super.key, required this.role});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -14,647 +14,478 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  // Controllers
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _role = 'student'; // Default role
-  String? _educationLevel;
-  int? _grade;
+  final _phoneController = TextEditingController();
 
-  final List<String> _educationLevels = [
-    'Primary',
-    'Secondary',
-    'University',
-    'Other',
+  // Role Specific Variables
+  String?
+  _selectedClassLevel; // Changed from 'Grade' to 'Class Level' to avoid confusion
+  String? _selectedChildClassLevel;
+
+  // Selections
+  final List<String> _selectedSubjects = []; // For teachers
+  final List<String> _selectedInterests = []; // For students (New!)
+
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  // --- DATA LISTS ---
+  // Renamed to "Class Levels" to be distinct from "Performance Grades"
+  final List<String> _classLevels = [
+    'Grade 4',
+    'Grade 5',
+    'Grade 6',
+    'Grade 7 (JSS)',
+    'Grade 8 (JSS)',
+    'Grade 9 (JSS)',
+    'Form 1',
+    'Form 2',
+    'Form 3',
+    'Form 4',
   ];
 
-  List<int> _getGradesForLevel(String? level) {
-    if (level == 'Primary') {
-      return List.generate(8, (i) => i + 1); // 1-8
-    }
-    if (level == 'Secondary') {
-      return List.generate(4, (i) => i + 1); // 1-4 (Form 1-4)
-    }
-    if (level == 'University') {
-      return List.generate(6, (i) => i + 1); // 1-6
-    }
-    return [];
-  }
+  final List<String> _subjects = [
+    'Mathematics',
+    'English',
+    'Kiswahili',
+    'Chemistry',
+    'Biology',
+    'Physics',
+    'History',
+    'Geography',
+    'CRE',
+    'Business Studies',
+    'Computer Studies',
+    'Agriculture',
+  ];
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        await Provider.of<AuthProvider>(context, listen: false).signUp(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-          _role,
-          _nameController.text.trim(),
-          educationLevel: _role == 'student' ? _educationLevel : null,
-          grade: _role == 'student' ? _grade : null,
-        );
-        if (mounted) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Sign up failed: ${e.toString()}")),
-          );
-        }
-      }
-    }
-  }
+  // NEW: Interest Categories for Career Compass
+  final List<String> _careerInterests = [
+    'Technology & Coding',
+    'Medicine & Health',
+    'Engineering',
+    'Arts & Design',
+    'Business & Finance',
+    'Law & Justice',
+    'Sports & Fitness',
+    'Media & Writing',
+    'Agriculture & Nature',
+    'Teaching & Education',
+    'Music & Performance',
+    'Public Service',
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = Provider.of<AuthProvider>(context).isLoading;
     final theme = Theme.of(context);
-
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [theme.scaffoldBackgroundColor, theme.colorScheme.surface],
-          ),
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
         ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 32.0,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 400),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // App Logo and Branding
-                      Container(
-                        height: 100,
-                        width: 100,
-                        margin: const EdgeInsets.only(bottom: 24),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/images/logo.png',
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        "Join ${AppStrings.appName}",
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                          letterSpacing: -0.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Start your learning journey today",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.7,
-                          ),
-                          fontWeight: FontWeight.w400,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 40),
-                      // Full Name Field
-                      TextFormField(
-                        controller: _nameController,
-                        style: TextStyle(color: theme.colorScheme.onSurface),
-                        decoration: InputDecoration(
-                          labelText: "Full Name",
-                          prefixIcon: const Icon(Icons.person_outlined),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color:
-                                  theme
-                                      .inputDecorationTheme
-                                      .enabledBorder
-                                      ?.borderSide
-                                      .color ??
-                                  AppColors.textLight,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: AppColors.primary,
-                              width: 2,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: theme.inputDecorationTheme.fillColor,
-                        ),
-                        validator: (value) => value != null && value.isNotEmpty
-                            ? null
-                            : "Enter your name",
-                      ),
-                      const SizedBox(height: 20),
-                      // Email Field
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        style: TextStyle(color: theme.colorScheme.onSurface),
-                        decoration: InputDecoration(
-                          labelText: "Email Address",
-                          prefixIcon: const Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color:
-                                  theme
-                                      .inputDecorationTheme
-                                      .enabledBorder
-                                      ?.borderSide
-                                      .color ??
-                                  AppColors.textLight,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: AppColors.primary,
-                              width: 2,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: theme.inputDecorationTheme.fillColor,
-                        ),
-                        validator: (value) =>
-                            value != null && value.contains('@')
-                            ? null
-                            : "Enter a valid email",
-                      ),
-                      const SizedBox(height: 20),
-                      // Password Field
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        style: TextStyle(color: theme.colorScheme.onSurface),
-                        decoration: InputDecoration(
-                          labelText: "Password",
-                          prefixIcon: const Icon(Icons.lock_outlined),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color:
-                                  theme
-                                      .inputDecorationTheme
-                                      .enabledBorder
-                                      ?.borderSide
-                                      .color ??
-                                  AppColors.textLight,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: AppColors.primary,
-                              width: 2,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: theme.inputDecorationTheme.fillColor,
-                        ),
-                        validator: (value) => value != null && value.length >= 6
-                            ? null
-                            : "Password must be at least 6 characters",
-                      ),
-                      const SizedBox(height: 20),
-                      // Role Selection
-                      DropdownButtonFormField<String>(
-                        initialValue: _role,
-                        style: TextStyle(color: theme.colorScheme.onSurface),
-                        dropdownColor: theme.cardColor,
-                        decoration: InputDecoration(
-                          labelText: "I am a",
-                          prefixIcon: const Icon(Icons.group_outlined),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color:
-                                  theme
-                                      .inputDecorationTheme
-                                      .enabledBorder
-                                      ?.borderSide
-                                      .color ??
-                                  AppColors.textLight,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: AppColors.primary,
-                              width: 2,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: theme.inputDecorationTheme.fillColor,
-                        ),
-                        items: [
-                          DropdownMenuItem(
-                            value: 'student',
-                            child: Text(
-                              "Student",
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'teacher',
-                            child: Text(
-                              "Teacher",
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'parent',
-                            child: Text(
-                              "Parent",
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _role = value!;
-                          });
-                        },
-                      ),
-                      if (_role == 'student') ...[
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: AppColors.primary,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  "Tell us about your education to help us personalize your learning experience.",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        // Education Level
-                        DropdownButtonFormField<String>(
-                          initialValue: _educationLevel,
-                          style: TextStyle(color: theme.colorScheme.onSurface),
-                          dropdownColor: theme.cardColor,
-                          decoration: InputDecoration(
-                            labelText: "Level of Education (Optional)",
-                            prefixIcon: const Icon(Icons.school_outlined),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color:
-                                    theme
-                                        .inputDecorationTheme
-                                        .enabledBorder
-                                        ?.borderSide
-                                        .color ??
-                                    AppColors.textLight,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: AppColors.primary,
-                                width: 2,
-                              ),
-                            ),
-                            filled: true,
-                            fillColor: theme.inputDecorationTheme.fillColor,
-                          ),
-                          items: _educationLevels.map((level) {
-                            return DropdownMenuItem(
-                              value: level,
-                              child: Text(
-                                level,
-                                style: TextStyle(
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _educationLevel = value;
-                              _grade = null; // Reset grade when level changes
-                            });
-                          },
-                        ),
-                        if (_educationLevel != null &&
-                            _educationLevel != 'Other') ...[
-                          const SizedBox(height: 20),
-                          // Grade/Year
-                          DropdownButtonFormField<int>(
-                            initialValue: _grade,
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurface,
-                            ),
-                            dropdownColor: theme.cardColor,
-                            decoration: InputDecoration(
-                              labelText: _educationLevel == 'Secondary'
-                                  ? "Form (Optional)"
-                                  : "Grade/Year (Optional)",
-                              prefixIcon: const Icon(Icons.grade_outlined),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color:
-                                      theme
-                                          .inputDecorationTheme
-                                          .enabledBorder
-                                          ?.borderSide
-                                          .color ??
-                                      AppColors.textLight,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: AppColors.primary,
-                                  width: 2,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor: theme.inputDecorationTheme.fillColor,
-                            ),
-                            items: _getGradesForLevel(_educationLevel).map((
-                              grade,
-                            ) {
-                              return DropdownMenuItem(
-                                value: grade,
-                                child: Text(
-                                  _educationLevel == 'Secondary'
-                                      ? "Form $grade"
-                                      : "Grade/Year $grade",
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurface,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _grade = value;
-                              });
-                            },
-                          ),
-                        ],
-                      ],
-                      const SizedBox(height: 32),
-                      // Sign Up Button
-                      Container(
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton(
-                          onPressed: isLoading ? null : _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text(
-                                  "Create Account",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Divider
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: theme.dividerColor)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              "OR",
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.6,
-                                ),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: theme.dividerColor)),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Google Sign Up Button
-                      SizedBox(
-                        height: 56,
-                        child: OutlinedButton.icon(
-                          onPressed: isLoading
-                              ? null
-                              : () async {
-                                  try {
-                                    await Provider.of<AuthProvider>(
-                                      context,
-                                      listen: false,
-                                    ).signInWithGoogle();
-                                    if (mounted) {
-                                      Navigator.of(
-                                        this.context,
-                                      ).popUntil((route) => route.isFirst);
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        this.context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            "Google Sign In failed: ${e.toString()}",
-                                          ),
-                                          backgroundColor: AppColors.error,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                          icon: Container(
-                            height: 20,
-                            width: 20,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: Image.asset(
-                              'assets/images/google_logo.png',
-                              height: 20,
-                              width: 20,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    height: 20,
-                                    width: 20,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(2),
-                                      gradient: AppColors.googleGradient,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        'G',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                            ),
-                          ),
-                          label: Text(
-                            "Continue with Google",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: theme.cardColor,
-                            side: BorderSide(color: theme.dividerColor),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 1,
-                            shadowColor: Colors.black.withValues(alpha: 0.1),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      // Sign In Link
-                      Center(
-                        child: TextButton(
-                          onPressed: widget.onToggle,
-                          child: RichText(
-                            text: TextSpan(
-                              text: "Already have an account? ",
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.7,
-                                ),
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: "Sign In",
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Create ${widget.role.capitalize()} Account",
+                  style: GoogleFonts.nunito(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(
+                  "Tell us about yourself so we can guide your journey.",
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // --- COMMON FIELDS ---
+                _buildTextField(
+                  controller: _nameController,
+                  label: "Full Name",
+                  icon: Icons.person_outline,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: _emailController,
+                  label: "Email Address",
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: _phoneController,
+                  label: "Phone Number",
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                ),
+
+                // --- DYNAMIC ROLE-BASED FIELDS ---
+                const SizedBox(height: 24),
+                _buildRoleSpecificFields(theme),
+                const SizedBox(height: 24),
+
+                // --- PASSWORD ---
+                _buildTextField(
+                  controller: _passwordController,
+                  label: "Password",
+                  icon: Icons.lock_outline,
+                  isPassword: true,
+                ),
+                const SizedBox(height: 32),
+
+                // --- SUBMIT BUTTON ---
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _handleSignup,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C63FF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            "Sign Up",
+                            style: GoogleFonts.nunito(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  // --- WIDGET BUILDERS ---
+
+  Widget _buildRoleSpecificFields(ThemeData theme) {
+    // 1. STUDENT VIEW
+    if (widget.role.toLowerCase() == 'student') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Education Level (Still needed for content, but distinct from performance)
+          Text(
+            "Current Class/Form",
+            style: GoogleFonts.nunito(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            key: ValueKey(
+              _selectedClassLevel,
+            ), // Force rebuild to update initialValue
+            initialValue: _selectedClassLevel,
+            decoration: _inputDecoration(
+              "Select your Class",
+              Icons.school_outlined,
+            ),
+            items: _classLevels.map((level) {
+              return DropdownMenuItem(value: level, child: Text(level));
+            }).toList(),
+            onChanged: (val) => setState(() => _selectedClassLevel = val),
+            validator: (val) => val == null ? "Please select your class" : null,
+          ),
+
+          const SizedBox(height: 24),
+
+          // NEW: INTERESTS SECTION
+          Row(
+            children: [
+              const Icon(
+                Icons.explore_outlined,
+                color: Color(0xFF6C63FF),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "My Interests & Hobbies",
+                style: GoogleFonts.nunito(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Select topics you enjoy. We'll use this for your Career Compass.",
+            style: GoogleFonts.nunito(color: Colors.grey[600], fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
+            children: _careerInterests.map((interest) {
+              final isSelected = _selectedInterests.contains(interest);
+              return FilterChip(
+                label: Text(interest),
+                selected: isSelected,
+                selectedColor: const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                checkmarkColor: const Color(0xFF6C63FF),
+                backgroundColor: theme.cardColor,
+                labelStyle: GoogleFonts.nunito(
+                  color: isSelected
+                      ? const Color(0xFF6C63FF)
+                      : Colors.grey[700],
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  fontSize: 13,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isSelected
+                        ? const Color(0xFF6C63FF)
+                        : Colors.transparent,
+                    width: 1,
+                  ),
+                ),
+                onSelected: (bool selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedInterests.add(interest);
+                    } else {
+                      _selectedInterests.remove(interest);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      );
+    }
+    // 2. PARENT VIEW
+    else if (widget.role.toLowerCase() == 'parent') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Child's Class/Form",
+            style: GoogleFonts.nunito(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            key: ValueKey(_selectedChildClassLevel),
+            initialValue: _selectedChildClassLevel,
+            decoration: _inputDecoration(
+              "Select Child's Class",
+              Icons.child_care_outlined,
+            ),
+            items: _classLevels.map((level) {
+              return DropdownMenuItem(value: level, child: Text(level));
+            }).toList(),
+            onChanged: (val) => setState(() => _selectedChildClassLevel = val),
+            validator: (val) =>
+                val == null ? "Please select child's class" : null,
+          ),
+        ],
+      );
+    }
+    // 3. TEACHER VIEW
+    else if (widget.role.toLowerCase() == 'teacher') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Subjects Taught",
+            style: GoogleFonts.nunito(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 4.0,
+            children: _subjects.map((subject) {
+              final isSelected = _selectedSubjects.contains(subject);
+              return FilterChip(
+                label: Text(subject),
+                selected: isSelected,
+                selectedColor: const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                checkmarkColor: const Color(0xFF6C63FF),
+                labelStyle: GoogleFonts.nunito(
+                  color: isSelected ? const Color(0xFF6C63FF) : Colors.black87,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+                onSelected: (bool selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedSubjects.add(subject);
+                    } else {
+                      _selectedSubjects.remove(subject);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    final theme = Theme.of(context);
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.nunito(color: theme.hintColor),
+      prefixIcon: Icon(icon, color: const Color(0xFF6C63FF)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: theme.dividerColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: theme.dividerColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 2),
+      ),
+      filled: true,
+      fillColor: theme.cardColor,
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool isPassword = false,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: isPassword && _obscurePassword,
+      keyboardType: keyboardType,
+      validator: (value) {
+        if (value == null || value.isEmpty) return "Required";
+        if (label.contains("Email") && !value.contains("@")) {
+          return "Invalid email";
+        }
+        if (label.contains("Password") && value.length < 6) {
+          return "Min 6 chars";
+        }
+        return null;
+      },
+      decoration: _inputDecoration(label, icon).copyWith(
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey,
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
+              )
+            : null,
+      ),
+    );
+  }
+
+  // --- LOGIC ---
+
+  Future<void> _handleSignup() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Custom Validations
+    if (widget.role == 'teacher' && _selectedSubjects.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Select at least one subject")),
+      );
+      return;
+    }
+    if (widget.role == 'student' && _selectedInterests.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Select at least one interest/hobby")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final Map<String, dynamic> additionalData = {
+        'role': widget.role,
+        'phone': _phoneController.text.trim(),
+        'createdAt': DateTime.now().toIso8601String(),
+      };
+
+      if (widget.role == 'student') {
+        additionalData['classLevel'] = _selectedClassLevel;
+        // Key Update: Save interests for Career Compass
+        additionalData['interests'] = _selectedInterests;
+        additionalData['careerMode'] = 'interest_based';
+      } else if (widget.role == 'parent') {
+        additionalData['childClassLevel'] = _selectedChildClassLevel;
+      } else if (widget.role == 'teacher') {
+        additionalData['subjectsTaught'] = _selectedSubjects;
+      }
+
+      await Provider.of<AuthProvider>(context, listen: false).signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        name: _nameController.text.trim(),
+        additionalData: additionalData,
+      );
+
+      if (mounted) {
+        Navigator.popUntil(context, (route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Signup Failed: ${e.toString()}")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }

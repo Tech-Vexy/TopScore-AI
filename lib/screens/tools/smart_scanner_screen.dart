@@ -1,19 +1,14 @@
+import 'package:flutter/foundation.dart'; // For platform detection
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../constants/colors.dart';
-import '../../services/ai_service.dart';
-import 'package:flutter/foundation.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'camera_screen.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-enum ScannerMode { homework, text, diagram }
+// Ensure you import your ChatScreen to show the AI results
+import '../../tutor_client/chat_screen.dart';
 
 class SmartScannerScreen extends StatefulWidget {
-  final Uint8List? initialImage;
-  const SmartScannerScreen({super.key, this.initialImage});
+  const SmartScannerScreen({super.key});
 
   @override
   State<SmartScannerScreen> createState() => _SmartScannerScreenState();
@@ -21,440 +16,259 @@ class SmartScannerScreen extends StatefulWidget {
 
 class _SmartScannerScreenState extends State<SmartScannerScreen> {
   final ImagePicker _picker = ImagePicker();
-  final AIService _aiService = AIService();
+  bool _isProcessing = false;
+  String? _errorMessage;
 
-  XFile? _pickedFile;
-
-  Uint8List? _imageBytes;
-  String? _result;
-  bool _isAnalyzing = false;
-  ScannerMode _selectedMode = ScannerMode.homework;
+  /// Helper to determine if we are on a mobile device (Android/iOS).
+  /// This works for both Native Apps and Mobile Web Browsers.
+  bool get _isMobileDevice {
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialImage != null) {
-      _imageBytes = widget.initialImage;
-    }
   }
 
-  Future<void> _openCamera() async {
-    try {
-      final XFile? pickedFile = await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const CameraScreen()),
-      );
-
-      if (pickedFile != null) {
-        final bytes = await pickedFile.readAsBytes();
-        setState(() {
-          _pickedFile = pickedFile;
-          _imageBytes = bytes;
-          _result = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error opening camera: $e')));
-      }
-    }
-  }
-
+  /// The Core Logic: Pick Image -> Send to AI
   Future<void> _pickImage(ImageSource source) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-
-      if (pickedFile != null) {
-        final bytes = await pickedFile.readAsBytes();
-        setState(() {
-          _pickedFile = pickedFile;
-          _imageBytes = bytes;
-          _result = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
-      }
-    }
-  }
-
-  Future<void> _analyzeImage() async {
-    if (_imageBytes == null) return;
-
     setState(() {
-      _isAnalyzing = true;
-      _result = null;
+      _isProcessing = true;
+      _errorMessage = null;
     });
 
     try {
-      // 1. Attempt to extract text using ML Kit (for all modes)
-      String extractedText = "";
-      if (!kIsWeb && _pickedFile != null) {
-        try {
-          final inputImage = InputImage.fromFilePath(_pickedFile!.path);
-          final textRecognizer = TextRecognizer(
-            script: TextRecognitionScript.latin,
-          );
-          final RecognizedText recognizedText = await textRecognizer
-              .processImage(inputImage);
-          await textRecognizer.close();
-          extractedText = recognizedText.text;
-        } catch (e) {
-          debugPrint("ML Kit OCR error: $e");
-        }
-      }
+      // 1. CAPTURE IMAGE
+      final XFile? photo = await _picker.pickImage(
+        source: source,
+        imageQuality: 85, // Good balance of speed/quality
+        maxWidth: 1024, // AI doesn't need huge 4k images
+      );
 
-      // 2. Handle Text Mode (Return generic OCR result)
-      if (_selectedMode == ScannerMode.text) {
-        if (mounted) {
-          setState(() {
-            _result = extractedText.isEmpty ? "No text found." : extractedText;
-            _isAnalyzing = false;
-          });
-        }
+      if (photo == null) {
+        // User cancelled
+        setState(() => _isProcessing = false);
         return;
       }
 
-      // 3. Handle Homework/Diagram Mode (AI analysis)
-      String prompt;
-      switch (_selectedMode) {
-        case ScannerMode.diagram:
-          prompt = """
-Analyze this diagram or image.
-Explain what it represents in detail.
-Identify key components and their relationships.
-Use simple, educational language suitable for a student.
-""";
-          break;
-        case ScannerMode.homework:
-        default:
-          prompt = """
-Analyze this image for a student. 
-If it's a homework question, solve it step-by-step.
-If it's a diagram, explain it.
-If it's text, summarize it.
-Use simple, encouraging language.
-""";
-          break;
-      }
+      // 2. NAVIGATE TO AI TUTOR
+      if (!mounted) return;
 
-      // Append extracted text to prompt if available
-      if (extractedText.isNotEmpty) {
-        prompt +=
-            """
-
-I have also extracted the following text from the image for your reference:
-===
-$extractedText
-===
-Please use this text to ensure accuracy if the image text is difficult to read.
-""";
-      }
-
-      final response = await _aiService.analyzeImage(_imageBytes!, prompt);
-
-      if (mounted) {
-        setState(() {
-          _result = response;
-          _isAnalyzing = false;
-        });
-      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatScreen(
+            initialImage: photo,
+            initialMessage:
+                "Analyze this image and solve the problem step-by-step.",
+          ),
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _result = "Error analyzing image. Please try again.";
-          _isAnalyzing = false;
-        });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      debugPrint("Scanner Error: $e");
+      setState(() {
+        _errorMessage = "Could not access image source: $e";
+        _isProcessing = false;
+      });
     }
-  }
-
-  void _clearImage() {
-    setState(() {
-      _imageBytes = null;
-      _result = null;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // Check if camera should be enabled
+    final bool isCameraEnabled = _isMobileDevice;
+
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: Colors.black, // Sleek "Camera Mode" look
       appBar: AppBar(
         title: Text(
-          'Smart Scanner',
-          style: TextStyle(color: theme.colorScheme.onSurface),
+          "Smart Scanner",
+          style: GoogleFonts.nunito(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
-        backgroundColor:
-            theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
-        elevation: 1,
-        iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
-        actions: [
-          if (_imageBytes != null)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              onPressed: _clearImage,
-            ),
-        ],
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Image Preview Area
-            Container(
-              height: 300,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: theme.dividerColor.withValues(alpha: 0.2),
-                ),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: _imageBytes != null
-                  ? Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.memory(_imageBytes!, fit: BoxFit.cover),
-                        if (_isAnalyzing)
-                          Container(
-                            color: Colors.black45,
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                      ],
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.add_a_photo_outlined,
-                          size: 64,
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Take a photo of your homework\nor upload an image',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: _openCamera,
-                              icon: const Icon(Icons.camera_alt),
-                              label: const Text('Camera'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.googleBlue,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            OutlinedButton.icon(
-                              onPressed: () => _pickImage(ImageSource.gallery),
-                              icon: const Icon(Icons.photo_library),
-                              label: const Text('Gallery'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.googleBlue,
-                                side: const BorderSide(
-                                  color: AppColors.googleBlue,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Mode Selection
-            if (_imageBytes != null && !_isAnalyzing)
-              Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: SegmentedButton<ScannerMode>(
-                  segments: const [
-                    ButtonSegment<ScannerMode>(
-                      value: ScannerMode.homework,
-                      label: Text('Homework'),
-                      icon: Icon(Icons.school),
-                    ),
-                    ButtonSegment<ScannerMode>(
-                      value: ScannerMode.text,
-                      label: Text('Text'),
-                      icon: Icon(Icons.text_fields),
-                    ),
-                    ButtonSegment<ScannerMode>(
-                      value: ScannerMode.diagram,
-                      label: Text('Diagram'),
-                      icon: Icon(Icons.image),
-                    ),
-                  ],
-                  selected: {_selectedMode},
-                  onSelectionChanged: (Set<ScannerMode> newSelection) {
-                    setState(() {
-                      _selectedMode = newSelection.first;
-                      _result = null; // Clear result when mode changes
-                    });
-                  },
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.resolveWith<Color>((
-                      Set<WidgetState> states,
-                    ) {
-                      if (states.contains(WidgetState.selected)) {
-                        return AppColors.googleBlue.withValues(alpha: 0.2);
-                      }
-                      return Colors.transparent;
-                    }),
-                    foregroundColor: WidgetStateProperty.resolveWith<Color>((
-                      Set<WidgetState> states,
-                    ) {
-                      if (states.contains(WidgetState.selected)) {
-                        return AppColors.googleBlue;
-                      }
-                      return theme.colorScheme.onSurface;
-                    }),
-                  ),
-                ),
-              ),
-
-            // Analyze Button
-            if (_imageBytes != null && !_isAnalyzing && _result == null)
-              ElevatedButton.icon(
-                onPressed: _analyzeImage,
-                icon: Icon(
-                  _selectedMode == ScannerMode.text
-                      ? Icons.copy_all
-                      : Icons.auto_awesome,
-                ),
-                label: Text(
-                  _selectedMode == ScannerMode.text
-                      ? 'Extract Text'
-                      : 'Analyze with AI',
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.googleBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-            // Result Area
-            if (_result != null) ...[
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Center(
+        child: _isProcessing
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  const CircularProgressIndicator(color: Color(0xFF6C63FF)),
+                  const SizedBox(height: 20),
                   Text(
-                    "Analysis Result",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
+                    "Processing Image...",
+                    style: GoogleFonts.nunito(
+                      color: Colors.white70,
+                      fontSize: 16,
                     ),
                   ),
-                  if (_selectedMode == ScannerMode.text)
-                    IconButton(
-                      icon: const Icon(Icons.copy, color: AppColors.googleBlue),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: _result!));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Text copied to clipboard'),
-                          ),
-                        );
-                      },
-                      tooltip: 'Copy Text',
-                    ),
                 ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: theme.dividerColor.withValues(alpha: 0.2),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: _selectedMode == ScannerMode.text
-                    ? SelectableText(
-                        _result!,
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          height: 1.5,
-                          color: theme.colorScheme.onSurface,
+              )
+            : Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // --- SCANNER VISUAL ---
+                    Container(
+                      width: 280,
+                      height: 280,
+                      decoration: BoxDecoration(
+                        color: Colors.white10,
+                        border: Border.all(
+                          color: const Color(0xFF6C63FF),
+                          width: 2,
                         ),
-                      )
-                    : MarkdownBody(
-                        data: _result!,
-                        styleSheet: MarkdownStyleSheet(
-                          p: TextStyle(
-                            fontSize: 16,
-                            height: 1.5,
-                            color: theme.colorScheme.onSurface,
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const FaIcon(
+                            FontAwesomeIcons.expand,
+                            size: 50,
+                            color: Color(0xFF6C63FF),
                           ),
-                          h1: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface,
+                          const SizedBox(height: 16),
+                          Text(
+                            "Tap to Scan",
+                            style: GoogleFonts.nunito(
+                              color: Colors.white54,
+                              fontSize: 18,
+                            ),
                           ),
-                          h2: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                          code: GoogleFonts.firaCode(
-                            backgroundColor:
-                                theme.colorScheme.surfaceContainerHighest,
-                            color: theme.colorScheme.onSurface,
-                          ),
+                        ],
+                      ),
+                    ),
+
+                    // --- ERROR MESSAGE ---
+                    if (_errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.redAccent),
                         ),
                       ),
+
+                    const SizedBox(height: 50),
+
+                    // --- INSTRUCTIONS ---
+                    Text(
+                      "Solve Homework Instantly",
+                      style: GoogleFonts.nunito(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "Take a photo of any math problem, science question, or diagram.",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunito(
+                        fontSize: 16,
+                        color: Colors.white60,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+
+                    // --- ACTION BUTTONS ---
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // 1. GALLERY (Always Enabled)
+                        _buildActionButton(
+                          icon: Icons.photo_library,
+                          label: "Gallery",
+                          isEnabled: true,
+                          isPrimary: false,
+                          onTap: () => _pickImage(ImageSource.gallery),
+                        ),
+                        const SizedBox(width: 30),
+
+                        // 2. CAMERA (Enabled only on Mobile/Tablets)
+                        _buildActionButton(
+                          icon: Icons.camera_alt,
+                          label: "Camera",
+                          isEnabled: isCameraEnabled,
+                          isPrimary: true,
+                          onTap: () {
+                            if (isCameraEnabled) {
+                              _pickImage(ImageSource.camera);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Please use 'Gallery' upload on desktops.",
+                                  ),
+                                  backgroundColor: Colors.grey,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ],
-        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isEnabled = true,
+    bool isPrimary = false,
+  }) {
+    // Determine visual style based on enabled state
+    final Color bgColor = isEnabled
+        ? (isPrimary ? const Color(0xFF6C63FF) : Colors.white12)
+        : Colors.white10; // Dimmer for disabled
+
+    final Color iconColor = isEnabled ? Colors.white : Colors.white38;
+    final Color textColor = isEnabled ? Colors.white : Colors.white38;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: bgColor,
+              shape: BoxShape.circle,
+              boxShadow: (isEnabled && isPrimary)
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Icon(icon, color: iconColor, size: 30),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            style: GoogleFonts.nunito(
+              color: textColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

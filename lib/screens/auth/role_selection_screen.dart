@@ -1,247 +1,268 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../providers/auth_provider.dart';
-import '../../constants/colors.dart';
-import '../../constants/strings.dart';
+import '../dashboard_screen.dart';
 
-class RoleSelectionScreen extends StatelessWidget {
+class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final isLoading = authProvider.isLoading;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: isDark ? AppColors.darkGradient : null,
-          color: isDark ? null : AppColors.background,
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header
-                _buildHeader(context, isDark),
-
-                const SizedBox(height: 40),
-
-                // Role Cards
-                _RoleCard(
-                  title: "Student",
-                  description:
-                      "Access learning materials, AI tutoring, and resources",
-                  icon: FontAwesomeIcons.userGraduate,
-                  color: AppColors.cardBlue,
-                  isDark: isDark,
-                  onPressed: isLoading
-                      ? null
-                      : () => authProvider.completeGoogleSignup('student'),
-                ),
-                const SizedBox(height: 16),
-                _RoleCard(
-                  title: "Teacher",
-                  description:
-                      "Manage classes, share resources, and track students",
-                  icon: FontAwesomeIcons.chalkboardUser,
-                  color: AppColors.cardPurple,
-                  isDark: isDark,
-                  onPressed: isLoading
-                      ? null
-                      : () => authProvider.completeGoogleSignup('teacher'),
-                ),
-                const SizedBox(height: 16),
-                _RoleCard(
-                  title: "Parent",
-                  description:
-                      "Monitor your child's progress and learning journey",
-                  icon: FontAwesomeIcons.peopleRoof,
-                  color: AppColors.cardGreen,
-                  isDark: isDark,
-                  onPressed: isLoading
-                      ? null
-                      : () => authProvider.completeGoogleSignup('parent'),
-                ),
-
-                // Loading indicator
-                if (isLoading) _buildLoadingIndicator(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, bool isDark) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: AppColors.heroGradient,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryPurple.withValues(alpha: 0.4),
-                blurRadius: 25,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: const FaIcon(
-            FontAwesomeIcons.userCheck,
-            size: 40,
-            color: AppColors.accentTeal,
-          ),
-        ),
-        const SizedBox(height: 28),
-        Text(
-          "Choose Your Role",
-          style: GoogleFonts.roboto(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.textDark : AppColors.text,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 10),
-        Text(
-          "Tell us how you'll be using ${AppStrings.appName}",
-          style: GoogleFonts.roboto(
-            fontSize: 15,
-            color: isDark
-                ? AppColors.textSecondaryDark
-                : AppColors.textSecondary,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLoadingIndicator() {
-    return Container(
-      margin: const EdgeInsets.only(top: 32),
-      child: Column(
-        children: [
-          const CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentTeal),
-            strokeWidth: 3,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            "Setting up your account...",
-            style: GoogleFonts.roboto(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
 }
 
-class _RoleCard extends StatelessWidget {
-  final String title;
-  final String description;
-  final IconData icon;
-  final Color color;
-  final bool isDark;
-  final VoidCallback? onPressed;
+class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
+  // --- Form State ---
+  String selectedRole = 'Student';
+  String? selectedCurriculum; // "CBC" or "8-4-4"
+  String? selectedGrade;
+  final TextEditingController _schoolController = TextEditingController();
+  bool _isSaving = false;
 
-  const _RoleCard({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.color,
-    required this.isDark,
-    this.onPressed,
-  });
+  // --- Data Options ---
+  final List<String> roles = ['Student', 'Teacher', 'Parent'];
+  final List<String> curriculums = ['CBC', '8-4-4'];
+
+  // Dynamic grades based on curriculum
+  List<String> get _availableGrades {
+    if (selectedCurriculum == 'CBC') {
+      return List.generate(12, (index) => 'Grade ${index + 1}');
+    } else if (selectedCurriculum == '8-4-4') {
+      return ['Form 1', 'Form 2', 'Form 3', 'Form 4'];
+    }
+    return [];
+  }
+
+  // --- Logic ---
+  Future<void> _saveAndContinue() async {
+    // Validation
+    if (_schoolController.text.trim().isEmpty) {
+      _showError("Please enter your school name");
+      return;
+    }
+    if ((selectedRole == 'Student' || selectedRole == 'Teacher') &&
+        selectedCurriculum == null) {
+      _showError("Please select a curriculum (CBC or 8-4-4)");
+      return;
+    }
+    if ((selectedRole == 'Student' || selectedRole == 'Teacher') &&
+        selectedGrade == null) {
+      _showError("Please select your grade/form");
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // Combine Curriculum + Grade (e.g., "CBC - Grade 7" or just "Grade 7")
+      // You might want to save them separately in your model, but for now we pass the grade.
+      // Ideally, update updateUserRole to accept curriculum too.
+      // For this implementation, we will append curriculum info if needed or just save the grade string.
+
+      await authProvider.updateUserRole(
+        selectedRole.toLowerCase(),
+        selectedGrade ?? '', // Pass the specific grade (e.g. "Form 1")
+        _schoolController.text.trim(),
+      );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError("Error: $e");
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceElevatedDark : AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
-            ),
-          ],
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.05)
-                : Colors.black.withValues(alpha: 0.03),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(16),
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- Header ---
+              Text(
+                "Complete Profile",
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
-              child: FaIcon(icon, size: 26, color: color),
-            ),
-            const SizedBox(width: 18),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.roboto(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textDark : AppColors.text,
+              const SizedBox(height: 10),
+              Text(
+                "Help us tailor the content to your curriculum.",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              // --- 1. Role Selection ---
+              _buildLabel(theme, "I am a..."),
+              DropdownButtonFormField<String>(
+                // ignore: deprecated_member_use
+                value: selectedRole,
+                dropdownColor: theme.cardColor,
+                style: TextStyle(color: theme.colorScheme.onSurface),
+                items: roles
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                    .toList(),
+                onChanged: (val) => setState(() {
+                  selectedRole = val!;
+                  // Reset downstream fields if role changes (optional)
+                }),
+                decoration: _inputDecoration(theme),
+              ),
+              const SizedBox(height: 20),
+
+              // --- 2. School Name ---
+              _buildLabel(theme, "School Name"),
+              TextField(
+                controller: _schoolController,
+                style: TextStyle(color: theme.colorScheme.onSurface),
+                decoration: _inputDecoration(theme).copyWith(
+                  hintText: "e.g., Nairobi School",
+                  prefixIcon: Icon(
+                    Icons.school_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // --- 3. Curriculum & Grade (Conditional) ---
+              if (selectedRole == 'Student' || selectedRole == 'Teacher') ...[
+                // Curriculum
+                _buildLabel(theme, "Curriculum System"),
+                DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
+                  value: selectedCurriculum,
+                  dropdownColor: theme.cardColor,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  hint: Text(
+                    "Select Curriculum",
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: GoogleFonts.roboto(
-                      fontSize: 13,
-                      height: 1.4,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondary,
+                  items: curriculums
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (val) => setState(() {
+                    selectedCurriculum = val;
+                    selectedGrade = null; // Reset grade when curriculum changes
+                  }),
+                  decoration: _inputDecoration(theme),
+                ),
+                const SizedBox(height: 20),
+
+                // Grade (Visible only if Curriculum is selected)
+                if (selectedCurriculum != null) ...[
+                  _buildLabel(
+                    theme,
+                    selectedRole == 'Teacher'
+                        ? "Grade I Teach"
+                        : "My Current Level",
+                  ),
+                  DropdownButtonFormField<String>(
+                    // ignore: deprecated_member_use
+                    value: selectedGrade,
+                    dropdownColor: theme.cardColor,
+                    style: TextStyle(color: theme.colorScheme.onSurface),
+                    hint: Text(
+                      "Select Level",
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
                     ),
+                    items: _availableGrades
+                        .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                        .toList(),
+                    onChanged: (val) => setState(() => selectedGrade = val),
+                    decoration: _inputDecoration(theme),
                   ),
                 ],
+              ],
+
+              const SizedBox(height: 40),
+
+              // --- Save Button ---
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _saveAndContinue,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isSaving
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          "Finish Setup",
+                          style: GoogleFonts.nunito(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: FaIcon(
-                FontAwesomeIcons.chevronRight,
-                size: 14,
-                color: color,
-              ),
-            ),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLabel(ThemeData theme, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        text,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(ThemeData theme) {
+    return InputDecoration(
+      filled: true,
+      fillColor: theme.cardColor,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 }

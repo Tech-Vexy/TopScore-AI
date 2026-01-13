@@ -50,27 +50,21 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <script src="https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.9.1/nutrient-viewer.js"></script>
-  <title>TopScore AI</title>
-  <link rel="manifest" href="manifest.json">
+
 
   <!-- reCAPTCHA Enterprise -->
-  <script src="https://www.google.com/recaptcha/enterprise.js?render=6LfloC0sAAAAANQTVBr3RxYg-n38B-L-IESgxVpg"></script>
+  <script src="https://www.google.com/recaptcha/enterprise.js?render=6LcgGEIsAAAAAHXWC6Wq75smJnr8fhr2VjI3eLB7"></script>
+
+  <title>TopScore AI</title>
+  <link rel="manifest" href="manifest.json">
   <script>
-    window.getRecaptchaToken = async function () {
-      return new Promise((resolve, reject) => {
-        grecaptcha.enterprise.ready(async () => {
-          try {
-            const token = await grecaptcha.enterprise.execute('6LfloC0sAAAAANQTVBr3RxYg-n38B-L-IESgxVpg', { action: 'LOGIN' });
-            resolve(token);
-          } catch (e) {
-            console.error("reCAPTCHA error:", e);
-            resolve(null); // Resolve null on error to allow login flow to continue or handle gracefully
-          }
-        });
-      });
-    }
+    var serviceWorkerVersion = "{{flutter_service_worker_version}}";
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script type="text/javascript">
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+  </script>
+
 </head>
 
 <body>
