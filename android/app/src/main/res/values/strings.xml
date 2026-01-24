@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TopScore AI</string>
+    
+    <!-- App Shortcuts -->
+    <string name="shortcut_ai_tutor_short">AI Tutor</string>
+    <string name="shortcut_ai_tutor_long">Ask AI Tutor</string>
+    
+    <string name="shortcut_scanner_short">Scanner</string>
+    <string name="shortcut_scanner_long">Smart Scanner</string>
+    
+    <string name="shortcut_calculator_short">Calculator</string>
+    <string name="shortcut_calculator_long">Scientific Calculator</string>
+    
+    <string name="shortcut_library_short">Library</string>
+    <string name="shortcut_library_long">Study Resources</string>
+</resources>

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:provider/provider.dart';
 import 'dart:ui' as ui; // Needed for ImageFilter
 import '../constants/colors.dart';
+import '../providers/auth_provider.dart';
 import 'auth/auth_screen.dart';
 
 class LandingPage extends StatefulWidget {
@@ -75,7 +77,8 @@ class _LandingPageState extends State<LandingPage>
         curve: Curves.fastEaseInToSlowEaseOut,
       );
     } else {
-      _goToAuthScreen(isLogin: false);
+      // Defer auth: Enter Guest Mode with anonymous authentication
+      context.read<AuthProvider>().continueAsGuest();
     }
   }
 
@@ -148,7 +151,7 @@ class _LandingPageState extends State<LandingPage>
                                 : Colors.black54,
                           ),
                           child: Text(
-                            'Skip',
+                            'Log In',
                             style: GoogleFonts.nunito(
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
@@ -163,6 +166,7 @@ class _LandingPageState extends State<LandingPage>
                 Expanded(
                   child: PageView.builder(
                     controller: _pageController,
+                    physics: const BouncingScrollPhysics(),
                     onPageChanged: (index) =>
                         setState(() => _currentPage = index),
                     itemCount: _pages.length,

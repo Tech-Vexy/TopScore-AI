@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../services/offline_service.dart';
 
 class SettingsProvider with ChangeNotifier {
-  final OfflineService _offlineService = OfflineService();
+  final OfflineService? _offlineService = kIsWeb ? null : OfflineService();
   bool _isLiteMode = false;
   ThemeMode _themeMode = ThemeMode.system; // Default to system
 
@@ -14,14 +15,18 @@ class SettingsProvider with ChangeNotifier {
   }
 
   void _loadSettings() {
-    _isLiteMode = _offlineService.getLiteMode();
+    if (!kIsWeb && _offlineService != null) {
+      _isLiteMode = _offlineService.getLiteMode();
+    }
     // In a real app, save/load theme mode from SharedPreferences here
     notifyListeners();
   }
 
   Future<void> toggleLiteMode(bool value) async {
     _isLiteMode = value;
-    await _offlineService.saveLiteMode(value);
+    if (!kIsWeb && _offlineService != null) {
+      await _offlineService.saveLiteMode(value);
+    }
     notifyListeners();
   }
 

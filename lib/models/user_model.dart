@@ -5,7 +5,7 @@ class UserModel {
   final String email;
   final String displayName;
   final String?
-  photoURL; // Changed from photoUrl to photoURL to match Firebase Auth
+      photoURL; // Changed from photoUrl to photoURL to match Firebase Auth
   final String role; // 'student', 'teacher', 'parent'
   final int? grade; // Changed to int? to match usage in AuthProvider
   final String schoolName; // <--- NEW FIELD
@@ -22,6 +22,8 @@ class UserModel {
   final List<String> badges;
   final List<String>? interests;
   final String? careerMode;
+  final String? phoneNumber; // Added
+  final String? curriculum; // Added
 
   UserModel({
     required this.uid,
@@ -44,6 +46,8 @@ class UserModel {
     this.badges = const [],
     this.interests,
     this.careerMode,
+    this.phoneNumber,
+    this.curriculum,
   });
 
   Map<String, dynamic> toMap() {
@@ -74,6 +78,8 @@ class UserModel {
       'badges': badges,
       'interests': interests,
       'careerMode': careerMode,
+      'phoneNumber': phoneNumber,
+      'curriculum': curriculum,
     };
   }
 
@@ -99,9 +105,8 @@ class UserModel {
             ), // Handle String/Int mismatch
       schoolName: map['schoolName'] ?? '', // <--- NEW FIELD
       educationLevel: map['educationLevel'],
-      subjects: map['subjects'] != null
-          ? List<String>.from(map['subjects'])
-          : null,
+      subjects:
+          map['subjects'] != null ? List<String>.from(map['subjects']) : null,
       isSubscribed: map['isSubscribed'] ?? false,
       subscriptionExpiry: getDateTime(map['subscriptionExpiry']),
       preferredLanguage: map['preferred_language'],
@@ -115,10 +120,11 @@ class UserModel {
       xp: map['xp'] ?? 0,
       level: map['level'] ?? 1,
       badges: map['badges'] != null ? List<String>.from(map['badges']) : [],
-      interests: map['interests'] != null
-          ? List<String>.from(map['interests'])
-          : null,
+      interests:
+          map['interests'] != null ? List<String>.from(map['interests']) : null,
       careerMode: map['careerMode'],
+      phoneNumber: map['phoneNumber'],
+      curriculum: map['curriculum'],
     );
   }
 
@@ -143,6 +149,8 @@ class UserModel {
     List<String>? badges,
     List<String>? interests,
     String? careerMode,
+    String? phoneNumber,
+    String? curriculum,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -165,6 +173,8 @@ class UserModel {
       badges: badges ?? this.badges,
       interests: interests ?? this.interests,
       careerMode: careerMode ?? this.careerMode,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      curriculum: curriculum ?? this.curriculum,
     );
   }
 }

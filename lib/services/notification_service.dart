@@ -17,28 +17,40 @@ class NotificationService {
     // Initialize Timezones for scheduling
     tz.initializeTimeZones();
 
-    // Request Permissions
-    await _fcm.requestPermission(alert: true, badge: true, sound: true);
-
     // Setup Local Notifications
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // Fix for iOS permissions
+    // Fix for iOS permissions - Defer request
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-          requestAlertPermission: true,
-          requestBadgePermission: true,
-          requestSoundPermission: true,
-        );
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
 
     const InitializationSettings initializationSettings =
         InitializationSettings(
-          android: initializationSettingsAndroid,
-          iOS: initializationSettingsDarwin,
-        );
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsDarwin,
+    );
 
     await _localNotifications.initialize(initializationSettings);
+  }
+
+  Future<void> requestPermissions() async {
+    // Request Permissions for Firebase Messaging
+    await _fcm.requestPermission(alert: true, badge: true, sound: true);
+
+    // Request Permissions for Local Notifications (iOS)
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
   }
 
   /// Schedule a weekly reminder for a class

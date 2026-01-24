@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NavigationProvider extends ChangeNotifier {
   int _currentIndex = 0;
@@ -12,18 +13,27 @@ class NavigationProvider extends ChangeNotifier {
   String? get pendingMessage => _pendingMessage;
   XFile? get pendingImage => _pendingImage;
 
+  Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey('current_nav_index')) {
+      _currentIndex = prefs.getInt('current_nav_index') ?? 0;
+      notifyListeners();
+    }
+  }
+
   /// Switch the tab on HomeScreen
-  void setIndex(int index) {
+  Future<void> setIndex(int index) async {
     _currentIndex = index;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('current_nav_index', index);
   }
 
   /// Helper to go specifically to AI Tutor with data
   void navigateToChat({String? message, XFile? image, BuildContext? context}) {
     _pendingMessage = message;
     _pendingImage = image;
-    _currentIndex = 2; // Assuming Chat is at index 2
-    notifyListeners();
+    setIndex(2); // Updates index and persists it
 
     // If we are deep in a stack (e.g., PDF Viewer), go back to Home
     if (context != null) {

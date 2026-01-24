@@ -17,6 +17,7 @@ class WebSocketService {
   static const int _maxReconnectAttempts = 3;
   Timer? _reconnectTimer;
   Timer? _pingTimer;
+  Timer? _keepAliveTimer;
 
   Stream<Map<String, dynamic>> get messageStream => _messageController.stream;
   Stream<bool> get isConnectedStream => _isConnectedController.stream;
@@ -36,6 +37,11 @@ class WebSocketService {
   String get _wsUrl {
     // NEW: Session ID is now required in the path
     return 'wss://agent.topscoreapp.ai/ws/chat/$sessionId';
+  }
+
+  String get _voiceWsUrl {
+    // Dedicated voice endpoint for low-latency voice interactions
+    return 'wss://agent.topscoreapp.ai/voice/ws/live/$sessionId';
   }
 
   void setThreadId(String newThreadId) {
@@ -192,6 +198,49 @@ class WebSocketService {
     }
   }
 
+  /// Connect to dedicated voice WebSocket endpoint for live voice mode
+  void connectVoice() {
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      debugPrint(
+        'Voice WebSocket: Max reconnect attempts reached. Call resetConnection() to retry.',
+      );
+      return;
+    }
+
+    try {
+      debugPrint(
+        'Voice WebSocket: Connecting to $_voiceWsUrl (attempt ${_reconnectAttempts + 1}/$_maxReconnectAttempts)',
+      );
+      _channel = WebSocketChannel.connect(Uri.parse(_voiceWsUrl));
+
+      _channel!.stream.listen(
+        (message) {
+          try {
+            final data = jsonDecode(message) as Map<String, dynamic>;
+            _handleIncomingMessage(data);
+          } catch (e) {
+            debugPrint('Voice WebSocket: Error parsing message: $e');
+          }
+        },
+        onError: (error) {
+          debugPrint('Voice WebSocket: Connection error: $error');
+          _handleDisconnection();
+        },
+        onDone: () {
+          debugPrint('Voice WebSocket: Connection closed');
+          _handleDisconnection();
+        },
+      );
+
+      // Connection will be confirmed when we receive 'connected' message
+    } catch (e) {
+      debugPrint('Voice WebSocket: Failed to connect: $e');
+      _isConnected = false;
+      _isConnectedController.add(false);
+      _scheduleReconnect();
+    }
+  }
+
   void _handleIncomingMessage(Map<String, dynamic> data) {
     final type = data['type'];
 
@@ -202,6 +251,7 @@ class WebSocketService {
         _reconnectAttempts = 0;
         _isConnectedController.add(true);
         _startPingTimer();
+        _startKeepAliveTimer();
         break;
 
       case 'ping':
@@ -214,6 +264,14 @@ class WebSocketService {
       case 'status':
       case 'error':
       case 'title_updated':
+      // NEW: Handle these explicitly to identify them in logs or logic if needed
+      case 'response_start':
+      case 'tool_start':
+      case 'done':
+      // Voice-specific message types
+      case 'transcription': // User's speech transcribed to text
+      case 'listening': // Status: listening for audio
+      case 'transcribing': // Status: processing audio
         // Forward to message stream for UI handling
         _messageController.add(data);
         break;
@@ -240,6 +298,24 @@ class WebSocketService {
     });
   }
 
+  void _startKeepAliveTimer() {
+    _keepAliveTimer?.cancel();
+    // Send keep-alive ping every 20 seconds to maintain connection
+    _keepAliveTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (_isConnected && _channel != null) {
+        try {
+          _channel!.sink.add(jsonEncode({'type': 'ping'}));
+          debugPrint('WebSocket: Keep-alive ping sent');
+        } catch (e) {
+          debugPrint('WebSocket: Keep-alive ping failed: $e');
+          _handleDisconnection();
+        }
+      } else {
+        _keepAliveTimer?.cancel();
+      }
+    });
+  }
+
   void _scheduleReconnect() {
     _reconnectAttempts++;
     if (_reconnectAttempts < _maxReconnectAttempts) {
@@ -261,6 +337,7 @@ class WebSocketService {
     debugPrint('WebSocket: Resetting connection attempts');
     _reconnectAttempts = 0;
     _reconnectTimer?.cancel();
+    _keepAliveTimer?.cancel();
     _pingTimer?.cancel();
     connect();
   }
@@ -289,6 +366,7 @@ class WebSocketService {
 
     // 1. Match the Python Script's Payload Structure exactly
     final Map<String, dynamic> data = {
+      "type": "message", // Required by new protocol
       "message": message, // Script uses "message", not "content"
       "user_id": userId,
       "thread_id": threadId ?? this.threadId,
@@ -315,8 +393,34 @@ class WebSocketService {
     _channel!.sink.add(jsonEncode(data));
   }
 
+  /// Send audio message for live voice mode
+  /// Audio should be base64-encoded m4a or wav format
+  void sendAudioMessage({
+    required String base64Audio,
+    required String userId,
+    String? threadId,
+    String? modelPreference,
+  }) {
+    if (_channel == null) {
+      debugPrint('Voice WS Not connected');
+      return;
+    }
+
+    final Map<String, dynamic> data = {
+      "type": "audio",
+      "user_id": userId,
+      "audioData": base64Audio,
+      "modelPreference": modelPreference ?? "fast", // Recommended for voice
+      "thread_id": threadId ?? this.threadId,
+    };
+
+    debugPrint('Sending Voice Audio Payload (${base64Audio.length} bytes)');
+    _channel!.sink.add(jsonEncode(data));
+  }
+
   void dispose() {
     _reconnectTimer?.cancel();
+    _keepAliveTimer?.cancel();
     _pingTimer?.cancel();
     _channel?.sink.close();
     _messageController.close();

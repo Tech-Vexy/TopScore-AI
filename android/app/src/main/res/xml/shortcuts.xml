@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- AI Tutor Shortcut -->
+    <shortcut
+        android:shortcutId="ai_tutor"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_ai"
+        android:shortcutShortLabel="@string/shortcut_ai_tutor_short"
+        android:shortcutLongLabel="@string/shortcut_ai_tutor_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.elimisha.elimisha"
+            android:targetClass="com.elimisha.elimisha.MainActivity"
+            android:data="topscore://app/ai-tutor" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <!-- Smart Scanner Shortcut -->
+    <shortcut
+        android:shortcutId="scanner"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_scanner"
+        android:shortcutShortLabel="@string/shortcut_scanner_short"
+        android:shortcutLongLabel="@string/shortcut_scanner_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.elimisha.elimisha"
+            android:targetClass="com.elimisha.elimisha.MainActivity"
+            android:data="topscore://app/tools/scanner" />
+    </shortcut>
+
+    <!-- Calculator Shortcut -->
+    <shortcut
+        android:shortcutId="calculator"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_calculator"
+        android:shortcutShortLabel="@string/shortcut_calculator_short"
+        android:shortcutLongLabel="@string/shortcut_calculator_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.elimisha.elimisha"
+            android:targetClass="com.elimisha.elimisha.MainActivity"
+            android:data="topscore://app/tools/calculator" />
+    </shortcut>
+
+    <!-- Library Shortcut -->
+    <shortcut
+        android:shortcutId="library"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_library"
+        android:shortcutShortLabel="@string/shortcut_library_short"
+        android:shortcutLongLabel="@string/shortcut_library_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.elimisha.elimisha"
+            android:targetClass="com.elimisha.elimisha.MainActivity"
+            android:data="topscore://app/library" />
+    </shortcut>
+</shortcuts>

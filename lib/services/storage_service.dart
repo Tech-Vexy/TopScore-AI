@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/firebase_file.dart';
 
 class StorageService {
@@ -13,9 +14,16 @@ class StorageService {
 
   /// Gets all files from Firestore (fast, paginated)
   static Future<List<FirebaseFile>> getAllFilesFromFirestore({
-    int limit = 100,
+    int limit = 1000,
   }) async {
     try {
+      // Check if user is authenticated before querying Firestore
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        debugPrint('User not authenticated, skipping Firestore query');
+        return [];
+      }
+
       final snapshot = await _firestore
           .collection(_filesCollection)
           .orderBy('name')
@@ -27,8 +35,8 @@ class StorageService {
           .toList();
     } catch (e) {
       debugPrint('Error fetching files from Firestore: $e');
-      // Fallback to Storage if Firestore fails
-      return listAllFiles();
+      // Return empty list instead of fallback to avoid duplicate errors
+      return [];
     }
   }
 
@@ -111,6 +119,30 @@ class StorageService {
   // ============================================================
   // MIGRATION SCRIPT (Run once to populate Firestore)
   // ============================================================
+
+  /// Clears all indexed files from Firestore
+  static Future<void> clearAllIndexedFiles() async {
+    try {
+      debugPrint('Starting to clear all indexed files from Firestore...');
+      
+      // Get all documents in the files collection
+      final snapshot = await _firestore.collection(_filesCollection).get();
+      
+      debugPrint('Found ${snapshot.docs.length} indexed files to delete');
+      
+      // Delete each document
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      await batch.commit();
+      debugPrint('Successfully cleared all indexed files from Firestore');
+    } catch (e) {
+      debugPrint('Error clearing indexed files: $e');
+      rethrow;
+    }
+  }
 
   /// Migrates all files from Firebase Storage to Firestore metadata collection.
   /// Run this once via an admin button or command.

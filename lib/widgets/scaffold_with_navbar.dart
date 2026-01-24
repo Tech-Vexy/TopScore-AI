@@ -12,9 +12,8 @@ class ScaffoldWithNavBar extends StatelessWidget {
   void _goBranch(int index) {
     navigationShell.goBranch(
       index,
-      // Support navigating to the initial location when tapping the item that is
-      // already active.
-      initialLocation: index == navigationShell.currentIndex,
+      // Always navigate to initial location to ensure deep links work correctly
+      initialLocation: true,
     );
   }
 
@@ -60,8 +59,8 @@ class ScaffoldWithNavBar extends StatelessWidget {
               label: 'Tools',
             ),
             NavigationDestination(
-              icon: FaIcon(FontAwesomeIcons.headset, size: 20),
-              label: 'Support',
+              icon: FaIcon(FontAwesomeIcons.user, size: 20),
+              label: 'Profile',
             ),
           ],
         ),

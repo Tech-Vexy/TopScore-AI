@@ -1,5 +1,5 @@
 package com.elimisha.elimisha
 
-import io.flutter.embedding.android.FlutterAppCompatActivity
+import io.flutter.embedding.android.FlutterActivity
 
-class MainActivity : FlutterAppCompatActivity()
+class MainActivity : FlutterActivity()

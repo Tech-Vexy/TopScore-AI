@@ -53,6 +53,7 @@ class OfflineService {
 
   /// Retrieve cached resources. Returns empty list on error or empty cache.
   List<ResourceModel> getCachedResources(String path) {
+    if (!_isInitialized) return [];
     try {
       final data = _resourceBox.get(path);
 
@@ -102,15 +103,18 @@ class OfflineService {
   // ==========================================
 
   Future<void> saveLiteMode(bool isEnabled) async {
+    if (!_isInitialized) return;
     await _settingsBox.put('lite_mode', isEnabled);
   }
 
   bool getLiteMode() {
+    if (!_isInitialized) return false;
     return _settingsBox.get('lite_mode', defaultValue: false);
   }
 
   /// Generic String List Getter (SharedPreferences style)
   List<String> getStringList(String key) {
+    if (!_isInitialized) return []; // Return empty list if not initialized (e.g., on web)
     try {
       final data = _settingsBox.get(key);
       if (data != null && data is List) {
@@ -124,6 +128,7 @@ class OfflineService {
 
   /// Generic String List Setter
   Future<void> setStringList(String key, List<String> value) async {
+    if (!_isInitialized) return; // Skip if not initialized (e.g., on web)
     await _settingsBox.put(key, value);
   }
 

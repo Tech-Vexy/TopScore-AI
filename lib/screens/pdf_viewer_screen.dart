@@ -8,7 +8,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -18,6 +18,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import 'package:provider/provider.dart';
 import '../providers/navigation_provider.dart';
+import '../tutor_client/chat_screen.dart';
 
 class PdfViewerScreen extends StatefulWidget {
   final String? storagePath; // Firebase path OR full URL
@@ -56,11 +57,107 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   bool _isSubscriptionError = false;
+  OverlayEntry? _overlayEntry;
+
+  @override
+  void dispose() {
+    _checkAndCloseContextMenu();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
     _loadPdfData();
+  }
+
+  void _checkAndCloseContextMenu() {
+    if (_overlayEntry != null) {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    }
+  }
+
+  void _showContextMenu(
+      BuildContext context, PdfTextSelectionChangedDetails details) {
+    
+    // Remove existing if any (e.g. while dragging)
+    _checkAndCloseContextMenu();
+    
+    final OverlayState overlayState = Overlay.of(context);
+    
+    // Calculate position (guard against null region)
+    if (details.globalSelectedRegion == null) return;
+    
+    final double top = details.globalSelectedRegion!.top - 60;
+    final double left = details.globalSelectedRegion!.left;
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: top < 0 ? 20 : top, // Ensure it sits below status bar at least
+        left: left < 0 ? 0 : left, 
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    final selectedText = details.selectedText;
+                    if (selectedText != null) {
+                      Clipboard.setData(ClipboardData(text: selectedText));
+                      _checkAndCloseContextMenu();
+                      _pdfViewerController.clearSelection();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Copied to clipboard')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.copy, color: Colors.white, size: 16),
+                  label: const Text(
+                    'Copy',
+                    style: TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                ),
+                // Separation
+                Container(width: 1, height: 20, color: Colors.white24),
+                // "Explain" Button
+                TextButton.icon(
+                  onPressed: () {
+                    final selectedText = details.selectedText;
+                    if (selectedText != null) {
+                      _checkAndCloseContextMenu();
+                      _pdfViewerController.clearSelection();
+                      
+                      // Navigate to AI Chat with the text
+                       Provider.of<NavigationProvider>(context, listen: false).navigateToChat(
+                        message: "Please explain this text:\n\n\"$selectedText\"",
+                        context: context, 
+                      );
+                    }
+                  },
+                  icon: const FaIcon(FontAwesomeIcons.wandMagicSparkles, color: Colors.white, size: 14),
+                  label: const Text(
+                    'Explain',
+                    style: TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    overlayState.insert(_overlayEntry!);
   }
 
   /// --- 1. SMART LOADING LOGIC ---
@@ -152,7 +249,12 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       await file.writeAsBytes(_pdfBytes!);
 
       // 3. Share/Save using native sheet
-      await Share.shareXFiles([XFile(file.path)], text: 'Sharing $fileName');
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: 'Sharing $fileName',
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -301,7 +403,28 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
-  /// --- 5. UI BUILD ---
+  /// --- 5. AI DIALOG ---
+  
+  void _openAiTutorDialog() {
+    showDialog(
+      context: context,
+      useSafeArea: false,
+      builder: (ctx) => Dialog.fullscreen(
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('AI Tutor'),
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+          ),
+          body: const ChatScreen(),
+        ),
+      ),
+    );
+  }
+
+  /// --- 6. UI BUILD ---
 
   @override
   Widget build(BuildContext context) {
@@ -319,6 +442,30 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
         actions: [
+          // --- NEW: ZOOM CONTROLS ---
+          if (!_isLoading && _pdfBytes != null) ...[
+            IconButton(
+              icon: const Icon(Icons.zoom_out),
+              tooltip: 'Zoom Out',
+              onPressed: () {
+                final newZoom = _pdfViewerController.zoomLevel - 0.25;
+                if (newZoom >= 1.0) {
+                  _pdfViewerController.zoomLevel = newZoom;
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.zoom_in),
+              tooltip: 'Zoom In',
+              onPressed: () {
+                final newZoom = _pdfViewerController.zoomLevel + 0.25;
+                if (newZoom <= 50.0) {
+                  _pdfViewerController.zoomLevel = newZoom;
+                }
+              },
+            ),
+          ],
+
           // Download Button
           if (_pdfBytes != null)
             IconButton(
@@ -337,6 +484,22 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         ],
       ),
       body: _buildBody(),
+      floatingActionButton: !_isLoading && _pdfBytes != null
+          ? FloatingActionButton.extended(
+              onPressed: _openAiTutorDialog,
+              backgroundColor: Theme.of(context).primaryColor,
+              icon: const FaIcon(
+                FontAwesomeIcons.wandMagicSparkles,
+                size: 20,
+              ),
+              label: const Text(
+                'Ask AI',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -375,15 +538,29 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       return const Center(child: Text("No PDF Data"));
     }
 
-    return RepaintBoundary(
-      key: _pdfRepaintKey,
-      child: SfPdfViewer.memory(
-        _pdfBytes!,
-        controller: _pdfViewerController,
-        canShowPaginationDialog: true,
-        canShowScrollStatus: true,
-        enableDoubleTapZooming: true,
-        enableTextSelection: true,
+    // --- MODIFIED: Centering & Max Width ---
+    return Center(
+      child: ConstrainedBox(
+        // Keeps PDF comfortable to read on wide screens (Web/Tablet)
+        constraints: const BoxConstraints(maxWidth: 850), 
+        child: RepaintBoundary(
+          key: _pdfRepaintKey,
+          child: SfPdfViewer.memory(
+            _pdfBytes!,
+            controller: _pdfViewerController,
+            canShowPaginationDialog: true,
+            canShowScrollStatus: true,
+            enableDoubleTapZooming: true,
+            enableTextSelection: true,
+            onTextSelectionChanged: (PdfTextSelectionChangedDetails details) {
+              if (details.selectedText == null && _overlayEntry != null) {
+                _checkAndCloseContextMenu();
+              } else if (details.selectedText != null) {
+                _showContextMenu(context, details);
+              }
+            },
+          ),
+        ),
       ),
     );
   }

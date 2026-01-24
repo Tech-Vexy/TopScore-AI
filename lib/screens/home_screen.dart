@@ -13,12 +13,13 @@ import '../providers/navigation_provider.dart';
 import '../tutor_client/chat_screen.dart';
 import 'student/resources_screen.dart';
 import 'tools/tools_screen.dart';
-import 'support/support_screen.dart';
+import 'profile_screen.dart' as profile_page;
 import 'tools/science_lab_screen.dart';
 import 'student/career_compass_screen.dart';
 import 'discussion/group_allocation_screen.dart';
 
 import '../widgets/interest_update_sheet.dart';
+import '../widgets/shimmer_loading.dart'; // Performance: shimmer placeholders
 import 'pdf_viewer_screen.dart';
 import '../models/firebase_file.dart';
 import '../services/storage_service.dart';
@@ -54,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const ResourcesScreen(),
     const ChatScreen(),
     const ToolsScreen(),
-    const SupportScreen(),
+    const profile_page.ProfileScreen(),
   ];
 
   @override
@@ -137,8 +138,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: 'Tools',
                 ),
                 NavigationDestination(
-                  icon: FaIcon(FontAwesomeIcons.headset, size: 20),
-                  label: 'Support',
+                  icon: FaIcon(FontAwesomeIcons.user, size: 20),
+                  label: 'Profile',
                 ),
               ],
             ),
@@ -267,19 +268,40 @@ class _HomeTabState extends State<HomeTab> {
         url = await file.ref!.getDownloadURL();
       }
 
-      if (context.mounted) {
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PdfViewerScreen(
-              url: url,
-              title: file.name,
-              storagePath: file.path,
-            ),
+      if (!context.mounted) return;
+
+      // Track file opening
+      final resourceProvider = Provider.of<ResourceProvider>(
+        context,
+        listen: false,
+      );
+      final resourceModel = ResourceModel(
+        id: file.path,
+        title: file.name,
+        type: 'file',
+        subject: '',
+        grade: 0,
+        curriculum: '',
+        downloadUrl: url,
+        fileSize: 0,
+        premium: false,
+        storagePath: file.path,
+      );
+      await resourceProvider.trackFileOpen(resourceModel);
+
+      if (!context.mounted) return;
+
+      Navigator.pop(context);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfViewerScreen(
+            url: url,
+            title: file.name,
+            storagePath: file.path,
           ),
-        );
-      }
+        ),
+      );
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
@@ -350,12 +372,15 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  // ...existing code...
+
   Widget _buildSearchResultsSection(BuildContext context) {
     final theme = Theme.of(context);
     if (_isLoadingFiles) {
+      // Performance: Use shimmer loading instead of spinner for perceived speed
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
-        child: Center(child: CircularProgressIndicator()),
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: ResourceListShimmer(itemCount: 5),
       );
     }
 
@@ -699,9 +724,10 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _buildRecentlyOpenedSection(BuildContext context) {
     final theme = Theme.of(context);
-    return Consumer<ResourceProvider>(
-      builder: (context, resourceProvider, _) {
-        final recentlyOpened = resourceProvider.recentlyOpened;
+    // Performance: Use Selector to only rebuild when recentlyOpened changes
+    return Selector<ResourceProvider, List<ResourceModel>>(
+      selector: (_, provider) => provider.recentlyOpened,
+      builder: (context, recentlyOpened, _) {
         if (recentlyOpened.isEmpty) return const SizedBox.shrink();
 
         return Column(
@@ -717,7 +743,7 @@ class _HomeTabState extends State<HomeTab> {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 100,
+              height: 120,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: recentlyOpened.length,
@@ -734,7 +760,7 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _buildRecentFileCard(ResourceModel resource) {
     return Container(
-      width: 140,
+      width: 200,
       margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -743,6 +769,13 @@ class _HomeTabState extends State<HomeTab> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -765,21 +798,51 @@ class _HomeTabState extends State<HomeTab> {
           },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.description, color: Colors.white, size: 24),
-                Text(
-                  resource.title,
-                  style: GoogleFonts.nunito(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.description,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Continue Reading',
+                      style: GoogleFonts.nunito(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      resource.title,
+                      style: GoogleFonts.nunito(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ],
             ),

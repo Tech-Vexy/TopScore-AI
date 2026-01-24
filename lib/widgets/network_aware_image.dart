@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/image_cache_manager.dart';
 
 class NetworkAwareImage extends StatelessWidget {
   final String? imageUrl;
@@ -36,9 +37,21 @@ class NetworkAwareImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit ?? BoxFit.cover,
+      
+      // Use custom cache manager for profile pictures to prevent 429 errors
+      cacheManager: isProfilePicture 
+          ? ProfileImageCacheManager()
+          : AppImageCacheManager(),
 
       // 2. Optimization: Resize image in memory to save RAM
       memCacheWidth: width != null ? (width! * 2).toInt() : null,
+
+      // Aggressive caching to prevent 429 errors
+      maxWidthDiskCache: width != null ? (width! * 3).toInt() : 1000,
+      maxHeightDiskCache: height != null ? (height! * 3).toInt() : 1000,
+      
+      // Use cached image even if stale (for profile pictures)
+      cacheKey: isProfilePicture ? imageUrl : null,
 
       // 3. Loading State
       placeholder: (context, url) =>

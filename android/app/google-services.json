@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "974459699084",
+    "firebase_url": "https://elimisha-90787-default-rtdb.firebaseio.com",
     "project_id": "elimisha-90787",
     "storage_bucket": "elimisha-90787.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "com.elimisha.elimisha"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "974459699084-tsl2k03d62c6vaqac16luk6pogql04ib.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.elimisha.elimisha",
+            "certificate_hash": "5a8f810bde83df05964f8d781ed2ba4eeee66387"
+          }
+        },
+        {
+          "client_id": "974459699084-3upotvccrivu1qcvneft7fi0op2ljnte.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyB_t14ixbvACi7Bk2wiEQ6lWOG7MFd61iI"
@@ -20,7 +34,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "100900437629706573375",
+              "client_type": 3
+            },
+            {
+              "client_id": "974459699084-db6lj666h0rr2khucbv3ig53t0jlloqp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.elimisha.elimisha"
+              }
+            }
+          ]
         }
       }
     }

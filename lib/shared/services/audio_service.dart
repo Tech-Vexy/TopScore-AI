@@ -21,7 +21,7 @@ class AudioService {
 
   Future<void> initializeTts({
     String language = "en-US",
-    double speechRate = 1.0,
+    double speechRate = 0.5,
     double volume = 1.0,
     double pitch = 1.0,
   }) async {

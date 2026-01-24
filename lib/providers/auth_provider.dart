@@ -7,69 +7,155 @@ import '../models/user_model.dart';
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  bool _googleSignInInitialized = false;
 
   UserModel? _userModel;
   UserModel? get userModel => _userModel;
 
-  bool _isLoading = false;
+  bool _isLoading = true; // Start as true until init() completes
   bool get isLoading => _isLoading;
 
-  // Check if role or school is missing (basic role selection criteria)
-  bool get needsRoleSelection =>
-      _userModel != null &&
-      (_userModel!.role.isEmpty ||
-          _userModel!.schoolName.isEmpty && _userModel!.role != 'parent');
-  // Note: Logic might need refinement, assuming school is required for student/teacher. Parent might not need school?
-  // User request implies linking students and teachers. Let's enforce school for all for now or check role.
-  // Based on UI provided, school input is general.
+  // Guest Mode logic
+  bool _isGuest = false;
+  bool get isGuest => _isGuest;
+  
+  // Usage counters for guest
+  int _guestMessageCount = 0;
+  int _guestDocumentCount = 0;
+
+  static const int kGuestMessageLimit = 5;
+  static const int kGuestDocumentLimit = 3;
+
+  bool get isAuthOrGuest => _userModel != null || _isGuest;
+
+  /// Sign in anonymously for guest access - this gives a real Firebase uid
+  /// so Firestore rules work while user explores without creating an account
+  Future<void> continueAsGuest() async {
+    try {
+      _setLoading(true);
+      final user = _auth.currentUser;
+      if (user == null) {
+        await _auth.signInAnonymously();
+        debugPrint('Signed in anonymously as guest');
+      }
+      _isGuest = true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Anonymous sign-in error: $e');
+      // Fall back to local guest mode if anonymous auth fails
+      _isGuest = true;
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  bool get canSendMessage {
+    if (_userModel != null) return true;
+    return _guestMessageCount < kGuestMessageLimit;
+  }
+
+  void incrementGuestMessage() {
+    if (_isGuest) {
+      _guestMessageCount++;
+      // notifyListeners(); // Optional: only if UI needs to update count in real-time
+    }
+  }
+
+  bool get canOpenDocument {
+    if (_userModel != null) return true;
+    return _guestDocumentCount < kGuestDocumentLimit;
+  }
+
+  void incrementGuestDocument() {
+    if (_isGuest) {
+      _guestDocumentCount++;
+    }
+  }
+
+  // Role selection is disabled - always return false
+  bool get needsRoleSelection => false;
 
   Future<void> init() async {
     _setLoading(true);
-    User? user = _auth.currentUser;
-    if (user != null) {
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      if (doc.exists) {
-        _userModel = UserModel.fromMap(
-          doc.data() as Map<String, dynamic>,
-          user.uid,
-        );
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        DocumentSnapshot doc =
+            await _firestore.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          _userModel = UserModel.fromMap(
+            doc.data() as Map<String, dynamic>,
+            user.uid,
+          );
+        }
       }
+    } catch (e) {
+      debugPrint("AuthProvider init error: $e");
+    } finally {
+      _setLoading(false);
     }
-    _setLoading(false);
   }
 
   // --- GOOGLE SIGN IN ---
+  Future<void> _ensureGoogleSignInInitialized() async {
+    if (!_googleSignInInitialized) {
+      await _googleSignIn.initialize();
+      _googleSignInInitialized = true;
+    }
+  }
+
   Future<bool> signInWithGoogle() async {
     try {
       _setLoading(true);
 
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        _setLoading(false);
-        return false;
+      await _ensureGoogleSignInInitialized();
+      
+      final account = await _googleSignIn.authenticate();
+      
+      // Get the ID token from authentication
+      final idToken = account.authentication.idToken;
+      
+      // For Firebase Auth, we need to get an access token via authorization
+      // Request authorization for basic scopes to get access token
+      final authorization = 
+          await account.authorizationClient.authorizeScopes(['email', 'profile']);
+
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: authorization.accessToken,
+        idToken: idToken,
+      );
+
+      // Check current user state for anonymous upgrade
+      final currentUser = _auth.currentUser;
+      UserCredential userCredential;
+
+      if (currentUser != null && currentUser.isAnonymous) {
+        try {
+          // Link the anonymous user to the new Google credential
+          userCredential = await currentUser.linkWithCredential(credential);
+          debugPrint("Successfully linked anonymous account to Google credential");
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'credential-already-in-use') {
+            // Account already exists, so we sign in to it (merging/overwriting guest session)
+            // Ideally prompt user, but for now we switch to the existing account
+            debugPrint("Credential in use, switching to existing account");
+            userCredential = await _auth.signInWithCredential(credential);
+          } else {
+            rethrow;
+          }
+        }
+      } else {
+        // Standard sign in
+        userCredential = await _auth.signInWithCredential(credential);
       }
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      UserCredential userCredential = await _auth.signInWithCredential(
-        credential,
-      );
       User? user = userCredential.user;
 
       if (user != null) {
-        DocumentSnapshot doc = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .get();
+        DocumentSnapshot doc =
+            await _firestore.collection('users').doc(user.uid).get();
 
         if (doc.exists) {
           _userModel = UserModel.fromMap(
@@ -80,6 +166,7 @@ class AuthProvider with ChangeNotifier {
           _setLoading(false);
           return true;
         } else {
+          // New User Setup
           UserModel newUser = UserModel(
             uid: user.uid,
             email: user.email ?? '',
@@ -110,29 +197,66 @@ class AuthProvider with ChangeNotifier {
     return false;
   }
 
-  // Updated to include School Name
-  Future<void> updateUserRole(
-    String role,
-    String grade,
-    String schoolName,
-  ) async {
+  /// Clears the current anonymous session effectively "resetting" the guest user.
+  /// Useful for shared devices.
+  Future<void> clearGuestSession() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null && user.isAnonymous) {
+        await user.delete(); // Removes the anonymous UID from Firebase Auth
+      }
+      await signOut(); // Clears local state
+      await continueAsGuest(); // Starts a fresh anonymous session
+    } catch (e) {
+      debugPrint("Error clearing guest session: $e");
+      await signOut();
+      await continueAsGuest();
+    }
+  }
+
+  // Updated to include all profile fields
+  Future<void> updateUserRole({
+    required String role,
+    required String grade,
+    required String schoolName,
+    String? displayName,
+    String? phoneNumber,
+    String? curriculum,
+    List<String>? interests,
+    List<String>? subjects,
+  }) async {
     if (_userModel == null) return;
 
     try {
       _setLoading(true);
       int? gradeInt = int.tryParse(grade.replaceAll(RegExp(r'[^0-9]'), ''));
 
-      await _firestore.collection('users').doc(_userModel!.uid).update({
+      final updates = {
         'role': role,
         'grade': gradeInt,
         'schoolName': schoolName,
-      });
+        'displayName': displayName ?? _userModel!.displayName,
+        'phoneNumber': phoneNumber,
+        'curriculum': curriculum,
+        'interests': interests,
+        'subjects': subjects,
+      };
+
+      // Remove nulls just in case, though Firestore handles merging
+      updates.removeWhere((key, value) => value == null);
+
+      await _firestore.collection('users').doc(_userModel!.uid).update(updates);
 
       // Update local model
       _userModel = _userModel!.copyWith(
         role: role,
         grade: gradeInt,
         schoolName: schoolName,
+        displayName: displayName,
+        phoneNumber: phoneNumber,
+        curriculum: curriculum,
+        interests: interests,
+        subjects: subjects,
       );
 
       notifyListeners();
@@ -144,100 +268,15 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // --- STANDARD AUTH METHODS ---
-  Future<void> signUp({
-    required String email,
-    required String password,
-    required String name,
-    required Map<String, dynamic> additionalData,
-    String role = 'student',
-  }) async {
-    try {
-      _setLoading(true);
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      User? user = result.user;
-
-      if (user != null) {
-        int? gradeInt;
-        String schoolName = '';
-
-        if (additionalData.containsKey('classLevel')) {
-          String gradeStr = additionalData['classLevel'].toString();
-          gradeInt = int.tryParse(gradeStr.replaceAll(RegExp(r'[^0-9]'), ''));
-        }
-
-        // Check if school provided in additionalData (SignupScreen might need update to send it,
-        // but for now default to empty if not present, assuming RoleSelection might happen or Signup flow update).
-        // Wait, User Request #3 shows RoleSelectionScreen update.
-        // SignupScreen logic is for Email/Pass. The user didn't share SignupScreen update for school.
-        // I should set schoolName to empty string here, logic remains consistent.
-        // Or check if 'schoolName' is in additionalData.
-
-        if (additionalData.containsKey('schoolName')) {
-          schoolName = additionalData['schoolName'];
-        }
-
-        UserModel newUser = UserModel(
-          uid: user.uid,
-          email: email,
-          displayName: name,
-          role: role,
-          grade: gradeInt,
-          schoolName: schoolName,
-          educationLevel: additionalData['educationLevel']?.toString(),
-          interests: additionalData['interests'] != null
-              ? List<String>.from(additionalData['interests'])
-              : null,
-          careerMode: additionalData['careerMode']?.toString(),
-          photoURL: null,
-          isSubscribed: false,
-        );
-
-        await _firestore.collection('users').doc(user.uid).set(newUser.toMap());
-        _userModel = newUser;
-      }
-      _setLoading(false);
-    } catch (e) {
-      _setLoading(false);
-      rethrow;
-    }
-  }
-
-  Future<void> signIn(String email, String password) async {
-    try {
-      _setLoading(true);
-      UserCredential result = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      User? user = result.user;
-
-      if (user != null) {
-        DocumentSnapshot doc = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .get();
-        if (doc.exists) {
-          _userModel = UserModel.fromMap(
-            doc.data() as Map<String, dynamic>,
-            user.uid,
-          );
-        }
-      }
-      _setLoading(false);
-    } catch (e) {
-      _setLoading(false);
-      rethrow;
-    }
-  }
+  // Email/Password methods removed as per request to remove email/password auth.
 
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
     _userModel = null;
+    _isGuest = false;
+    _guestMessageCount = 0;
+    _guestDocumentCount = 0;
     notifyListeners();
   }
 
@@ -317,10 +356,8 @@ class AuthProvider with ChangeNotifier {
     User? user = _auth.currentUser;
     if (user != null) {
       await user.reload();
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      DocumentSnapshot doc =
+          await _firestore.collection('users').doc(user.uid).get();
       if (doc.exists) {
         _userModel = UserModel.fromMap(
           doc.data() as Map<String, dynamic>,

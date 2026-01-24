@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:http/http.dart' as http;
+import '../models/flashcard_model.dart';
+import '../models/quiz_model.dart';
 
 // Data models for structured responses
 class AIResponse {
@@ -51,6 +54,7 @@ class AIService {
   // Use 10.0.2.2 for Android emulator, localhost for iOS/Web
   // static const String _wsUrl = 'ws://10.0.2.2:8080/ws';
   static const String _wsUrl = 'wss://agent.topscoreapp.ai/ws';
+  static const String _baseUrl = 'https://agent.topscoreapp.ai';
 
   WebSocketChannel? _channel;
 
@@ -299,5 +303,96 @@ Make it fun and easy to visualize!
   void resetChat() {
     _channel?.sink.close();
     _connect();
+  }
+
+  /// Generate AI-powered flashcards from a topic or source text
+  /// 
+  /// [userId] - The ID of the student (for personalization/logging)
+  /// [topic] - The main subject or topic (e.g., "Photosynthesis")
+  /// [amount] - Number of cards to generate (default: 5, max: 20)
+  /// [level] - Education level (default: "High School")
+  /// [sourceText] - Optional text content to generate cards from
+  Future<FlashcardSet> generateFlashcards({
+    required String userId,
+    required String topic,
+    int amount = 5,
+    String level = 'High School',
+    String? sourceText,
+  }) async {
+    final url = Uri.parse('$_baseUrl/flashcards/generate');
+
+    final payload = {
+      'user_id': userId,
+      'topic': topic,
+      'amount': amount,
+      'level': level,
+      if (sourceText != null && sourceText.isNotEmpty) 'source_text': sourceText,
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return FlashcardSet.fromJson(data);
+      } else {
+        debugPrint('Flashcard API error: ${response.statusCode} - ${response.body}');
+        throw Exception('Failed to generate flashcards: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error generating flashcards: $e');
+      throw Exception('Error connecting to server: $e');
+    }
+  }
+
+  /// Generate an AI-powered quiz from a topic or source text
+  /// 
+  /// [userId] - The ID of the student (for personalization/logging)
+  /// [topic] - The main subject or topic (e.g., "World War I")
+  /// [questionCount] - Number of questions to generate (default: 5, max: 10)
+  /// [difficulty] - Difficulty level: "Easy", "Medium", "Hard" (default: "Medium")
+  /// [level] - Education level (default: "High School")
+  /// [sourceText] - Optional text content to generate quiz from
+  Future<Quiz> generateQuiz({
+    required String userId,
+    required String topic,
+    int questionCount = 5,
+    String difficulty = 'Medium',
+    String level = 'High School',
+    String? sourceText,
+  }) async {
+    final url = Uri.parse('$_baseUrl/quiz/generate');
+
+    final payload = {
+      'user_id': userId,
+      'topic': topic,
+      'question_count': questionCount,
+      'difficulty': difficulty,
+      'level': level,
+      if (sourceText != null && sourceText.isNotEmpty) 'source_text': sourceText,
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return Quiz.fromJson(data);
+      } else {
+        debugPrint('Quiz API error: ${response.statusCode} - ${response.body}');
+        throw Exception('Failed to generate quiz: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error generating quiz: $e');
+      throw Exception('Error connecting to server: $e');
+    }
   }
 }

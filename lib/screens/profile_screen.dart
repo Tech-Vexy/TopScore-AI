@@ -6,9 +6,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/colors.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
+import '../utils/image_cache_manager.dart';
 import 'subscription/subscription_screen.dart';
 import 'legal/privacy_policy_screen.dart';
 import 'legal/terms_of_use_screen.dart';
+import 'auth/auth_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -25,21 +27,7 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.arrow_back_ios_new,
-              size: 18,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false, // Remove back button
         title: Text(
           "My Profile",
           style: GoogleFonts.nunito(
@@ -105,6 +93,34 @@ class ProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
             _buildSectionHeader(context, "App Preferences"),
+
+            Consumer<SettingsProvider>(
+              builder: (context, settings, _) {
+                return _buildSettingsTile(
+                  context,
+                  icon: isDark ? FontAwesomeIcons.moon : FontAwesomeIcons.sun,
+                  title: "Dark Mode",
+                  subtitle: isDark ? "Enabled" : "Disabled",
+                  iconColor: isDark ? Colors.deepPurple : Colors.amber,
+                  trailing: Switch.adaptive(
+                    value: isDark,
+                    activeTrackColor: AppColors.accentTeal,
+                    onChanged: (val) {
+                      settings.setThemeMode(
+                        val ? ThemeMode.dark : ThemeMode.light,
+                      );
+                    },
+                  ),
+                  onTap: () {
+                    settings.setThemeMode(
+                      isDark ? ThemeMode.light : ThemeMode.dark,
+                    );
+                  },
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
 
             Consumer<SettingsProvider>(
               builder: (context, settings, _) {
@@ -176,23 +192,83 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildSettingsTile(
-                    context,
-                    icon: FontAwesomeIcons.rightFromBracket,
-                    title: "Log Out",
-                    iconColor: theme.colorScheme.error,
-                    textColor: theme.colorScheme.error,
-                    hasShadow: false,
-                    backgroundColor: Colors.transparent,
-                    onTap: () async {
-                      await authProvider.signOut();
-                      if (context.mounted) {
-                        Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst);
-                      }
-                    },
-                  ),
+                  // Auth Actions
+                  ...(user != null
+                      ? [
+                          _buildSettingsTile(
+                            context,
+                            icon: FontAwesomeIcons.rightFromBracket,
+                            title: "Log Out",
+                            iconColor: theme.colorScheme.error,
+                            textColor: theme.colorScheme.error,
+                            hasShadow: false,
+                            onTap: () async {
+                              await authProvider.signOut();
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                          )
+                        ]
+                      : [
+                          _buildSettingsTile(
+                            context,
+                            icon: FontAwesomeIcons.rightToBracket,
+                            title: "Sign In / Register",
+                            iconColor: AppColors.primaryPurple,
+                            textColor: AppColors.primaryPurple,
+                            hasShadow: false,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const AuthScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          if (authProvider.isGuest)
+                            _buildSettingsTile(
+                              context,
+                              icon: FontAwesomeIcons.eraser,
+                              title: "Clear Guest Session",
+                              subtitle: "Start fresh on this device",
+                              iconColor: Colors.orange,
+                              textColor: Colors.orange,
+                              hasShadow: false,
+                              onTap: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text("Clear Guest Session?"),
+                                    content: const Text(
+                                        "This will delete your current anonymous history. Ensure you don't need it or sign in to save it."),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, false),
+                                        child: const Text("Cancel"),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, true),
+                                        child: const Text("Clear"),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm == true) {
+                                  await authProvider.clearGuestSession();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text("Guest session cleared.")),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                        ]),
+
                   Divider(
                     height: 1,
                     color: theme.colorScheme.error.withValues(alpha: 0.1),
@@ -251,7 +327,10 @@ class ProfileScreen extends StatelessWidget {
                 ],
                 image: (user?.photoURL != null && user!.photoURL!.isNotEmpty)
                     ? DecorationImage(
-                        image: CachedNetworkImageProvider(user.photoURL!),
+                        image: CachedNetworkImageProvider(
+                          user.photoURL!,
+                          cacheManager: ProfileImageCacheManager(),
+                        ),
                         fit: BoxFit.cover,
                       )
                     : null,

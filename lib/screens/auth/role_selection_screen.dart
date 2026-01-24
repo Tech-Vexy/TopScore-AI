@@ -16,12 +16,50 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   String selectedRole = 'Student';
   String? selectedCurriculum; // "CBC" or "8-4-4"
   String? selectedGrade;
+
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _schoolController = TextEditingController();
+
+  // Selections
+  final List<String> _selectedSubjects = [];
+  final List<String> _selectedInterests = [];
+
   bool _isSaving = false;
 
   // --- Data Options ---
-  final List<String> roles = ['Student', 'Teacher', 'Parent'];
+  final List<String> roles = ['Student']; // Only Student role available
   final List<String> curriculums = ['CBC', '8-4-4'];
+
+  final List<String> _subjects = [
+    'Mathematics',
+    'English',
+    'Kiswahili',
+    'Chemistry',
+    'Biology',
+    'Physics',
+    'History',
+    'Geography',
+    'CRE',
+    'Business Studies',
+    'Computer Studies',
+    'Agriculture',
+  ];
+
+  final List<String> _careerInterests = [
+    'Technology & Coding',
+    'Medicine & Health',
+    'Engineering',
+    'Arts & Design',
+    'Business & Finance',
+    'Law & Justice',
+    'Sports & Fitness',
+    'Media & Writing',
+    'Agriculture & Nature',
+    'Teaching & Education',
+    'Music & Performance',
+    'Public Service',
+  ];
 
   // Dynamic grades based on curriculum
   List<String> get _availableGrades {
@@ -33,9 +71,31 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     return [];
   }
 
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill name if available from Google Auth
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
+      if (user != null) {
+        if (user.displayName.isNotEmpty) {
+          _nameController.text = user.displayName;
+        }
+      }
+    });
+  }
+
   // --- Logic ---
   Future<void> _saveAndContinue() async {
     // Validation
+    if (_nameController.text.trim().isEmpty) {
+      _showError("Please enter your name");
+      return;
+    }
+    if (_phoneController.text.trim().isEmpty) {
+      _showError("Please enter your phone number");
+      return;
+    }
     if (_schoolController.text.trim().isEmpty) {
       _showError("Please enter your school name");
       return;
@@ -51,20 +111,30 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       return;
     }
 
+    // Custom Validations
+    if (selectedRole == 'Teacher' && _selectedSubjects.isEmpty) {
+      _showError("Select at least one subject");
+      return;
+    }
+    if (selectedRole == 'Student' && _selectedInterests.isEmpty) {
+      _showError("Select at least one interest/hobby");
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      // Combine Curriculum + Grade (e.g., "CBC - Grade 7" or just "Grade 7")
-      // You might want to save them separately in your model, but for now we pass the grade.
-      // Ideally, update updateUserRole to accept curriculum too.
-      // For this implementation, we will append curriculum info if needed or just save the grade string.
-
       await authProvider.updateUserRole(
-        selectedRole.toLowerCase(),
-        selectedGrade ?? '', // Pass the specific grade (e.g. "Form 1")
-        _schoolController.text.trim(),
+        role: selectedRole.toLowerCase(),
+        grade: selectedGrade ?? '', // Pass the specific grade (e.g. "Form 1")
+        schoolName: _schoolController.text.trim(),
+        displayName: _nameController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        curriculum: selectedCurriculum,
+        interests: selectedRole == 'Student' ? _selectedInterests : null,
+        subjects: selectedRole == 'Teacher' ? _selectedSubjects : null,
       );
 
       if (mounted) {
@@ -112,18 +182,44 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                "Help us tailor the content to your curriculum.",
+                "Tell us more to specialize your experience.",
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 30),
 
+              // --- 0. Basic Info ---
+              _buildLabel(theme, "Full Name"),
+              TextField(
+                controller: _nameController,
+                style: TextStyle(color: theme.colorScheme.onSurface),
+                decoration: _inputDecoration(theme).copyWith(
+                  hintText: "Your Name",
+                  prefixIcon: Icon(Icons.person_outline,
+                      color: theme.colorScheme.primary),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              _buildLabel(theme, "Phone Number"),
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                style: TextStyle(color: theme.colorScheme.onSurface),
+                decoration: _inputDecoration(theme).copyWith(
+                  hintText: "07...",
+                  prefixIcon: Icon(Icons.phone_outlined,
+                      color: theme.colorScheme.primary),
+                ),
+              ),
+              const SizedBox(height: 20),
+
               // --- 1. Role Selection ---
               _buildLabel(theme, "I am a..."),
               DropdownButtonFormField<String>(
-                // ignore: deprecated_member_use
-                value: selectedRole,
+                key: ValueKey(selectedRole),
+                initialValue: selectedRole,
                 dropdownColor: theme.cardColor,
                 style: TextStyle(color: theme.colorScheme.onSurface),
                 items: roles
@@ -131,7 +227,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     .toList(),
                 onChanged: (val) => setState(() {
                   selectedRole = val!;
-                  // Reset downstream fields if role changes (optional)
                 }),
                 decoration: _inputDecoration(theme),
               ),
@@ -157,8 +252,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 // Curriculum
                 _buildLabel(theme, "Curriculum System"),
                 DropdownButtonFormField<String>(
-                  // ignore: deprecated_member_use
-                  value: selectedCurriculum,
+                  key: ValueKey(selectedCurriculum),
+                  initialValue: selectedCurriculum,
                   dropdownColor: theme.cardColor,
                   style: TextStyle(color: theme.colorScheme.onSurface),
                   hint: Text(
@@ -187,8 +282,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         : "My Current Level",
                   ),
                   DropdownButtonFormField<String>(
-                    // ignore: deprecated_member_use
-                    value: selectedGrade,
+                    key: ValueKey(selectedGrade),
+                    initialValue: selectedGrade,
                     dropdownColor: theme.cardColor,
                     style: TextStyle(color: theme.colorScheme.onSurface),
                     hint: Text(
@@ -205,10 +300,83 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     onChanged: (val) => setState(() => selectedGrade = val),
                     decoration: _inputDecoration(theme),
                   ),
+                  const SizedBox(height: 20),
                 ],
               ],
 
-              const SizedBox(height: 40),
+              // --- 4. Interests (Student) ---
+              if (selectedRole == 'Student') ...[
+                _buildLabel(theme, "My Interests (Select all that apply)"),
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: _careerInterests.map((interest) {
+                    final isSelected = _selectedInterests.contains(interest);
+                    return FilterChip(
+                      label: Text(interest),
+                      selected: isSelected,
+                      selectedColor:
+                          const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                      checkmarkColor: const Color(0xFF6C63FF),
+                      backgroundColor: theme.cardColor,
+                      labelStyle: GoogleFonts.nunito(
+                        color: isSelected
+                            ? const Color(0xFF6C63FF)
+                            : Colors.grey[700],
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                      onSelected: (bool selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedInterests.add(interest);
+                          } else {
+                            _selectedInterests.remove(interest);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 30),
+              ],
+
+              // --- 5. Subjects (Teacher) ---
+              if (selectedRole == 'Teacher') ...[
+                _buildLabel(theme, "Subjects Taught"),
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 4.0,
+                  children: _subjects.map((subject) {
+                    final isSelected = _selectedSubjects.contains(subject);
+                    return FilterChip(
+                      label: Text(subject),
+                      selected: isSelected,
+                      selectedColor:
+                          const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                      checkmarkColor: const Color(0xFF6C63FF),
+                      labelStyle: GoogleFonts.nunito(
+                        color: isSelected
+                            ? const Color(0xFF6C63FF)
+                            : Colors.black87,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      onSelected: (bool selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedSubjects.add(subject);
+                          } else {
+                            _selectedSubjects.remove(subject);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 30),
+              ],
 
               // --- Save Button ---
               SizedBox(

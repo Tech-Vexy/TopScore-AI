@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'calculator_screen.dart';
 import 'smart_scanner_screen.dart';
 import 'flashcard_generator_screen.dart';
+import 'quiz_generator_screen.dart';
 import 'timetable_screen.dart';
 import 'science_lab_screen.dart';
 import 'periodic_table_screen.dart';
@@ -67,6 +68,13 @@ class ToolsScreen extends StatelessWidget {
         icon: Icons.flash_on_rounded,
         color: Color(0xFFA389F4),
         routeId: 'flashcards',
+      ),
+      ToolCardData(
+        title: "AI Quiz",
+        description: "Test your knowledge",
+        icon: Icons.quiz_rounded,
+        color: Color(0xFF00BCD4),
+        routeId: 'quiz',
       ),
       ToolCardData(
         title: "Smart Timetable",
@@ -209,6 +217,9 @@ class ToolsScreen extends StatelessWidget {
             break;
           case 'flashcards':
             targetScreen = const FlashcardGeneratorScreen();
+            break;
+          case 'quiz':
+            targetScreen = const QuizGeneratorScreen();
             break;
           case 'timetable':
             targetScreen = const TimetableScreen();

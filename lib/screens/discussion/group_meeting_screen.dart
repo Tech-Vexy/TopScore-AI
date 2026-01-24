@@ -263,8 +263,10 @@ class _GroupMeetingScreenState extends State<GroupMeetingScreen>
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  Share.share(
-                    "Join my study session: ${widget.meetingTopic}\nCode: ${widget.meetingId}",
+                  SharePlus.instance.share(
+                    ShareParams(
+                      text: "Join my study session: ${widget.meetingTopic}\nCode: ${widget.meetingId}",
+                    ),
                   );
                 },
                 icon: const Icon(Icons.share),

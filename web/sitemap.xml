@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Landing Page / Homepage -->
+  <url>
+    <loc>https://topscoreapp.ai/</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://topscoreapp.ai/icons/Icon-512.png</image:loc>
+      <image:title>TopScore AI Logo</image:title>
+    </image:image>
+  </url>
+  
+  <!-- Main App - Home Tab -->
+  <url>
+    <loc>https://topscoreapp.ai/home</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Library/Resources -->
+  <url>
+    <loc>https://topscoreapp.ai/library</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- AI Tutor Chat -->
+  <url>
+    <loc>https://topscoreapp.ai/ai-tutor</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Study Tools Hub -->
+  <url>
+    <loc>https://topscoreapp.ai/tools</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Calculator Tool -->
+  <url>
+    <loc>https://topscoreapp.ai/tools/calculator</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Smart Scanner Tool -->
+  <url>
+    <loc>https://topscoreapp.ai/tools/scanner</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Flashcard Generator -->
+  <url>
+    <loc>https://topscoreapp.ai/tools/flashcards</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Smart Timetable -->
+  <url>
+    <loc>https://topscoreapp.ai/tools/timetable</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Science Lab -->
+  <url>
+    <loc>https://topscoreapp.ai/tools/science_lab</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Periodic Table -->
+  <url>
+    <loc>https://topscoreapp.ai/tools/periodic_table</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Profile Screen -->
+  <url>
+    <loc>https://topscoreapp.ai/profile</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+</urlset>

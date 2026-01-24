@@ -84,9 +84,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   Future<void> _downloadAndShare() async {
     // 1. If it's already a local file, share it directly
     if (widget.videoFile != null) {
-      await Share.shareXFiles([
-        XFile(widget.videoFile!.path),
-      ], text: 'Sharing ${widget.title}');
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(widget.videoFile!.path)],
+          text: 'Sharing ${widget.title}',
+        ),
+      );
       return;
     }
 
@@ -116,9 +119,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         await file.writeAsBytes(response.bodyBytes);
 
         if (mounted) {
-          await Share.shareXFiles([
-            XFile(file.path),
-          ], text: 'Sharing ${widget.title}');
+          await SharePlus.instance.share(
+            ShareParams(
+              files: [XFile(file.path)],
+              text: 'Sharing ${widget.title}',
+            ),
+          );
         }
       }
     } catch (e) {

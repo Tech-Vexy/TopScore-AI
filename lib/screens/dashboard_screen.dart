@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
 import '../tutor_client/chat_screen.dart';
+import '../utils/image_cache_manager.dart';
 import 'student/resources_screen.dart';
 import 'tools/tools_screen.dart';
 import 'support/support_screen.dart';
 import 'subscription/subscription_screen.dart';
-import 'profile_screen.dart';
+import 'profile_screen.dart' as profile_page;
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -56,7 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const ProfileScreen(),
+                        builder: (context) => const profile_page.ProfileScreen(),
                       ),
                     );
                   },
@@ -66,7 +68,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       alpha: 0.1,
                     ),
                     backgroundImage: user?.photoURL != null
-                        ? NetworkImage(user!.photoURL!)
+                        ? CachedNetworkImageProvider(
+                            user!.photoURL!,
+                            cacheManager: ProfileImageCacheManager(),
+                          )
                         : null,
                     child: user?.photoURL == null
                         ? Text(

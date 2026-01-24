@@ -40,6 +40,10 @@ class ChatMessage {
   final String? mathAnswer;
   final bool isBookmarked;
   final List<VideoResult>? videos; // <--- NEW: Video Results
+  
+  // Hybrid Streaming Architecture flags
+  final bool isTemporary; // true when from WebSocket (temporary), false when from Firebase (final)
+  final bool isComplete; // true when streaming is done
 
   ChatMessage({
     required this.id,
@@ -56,6 +60,8 @@ class ChatMessage {
     this.mathAnswer,
     this.isBookmarked = false,
     this.videos,
+    this.isTemporary = false, // Default: final Firebase message
+    this.isComplete = true,   // Default: complete message
   });
 
   ChatMessage copyWith({
@@ -73,6 +79,8 @@ class ChatMessage {
     String? mathAnswer,
     bool? isBookmarked,
     List<VideoResult>? videos,
+    bool? isTemporary,
+    bool? isComplete,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -89,6 +97,8 @@ class ChatMessage {
       mathAnswer: mathAnswer ?? this.mathAnswer,
       isBookmarked: isBookmarked ?? this.isBookmarked,
       videos: videos ?? this.videos,
+      isTemporary: isTemporary ?? this.isTemporary,
+      isComplete: isComplete ?? this.isComplete,
     );
   }
 }

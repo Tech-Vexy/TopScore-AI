@@ -41,54 +41,55 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static FirebaseOptions get web => FirebaseOptions(
-    apiKey: dotenv.env['WEB_API_KEY']!,
-    appId: dotenv.env['WEB_APP_ID']!,
-    messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
-    projectId: dotenv.env['PROJECT_ID']!,
-    authDomain: dotenv.env['AUTH_DOMAIN'],
-    databaseURL: dotenv.env['DATABASE_URL'],
-    storageBucket: dotenv.env['STORAGE_BUCKET'],
-    measurementId: dotenv.env['MEASUREMENT_ID'],
-  );
+  // Hardcoded for web to avoid dotenv issues in production
+  static FirebaseOptions get web => const FirebaseOptions(
+        apiKey: 'AIzaSyDoG5zU8EzdPPFrXFstx0licFDklaxs83M',
+        appId: '1:974459699084:web:8d47fa11d39ca31968a0a9',
+        messagingSenderId: '974459699084',
+        projectId: 'elimisha-90787',
+        authDomain: 'elimisha-90787.firebaseapp.com',
+        databaseURL: 'https://elimisha-90787-default-rtdb.firebaseio.com',
+        storageBucket: 'elimisha-90787.firebasestorage.app',
+        measurementId: 'G-YBP1DZ3VC9',
+      );
 
   static FirebaseOptions get android => FirebaseOptions(
-    apiKey: dotenv.env['ANDROID_API_KEY']!,
-    appId: dotenv.env['ANDROID_APP_ID']!,
-    messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
-    projectId: dotenv.env['PROJECT_ID']!,
-    databaseURL: dotenv.env['DATABASE_URL'],
-    storageBucket: dotenv.env['STORAGE_BUCKET'],
-  );
+        apiKey: dotenv.env['ANDROID_API_KEY']!,
+        appId: dotenv.env['ANDROID_APP_ID']!,
+        messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
+        projectId: dotenv.env['PROJECT_ID']!,
+        databaseURL: dotenv.env['DATABASE_URL'],
+        storageBucket: dotenv.env['STORAGE_BUCKET'],
+      );
 
   static FirebaseOptions get ios => FirebaseOptions(
-    apiKey: dotenv.env['IOS_API_KEY']!,
-    appId: dotenv.env['IOS_APP_ID']!,
-    messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
-    projectId: dotenv.env['PROJECT_ID']!,
-    databaseURL: dotenv.env['DATABASE_URL'],
-    storageBucket: dotenv.env['STORAGE_BUCKET'],
-    iosBundleId: dotenv.env['IOS_BUNDLE_ID'],
-  );
+        apiKey: dotenv.env['IOS_API_KEY']!,
+        appId: dotenv.env['IOS_APP_ID']!,
+        messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
+        projectId: dotenv.env['PROJECT_ID']!,
+        databaseURL: dotenv.env['DATABASE_URL'],
+        storageBucket: dotenv.env['STORAGE_BUCKET'],
+        iosBundleId: dotenv.env['IOS_BUNDLE_ID'],
+      );
 
   static FirebaseOptions get macos => FirebaseOptions(
-    apiKey: dotenv.env['IOS_API_KEY']!, // Usually shares keys with iOS
-    appId: dotenv.env['IOS_APP_ID']!,   // Usually shares App ID with iOS
-    messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
-    projectId: dotenv.env['PROJECT_ID']!,
-    databaseURL: dotenv.env['DATABASE_URL'],
-    storageBucket: dotenv.env['STORAGE_BUCKET'],
-    iosBundleId: dotenv.env['IOS_BUNDLE_ID'],
-  );
+        apiKey: dotenv.env['IOS_API_KEY']!, // Usually shares keys with iOS
+        appId: dotenv.env['IOS_APP_ID']!, // Usually shares App ID with iOS
+        messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
+        projectId: dotenv.env['PROJECT_ID']!,
+        databaseURL: dotenv.env['DATABASE_URL'],
+        storageBucket: dotenv.env['STORAGE_BUCKET'],
+        iosBundleId: dotenv.env['IOS_BUNDLE_ID'],
+      );
 
   static FirebaseOptions get windows => FirebaseOptions(
-    apiKey: dotenv.env['WINDOWS_API_KEY']!,
-    appId: dotenv.env['WINDOWS_APP_ID']!,
-    messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
-    projectId: dotenv.env['PROJECT_ID']!,
-    authDomain: dotenv.env['AUTH_DOMAIN'],
-    databaseURL: dotenv.env['DATABASE_URL'],
-    storageBucket: dotenv.env['STORAGE_BUCKET'],
-    measurementId: dotenv.env['WINDOWS_MEASUREMENT_ID'],
-  );
+        apiKey: dotenv.env['WINDOWS_API_KEY']!,
+        appId: dotenv.env['WINDOWS_APP_ID']!,
+        messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
+        projectId: dotenv.env['PROJECT_ID']!,
+        authDomain: dotenv.env['AUTH_DOMAIN'],
+        databaseURL: dotenv.env['DATABASE_URL'],
+        storageBucket: dotenv.env['STORAGE_BUCKET'],
+        measurementId: dotenv.env['WINDOWS_MEASUREMENT_ID'],
+      );
 }

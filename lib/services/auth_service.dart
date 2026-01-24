@@ -7,9 +7,8 @@ import '../models/user_model.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'https://www.googleapis.com/auth/drive.readonly'],
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  bool _googleSignInInitialized = false;
 
   GoogleSignIn get googleSignIn => _googleSignIn;
 
@@ -17,24 +16,47 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
 
+  Future<void> _ensureGoogleSignInInitialized() async {
+    if (!_googleSignInInitialized) {
+      await _googleSignIn.initialize();
+      _googleSignInInitialized = true;
+    }
+  }
+
   Future<User?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
+      await _ensureGoogleSignInInitialized();
+      
+      final GoogleSignInAccount account = await _googleSignIn.authenticate();
+      
+      // Get the ID token from authentication
+      final idToken = account.authentication.idToken;
+      
+      // Request authorization for scopes to get access token
+      final authorization = 
+          await account.authorizationClient.authorizeScopes([
+            'email',
+            'https://www.googleapis.com/auth/drive.readonly'
+          ]);
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+        accessToken: authorization.accessToken,
+        idToken: idToken,
       );
 
       final UserCredential userCredential = await _auth.signInWithCredential(
         credential,
       );
       return userCredential.user;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        debugPrint('Google Sign In Error: User cancelled sign in');
+      } else {
+        debugPrint('Google Sign In Error: $e');
+      }
+      return null;
     } catch (e) {
-      debugPrint('$e');
+      debugPrint('Google Sign In Error: $e');
       return null;
     }
   }
