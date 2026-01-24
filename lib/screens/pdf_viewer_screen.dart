@@ -37,13 +37,13 @@ class PdfViewerScreen extends StatefulWidget {
     this.file,
     required this.title,
   }) : assert(
-         storagePath != null ||
-             url != null ||
-             assetPath != null ||
-             bytes != null ||
-             file != null,
-         'You must provide at least one PDF source',
-       );
+          storagePath != null ||
+              url != null ||
+              assetPath != null ||
+              bytes != null ||
+              file != null,
+          'You must provide at least one PDF source',
+        );
 
   @override
   State<PdfViewerScreen> createState() => _PdfViewerScreenState();
@@ -80,30 +80,31 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   void _showContextMenu(
       BuildContext context, PdfTextSelectionChangedDetails details) {
-    
     // Remove existing if any (e.g. while dragging)
     _checkAndCloseContextMenu();
-    
+
     final OverlayState overlayState = Overlay.of(context);
-    
+
     // Calculate position (guard against null region)
     if (details.globalSelectedRegion == null) return;
-    
+
     final double top = details.globalSelectedRegion!.top - 60;
     final double left = details.globalSelectedRegion!.left;
 
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         top: top < 0 ? 20 : top, // Ensure it sits below status bar at least
-        left: left < 0 ? 0 : left, 
+        left: left < 0 ? 0 : left,
         child: Material(
           color: Colors.transparent,
           child: Container(
-             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(8),
-              boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+              boxShadow: const [
+                BoxShadow(blurRadius: 4, color: Colors.black26)
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -137,15 +138,18 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                     if (selectedText != null) {
                       _checkAndCloseContextMenu();
                       _pdfViewerController.clearSelection();
-                      
+
                       // Navigate to AI Chat with the text
-                       Provider.of<NavigationProvider>(context, listen: false).navigateToChat(
-                        message: "Please explain this text:\n\n\"$selectedText\"",
-                        context: context, 
+                      Provider.of<NavigationProvider>(context, listen: false)
+                          .navigateToChat(
+                        message:
+                            "Please explain this text:\n\n\"$selectedText\"",
+                        context: context,
                       );
                     }
                   },
-                  icon: const FaIcon(FontAwesomeIcons.wandMagicSparkles, color: Colors.white, size: 14),
+                  icon: const FaIcon(FontAwesomeIcons.wandMagicSparkles,
+                      color: Colors.white, size: 14),
                   label: const Text(
                     'Explain',
                     style: TextStyle(color: Colors.white, fontSize: 14),
@@ -240,9 +244,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
       final tempDir = await getTemporaryDirectory();
       final safeTitle = widget.title.replaceAll(RegExp(r'[^\w\s\.]'), '_');
-      final fileName = safeTitle.endsWith('.pdf')
-          ? safeTitle
-          : '$safeTitle.pdf';
+      final fileName =
+          safeTitle.endsWith('.pdf') ? safeTitle : '$safeTitle.pdf';
       final file = File('${tempDir.path}/$fileName');
 
       // 2. Write Bytes
@@ -268,9 +271,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   Future<Uint8List?> _captureVisibleArea() async {
     try {
-      final boundary =
-          _pdfRepaintKey.currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
+      final boundary = _pdfRepaintKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
 
       if (boundary == null) return null;
 
@@ -404,7 +406,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   }
 
   /// --- 5. AI DIALOG ---
-  
+
   void _openAiTutorDialog() {
     showDialog(
       context: context,
@@ -542,7 +544,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     return Center(
       child: ConstrainedBox(
         // Keeps PDF comfortable to read on wide screens (Web/Tablet)
-        constraints: const BoxConstraints(maxWidth: 850), 
+        constraints: const BoxConstraints(maxWidth: 850),
         child: RepaintBoundary(
           key: _pdfRepaintKey,
           child: SfPdfViewer.memory(

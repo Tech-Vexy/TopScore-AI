@@ -331,7 +331,6 @@ class _HomeTabState extends State<HomeTab> {
               hintText: 'Search files, notes, topics...',
               margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             ),
-
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -340,10 +339,8 @@ class _HomeTabState extends State<HomeTab> {
                   children: [
                     _buildHeader(context, displayName, 12),
                     const SizedBox(height: 20),
-
                     _buildHeroCard(context),
                     const SizedBox(height: 20),
-
                     if (_isSearching)
                       _buildSearchResultsSection(context)
                     else ...[
@@ -359,7 +356,6 @@ class _HomeTabState extends State<HomeTab> {
                       _buildActionGrid(context),
                       const SizedBox(height: 20),
                     ],
-
                     _buildRecentlyOpenedSection(context),
                     const SizedBox(height: 24),
                   ],
@@ -436,9 +432,8 @@ class _HomeTabState extends State<HomeTab> {
   Widget _buildFileCard(BuildContext context, FirebaseFile file) {
     final theme = Theme.of(context);
     final pathParts = file.path.split('/');
-    final folderContext = pathParts.length > 1
-        ? pathParts[pathParts.length - 2]
-        : "General";
+    final folderContext =
+        pathParts.length > 1 ? pathParts[pathParts.length - 2] : "General";
 
     return Container(
       decoration: BoxDecoration(

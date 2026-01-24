@@ -92,7 +92,8 @@ final GoRouter router = GoRouter(
                     if (snapshot.connectionState == ConnectionState.done) {
                       return chat.ChatScreen();
                     }
-                    return const _DeferredLoadingScreen(message: 'Starting AI Tutor...');
+                    return const _DeferredLoadingScreen(
+                        message: 'Starting AI Tutor...');
                   },
                 ),
               ),
@@ -125,7 +126,8 @@ final GoRouter router = GoRouter(
                         if (snapshot.connectionState == ConnectionState.done) {
                           return flashcards.FlashcardGeneratorScreen();
                         }
-                        return const _DeferredLoadingScreen(message: 'Loading Flashcards...');
+                        return const _DeferredLoadingScreen(
+                            message: 'Loading Flashcards...');
                       },
                     ),
                   ),
@@ -143,7 +145,8 @@ final GoRouter router = GoRouter(
                         if (snapshot.connectionState == ConnectionState.done) {
                           return science_lab.ScienceLabScreen();
                         }
-                        return const _DeferredLoadingScreen(message: 'Loading Science Lab...');
+                        return const _DeferredLoadingScreen(
+                            message: 'Loading Science Lab...');
                       },
                     ),
                   ),
@@ -157,7 +160,8 @@ final GoRouter router = GoRouter(
                         if (snapshot.connectionState == ConnectionState.done) {
                           return periodic_table.PeriodicTableScreen();
                         }
-                        return const _DeferredLoadingScreen(message: 'Loading Periodic Table...');
+                        return const _DeferredLoadingScreen(
+                            message: 'Loading Periodic Table...');
                       },
                     ),
                   ),

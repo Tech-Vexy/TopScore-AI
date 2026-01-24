@@ -29,10 +29,11 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   debugPrint('[TOPSCORE] 1. Starting main()');
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Enable clean URLs for web (removes # from URLs)
   usePathUrlStrategy();
-  debugPrint('[TOPSCORE] 2. WidgetsFlutterBinding initialized & URL strategy set');
+  debugPrint(
+      '[TOPSCORE] 2. WidgetsFlutterBinding initialized & URL strategy set');
 
   // Load environment variables with error handling
   try {
@@ -193,17 +194,22 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthProvider>.value(value: _authProvider),
-        ChangeNotifierProvider<ResourceProvider>.value(value: _resourceProvider),
-        ChangeNotifierProvider<DownloadProvider>.value(value: _downloadProvider),
-        ChangeNotifierProvider<SettingsProvider>.value(value: _settingsProvider),
-        ChangeNotifierProvider<NavigationProvider>.value(value: _navigationProvider),
+        ChangeNotifierProvider<ResourceProvider>.value(
+            value: _resourceProvider),
+        ChangeNotifierProvider<DownloadProvider>.value(
+            value: _downloadProvider),
+        ChangeNotifierProvider<SettingsProvider>.value(
+            value: _settingsProvider),
+        ChangeNotifierProvider<NavigationProvider>.value(
+            value: _navigationProvider),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
           return Consumer<SettingsProvider>(
             builder: (context, settings, _) {
               // Check if user is logged in or guest to decide routing strategy
-              final isLoggedIn = authProvider.userModel != null || authProvider.isGuest;
+              final isLoggedIn =
+                  authProvider.userModel != null || authProvider.isGuest;
 
               if (isLoggedIn && !authProvider.needsRoleSelection) {
                 // Use go_router for logged-in users/guests with clean URLs

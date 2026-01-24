@@ -15,7 +15,7 @@ class AudioService {
   final AudioRecorder _audioRecorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final FlutterTts _flutterTts = FlutterTts();
-  
+
   bool _ttsAvailable = false;
   bool get ttsAvailable => _ttsAvailable;
 
@@ -66,7 +66,8 @@ class AudioService {
     String path = '';
     if (!kIsWeb) {
       final tempDir = await getTemporaryDirectory();
-      path = '${tempDir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      path =
+          '${tempDir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
     } else {
       path = 'audio_recording.m4a';
     }
@@ -90,7 +91,8 @@ class AudioService {
           base64Audio = base64Encode(response.bodyBytes);
         }
       } catch (e) {
-        developer.log('Error fetching blob: $e', name: 'AudioService', level: 900);
+        developer.log('Error fetching blob: $e',
+            name: 'AudioService', level: 900);
       }
     } else {
       final file = File(path);
@@ -115,7 +117,8 @@ class AudioService {
         }
       }
     } catch (e) {
-      developer.log('Error playing audio: $e', name: 'AudioService', level: 900);
+      developer.log('Error playing audio: $e',
+          name: 'AudioService', level: 900);
     }
   }
 
@@ -125,7 +128,8 @@ class AudioService {
       final bytes = base64Decode(base64Str);
       await _audioPlayer.play(BytesSource(bytes));
     } catch (e) {
-      developer.log('Error playing base64 audio: $e', name: 'AudioService', level: 900);
+      developer.log('Error playing base64 audio: $e',
+          name: 'AudioService', level: 900);
     }
   }
 

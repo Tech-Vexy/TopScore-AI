@@ -146,9 +146,8 @@ class ProfileScreen extends StatelessWidget {
               context,
               icon: FontAwesomeIcons.language,
               title: "Language",
-              subtitle: user?.preferredLanguage == 'sw'
-                  ? 'Kiswahili'
-                  : 'English',
+              subtitle:
+                  user?.preferredLanguage == 'sw' ? 'Kiswahili' : 'English',
               iconColor: Colors.purpleAccent,
               onTap: () =>
                   _showLanguageSelector(context, user?.preferredLanguage),
@@ -245,11 +244,13 @@ class ProfileScreen extends StatelessWidget {
                                         "This will delete your current anonymous history. Ensure you don't need it or sign in to save it."),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.pop(ctx, false),
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, false),
                                         child: const Text("Cancel"),
                                       ),
                                       TextButton(
-                                        onPressed: () => Navigator.pop(ctx, true),
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, true),
                                         child: const Text("Clear"),
                                       ),
                                     ],
@@ -261,7 +262,8 @@ class ProfileScreen extends StatelessWidget {
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                          content: Text("Guest session cleared.")),
+                                          content:
+                                              Text("Guest session cleared.")),
                                     );
                                   }
                                 }
@@ -570,8 +572,7 @@ class ProfileScreen extends StatelessWidget {
                 style: GoogleFonts.nunito(fontSize: 12, color: Colors.grey),
               )
             : null,
-        trailing:
-            trailing ??
+        trailing: trailing ??
             const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
       ),
     );

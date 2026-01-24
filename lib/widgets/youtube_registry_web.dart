@@ -7,13 +7,16 @@ void registerYouTubeViewFactory(String viewId, String videoId) {
   ui_web.platformViewRegistry.registerViewFactory(
     viewId,
     (int viewId) {
-      final iframe = web.document.createElement('iframe') as web.HTMLIFrameElement
-        ..src = 'https://www.youtube.com/embed/$videoId?autoplay=1&rel=0&modestbranding=1'
+      final iframe = web.document.createElement('iframe')
+          as web.HTMLIFrameElement
+        ..src =
+            'https://www.youtube.com/embed/$videoId?autoplay=1&rel=0&modestbranding=1'
         ..style.border = 'none'
         ..style.width = '100%'
         ..style.height = '100%'
         ..allowFullscreen = true
-        ..allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        ..allow =
+            'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
       return iframe;
     },
   );

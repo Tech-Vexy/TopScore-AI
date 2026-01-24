@@ -124,18 +124,18 @@ class StorageService {
   static Future<void> clearAllIndexedFiles() async {
     try {
       debugPrint('Starting to clear all indexed files from Firestore...');
-      
+
       // Get all documents in the files collection
       final snapshot = await _firestore.collection(_filesCollection).get();
-      
+
       debugPrint('Found ${snapshot.docs.length} indexed files to delete');
-      
+
       // Delete each document
       final batch = _firestore.batch();
       for (final doc in snapshot.docs) {
         batch.delete(doc.reference);
       }
-      
+
       await batch.commit();
       debugPrint('Successfully cleared all indexed files from Firestore');
     } catch (e) {

@@ -19,7 +19,7 @@ class AuthProvider with ChangeNotifier {
   // Guest Mode logic
   bool _isGuest = false;
   bool get isGuest => _isGuest;
-  
+
   // Usage counters for guest
   int _guestMessageCount = 0;
   int _guestDocumentCount = 0;
@@ -111,16 +111,16 @@ class AuthProvider with ChangeNotifier {
       _setLoading(true);
 
       await _ensureGoogleSignInInitialized();
-      
+
       final account = await _googleSignIn.authenticate();
-      
+
       // Get the ID token from authentication
       final idToken = account.authentication.idToken;
-      
+
       // For Firebase Auth, we need to get an access token via authorization
       // Request authorization for basic scopes to get access token
-      final authorization = 
-          await account.authorizationClient.authorizeScopes(['email', 'profile']);
+      final authorization = await account.authorizationClient
+          .authorizeScopes(['email', 'profile']);
 
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: authorization.accessToken,
@@ -135,7 +135,8 @@ class AuthProvider with ChangeNotifier {
         try {
           // Link the anonymous user to the new Google credential
           userCredential = await currentUser.linkWithCredential(credential);
-          debugPrint("Successfully linked anonymous account to Google credential");
+          debugPrint(
+              "Successfully linked anonymous account to Google credential");
         } on FirebaseAuthException catch (e) {
           if (e.code == 'credential-already-in-use') {
             // Account already exists, so we sign in to it (merging/overwriting guest session)

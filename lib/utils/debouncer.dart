@@ -1,13 +1,13 @@
 import 'dart:async';
 
 /// Utility class for debouncing rapid successive calls.
-/// 
+///
 /// Useful for search inputs to prevent firing API calls on every keystroke.
-/// 
+///
 /// Example:
 /// ```dart
 /// final _debouncer = Debouncer(milliseconds: 300);
-/// 
+///
 /// TextField(
 ///   onChanged: (query) {
 ///     _debouncer.run(() => _performSearch(query));
@@ -44,7 +44,7 @@ class Debouncer {
 
 /// Throttle utility - ensures action runs at most once per interval.
 /// Unlike debounce, it executes immediately then ignores subsequent calls.
-/// 
+///
 /// Useful for scroll events, button clicks, etc.
 class Throttler {
   final int milliseconds;

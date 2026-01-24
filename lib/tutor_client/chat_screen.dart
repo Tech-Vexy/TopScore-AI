@@ -98,9 +98,10 @@ class _ChatScreenState extends State<ChatScreen> {
   // Add this new variable to track cancellation
   bool _userStoppedGeneration = false;
   String? _currentStreamingMessageId;
-  
+
   // Loading message type for dynamic status
-  String _loadingMessageType = 'thinking'; // 'thinking', 'analyzing', 'generating'
+  String _loadingMessageType =
+      'thinking'; // 'thinking', 'analyzing', 'generating'
 
   // TTS state tracking
   bool _isTtsSpeaking = false;
@@ -177,7 +178,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Timer? _vadTimer; // Smart VAD timer
   bool _isSpeechDetected = false; // Tracks if user has started talking
   DateTime? _lastSpeechTime; // Last time we detected speech
-  final double _speechThreshold = -20.0; // Sensitivity (Lower = more sensitive). -20 is safer for noisy rooms.
+  final double _speechThreshold =
+      -20.0; // Sensitivity (Lower = more sensitive). -20 is safer for noisy rooms.
   final Duration _silenceTimeout = const Duration(
     milliseconds: 1200,
   ); // 1.2s pause = end of turn
@@ -333,7 +335,7 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
     });
-    
+
     _audioPlayer.onPositionChanged.listen((position) {
       if (mounted) {
         setState(() {
@@ -341,7 +343,7 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
     });
-    
+
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted) {
         setState(() {
@@ -465,7 +467,8 @@ class _ChatScreenState extends State<ChatScreen> {
         _shuffleQuestions();
       });
     } catch (e) {
-      developer.log('Error loading suggested questions: $e', name: 'ChatScreen');
+      developer.log('Error loading suggested questions: $e',
+          name: 'ChatScreen');
     }
   }
 
@@ -497,7 +500,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _processProviderImage(XFile image) async {
     try {
       final bytes = await image.readAsBytes();
-      
+
       // 1. Immediately show preview (Paste)
       final base64Image = base64Encode(bytes);
       if (mounted) {
@@ -514,7 +517,7 @@ class _ChatScreenState extends State<ChatScreen> {
         'pasted_image_${DateTime.now().millisecondsSinceEpoch}.png',
         'image/png',
       );
-      
+
       if (mounted) {
         setState(() {
           _pendingFileUrl = url;
@@ -811,7 +814,7 @@ class _ChatScreenState extends State<ChatScreen> {
           final tempIndex = _messages.indexWhere(
             (m) => m.id == key && m.isTemporary,
           );
-          
+
           if (tempIndex != -1) {
             // REPLACE temporary WebSocket message with final Firebase version
             developer.log(
@@ -822,7 +825,7 @@ class _ChatScreenState extends State<ChatScreen> {
           } else {
             // Check if message already exists (non-temporary)
             final existsIndex = _messages.indexWhere((m) => m.id == key);
-            
+
             if (existsIndex == -1) {
               // Truly new message - add it
               developer.log(
@@ -830,7 +833,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 name: 'ChatScreen',
               );
               _messages.add(msg);
-              
+
               // Sort by timestamp to maintain order
               _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
             } else {
@@ -880,7 +883,7 @@ class _ChatScreenState extends State<ChatScreen> {
           '📍 Firebase update for message: $key',
           name: 'ChatScreen',
         );
-        
+
         setState(() {
           _messages[idx] = updatedMsg;
           if (!updatedMsg.isUser) {
@@ -1020,10 +1023,10 @@ class _ChatScreenState extends State<ChatScreen> {
         // Create temporary AI message placeholder
         if (messageId != null) {
           _currentStreamingMessageId = messageId;
-          
+
           // Check if we already have this message (temporary or permanent)
           final exists = _messages.any((m) => m.id == messageId);
-          
+
           if (!exists) {
             setState(() {
               _messages.add(
@@ -1032,11 +1035,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   text: "",
                   isUser: false,
                   timestamp: DateTime.now(),
-                  isTemporary: true,  // WebSocket message
-                  isComplete: false,   // Still streaming
+                  isTemporary: true, // WebSocket message
+                  isComplete: false, // Still streaming
                 ),
               );
-              _isTyping = false; // Disable global indicator as we have a bubble now
+              _isTyping =
+                  false; // Disable global indicator as we have a bubble now
               _statusMessage = "Thinking...";
             });
             _scrollToBottom();
@@ -1060,7 +1064,8 @@ class _ChatScreenState extends State<ChatScreen> {
         final transcribedText = data['content'] as String? ?? '';
         if (transcribedText.isNotEmpty) {
           // Add user message to chat
-          final userMsgId = 'voice-user-${DateTime.now().millisecondsSinceEpoch}';
+          final userMsgId =
+              'voice-user-${DateTime.now().millisecondsSinceEpoch}';
           setState(() {
             _messages.add(
               ChatMessage(
@@ -1105,18 +1110,18 @@ class _ChatScreenState extends State<ChatScreen> {
         // HYBRID STREAMING: Backend sends FULL accumulated text each time (not delta)
         // Update temporary message with streamed content
         final chunkContent = data['content'] as String? ?? '';
-        
+
         setState(() {
           if (messageId != null) {
             // Find temporary message by ID
             final index = _messages.indexWhere(
               (m) => m.id == messageId && m.isTemporary,
             );
-            
+
             if (index != -1) {
               // Update existing temporary message with FULL content (not appended)
               _messages[index] = _messages[index].copyWith(
-                text: chunkContent,  // FULL text (snapshot), not delta
+                text: chunkContent, // FULL text (snapshot), not delta
               );
             } else {
               // Message doesn't exist yet - create temporary message
@@ -1144,14 +1149,14 @@ class _ChatScreenState extends State<ChatScreen> {
           if (messageId != null) {
             // Find the temp message or create it if missing
             final index = _messages.indexWhere((m) => m.id == messageId);
-            
+
             if (index != -1) {
               final oldMsg = _messages[index];
               _messages[index] = oldMsg.copyWith(
                 // Append new chunk to existing reasoning
                 reasoning: (oldMsg.reasoning ?? "") + rContent,
                 // Ensure we don't accidentally mark it as complete yet
-                isTemporary: true, 
+                isTemporary: true,
               );
             } else {
               // First chunk of reasoning arrived -> Create placeholder
@@ -1180,14 +1185,14 @@ class _ChatScreenState extends State<ChatScreen> {
             final index = _messages.indexWhere(
               (m) => m.id == messageId && m.isTemporary,
             );
-            
+
             if (index != -1) {
               _messages[index] = _messages[index].copyWith(
                 isComplete: true,
                 isTemporary: false, // Mark as permanent when streaming ends
               );
             }
-            
+
             // Update with any final content if provided
             if (data.containsKey('content')) {
               final content = data['content'] as String? ?? '';
@@ -1223,7 +1228,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   text: content,
                   isUser: false,
                   timestamp: DateTime.now(),
-                  isTemporary: false,  // Mark as permanent
+                  isTemporary: false, // Mark as permanent
                   isComplete: true,
                 ),
               );
@@ -1418,18 +1423,17 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () {
               Navigator.pop(context); // Close dialog
               Navigator.push(
-                context, 
+                context,
                 MaterialPageRoute(builder: (_) => const AuthScreen()),
               );
             },
             child: const Text('Sign Up / Login'),
           ),
           TextButton(
-             onPressed: () {
-               Navigator.pop(context); 
-             },
-             child: const Text('Cancel')
-          ),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel')),
         ],
       ),
     );
@@ -1446,9 +1450,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final fileUrlToSend = fileUrl ?? _pendingFileUrl;
 
     if (messageText.trim().isNotEmpty || fileUrlToSend != null) {
-       if (authProvider.isGuest) {
-          authProvider.incrementGuestMessage();
-       }
+      if (authProvider.isGuest) {
+        authProvider.incrementGuestMessage();
+      }
     }
 
     // Validation: Require text when sending an image
@@ -1471,10 +1475,10 @@ class _ChatScreenState extends State<ChatScreen> {
     // Determine loading message type based on content
     String loadingType = 'thinking';
     final lowerCaseMessage = messageText.toLowerCase();
-    
+
     // Check if this is a vision/analysis task
-    if (fileUrlToSend != null || 
-        lowerCaseMessage.contains('analyze') || 
+    if (fileUrlToSend != null ||
+        lowerCaseMessage.contains('analyze') ||
         lowerCaseMessage.contains('analyse') ||
         lowerCaseMessage.contains('look at') ||
         lowerCaseMessage.contains('what\'s in') ||
@@ -1483,20 +1487,20 @@ class _ChatScreenState extends State<ChatScreen> {
         lowerCaseMessage.contains('recognize') ||
         lowerCaseMessage.contains('scan')) {
       loadingType = 'analyzing';
-    } 
+    }
     // Check if this is a generation task
     else if (lowerCaseMessage.contains('generate') ||
-             lowerCaseMessage.contains('create') ||
-             lowerCaseMessage.contains('draw') ||
-             lowerCaseMessage.contains('make a') ||
-             lowerCaseMessage.contains('design') ||
-             lowerCaseMessage.contains('build') ||
-             lowerCaseMessage.contains('produce') ||
-             lowerCaseMessage.contains('graph') ||
-             lowerCaseMessage.contains('chart') ||
-             lowerCaseMessage.contains('diagram') ||
-             lowerCaseMessage.contains('image') ||
-             lowerCaseMessage.contains('picture')) {
+        lowerCaseMessage.contains('create') ||
+        lowerCaseMessage.contains('draw') ||
+        lowerCaseMessage.contains('make a') ||
+        lowerCaseMessage.contains('design') ||
+        lowerCaseMessage.contains('build') ||
+        lowerCaseMessage.contains('produce') ||
+        lowerCaseMessage.contains('graph') ||
+        lowerCaseMessage.contains('chart') ||
+        lowerCaseMessage.contains('diagram') ||
+        lowerCaseMessage.contains('image') ||
+        lowerCaseMessage.contains('picture')) {
       loadingType = 'generating';
     }
 
@@ -1997,18 +2001,19 @@ class _ChatScreenState extends State<ChatScreen> {
         });
         return;
       }
-      
+
       // Stop any currently playing audio
-      if (_playingAudioMessageId != null && _playingAudioMessageId != messageId) {
+      if (_playingAudioMessageId != null &&
+          _playingAudioMessageId != messageId) {
         await _audioPlayer.stop();
       }
-      
+
       setState(() {
         _playingAudioMessageId = messageId;
         _isPlayingAudio = true;
         _audioPosition = Duration.zero;
       });
-      
+
       // Play from URL (works for both local paths and remote URLs)
       if (audioUrl.startsWith('http')) {
         await _audioPlayer.play(UrlSource(audioUrl));
@@ -2023,7 +2028,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
   }
-  
+
   Future<void> _resumeVoiceMessage() async {
     try {
       await _audioPlayer.resume();
@@ -2090,8 +2095,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // Logic to handle "Edit and Send Back" with dialog
   void _handleUserEdit(ChatMessage message) {
-    final TextEditingController editController = TextEditingController(text: message.text);
-    
+    final TextEditingController editController =
+        TextEditingController(text: message.text);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -2117,7 +2123,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Navigator.pop(context);
                 return;
               }
-              
+
               Navigator.pop(context);
               await _editAndResend(message, editedText);
             },
@@ -2127,46 +2133,49 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-  
+
   // Delete old message pair and resend edited message
-  Future<void> _editAndResend(ChatMessage userMessage, String editedText) async {
+  Future<void> _editAndResend(
+      ChatMessage userMessage, String editedText) async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final userId = authProvider.userModel?.uid;
       final threadId = _wsService.threadId;
-      
+
       if (userId == null) return;
-      
+
       // Find the AI response that came after this user message
       final userIndex = _messages.indexWhere((m) => m.id == userMessage.id);
       String? aiResponseId;
-      
+
       if (userIndex != -1 && userIndex < _messages.length - 1) {
         final nextMessage = _messages[userIndex + 1];
         if (!nextMessage.isUser) {
           aiResponseId = nextMessage.id;
         }
       }
-      
+
       // Delete from Firebase RTDB
-      final messagesRef = FirebaseDatabase.instance.ref('chats/$threadId/messages');
-      
+      final messagesRef =
+          FirebaseDatabase.instance.ref('chats/$threadId/messages');
+
       // Delete user message
       await messagesRef.child(userMessage.id).remove();
-      
+
       // Delete AI response if exists
       if (aiResponseId != null) {
         await messagesRef.child(aiResponseId).remove();
       }
-      
+
       // Remove from local state (RTDB listener will handle this, but do it immediately for UX)
       setState(() {
-        _messages.removeWhere((m) => m.id == userMessage.id || (aiResponseId != null && m.id == aiResponseId));
+        _messages.removeWhere((m) =>
+            m.id == userMessage.id ||
+            (aiResponseId != null && m.id == aiResponseId));
       });
-      
+
       // Send the edited message as a new message
       await _sendMessage(text: editedText, fileUrl: userMessage.imageUrl);
-      
     } catch (e) {
       developer.log('Error editing message: $e', name: 'ChatScreen');
       if (mounted) {
@@ -2247,7 +2256,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _regenerateResponse(ChatMessage message) async {
     // Stop any active TTS playback first
     await _stopTts();
-    
+
     // Find the user message that triggered this response
     final messageIndex = _messages.indexOf(message);
     if (messageIndex > 0) {
@@ -2321,14 +2330,14 @@ class _ChatScreenState extends State<ChatScreen> {
         HapticFeedback.mediumImpact();
       }
       setState(() => _isVoiceMode = true);
-      
+
       // Connect to dedicated voice WebSocket endpoint for low-latency interactions
       if (!_wsService.isConnected) {
         _wsService.connectVoice();
         // Wait for connection
         await Future.delayed(const Duration(milliseconds: 500));
       }
-      
+
       _showVoiceModeUI();
       // Small delay to allow UI to build
       Future.delayed(const Duration(milliseconds: 300), _startListening);
@@ -2349,7 +2358,8 @@ class _ChatScreenState extends State<ChatScreen> {
             return _VoiceSessionOverlay(
               isAiSpeaking: _isAiSpeaking,
               isRecording: _isRecording,
-              statusText: _statusMessage ?? (_isAiSpeaking ? "Speaking..." : "Listening..."),
+              statusText: _statusMessage ??
+                  (_isAiSpeaking ? "Speaking..." : "Listening..."),
               transcription: _liveTranscription,
               amplitude: _currentAmplitude,
               onClose: () {
@@ -2465,7 +2475,7 @@ class _ChatScreenState extends State<ChatScreen> {
           _statusMessage = "Listening..."; // Initial state
         });
         _voiceDialogSetState?.call(() {});
-        
+
         // Haptic feedback for recording start
         if (!kIsWeb) {
           HapticFeedback.selectionClick();
@@ -2483,7 +2493,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
           // --- NEW: Check Safety Timeout ---
           if (DateTime.now().difference(startTime) > maxDuration) {
-            developer.log('⏱️ Max duration reached. Forcing stop.', name: 'ChatScreen');
+            developer.log('⏱️ Max duration reached. Forcing stop.',
+                name: 'ChatScreen');
             timer.cancel();
             _stopListeningAndSend();
             return;
@@ -2492,10 +2503,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
           final amplitude = await _audioRecorder.getAmplitude();
           final currentDb = amplitude.current;
-          
+
           // Debug Print: UNCOMMENT THIS to see your actual room noise level!
           // developer.log('🎤 dB: $currentDb | Threshold: $_speechThreshold', name: 'ChatScreen');
-          
+
           // Update amplitude for visual feedback
           if (mounted) {
             setState(() => _currentAmplitude = currentDb);
@@ -2519,7 +2530,7 @@ class _ChatScreenState extends State<ChatScreen> {
           // 2. Logic: Only stop IF we heard speech AND silence has passed
           if (_isSpeechDetected && _lastSpeechTime != null) {
             final timeSinceSpeech = DateTime.now().difference(_lastSpeechTime!);
-            
+
             if (timeSinceSpeech > _silenceTimeout) {
               // User has stopped talking for 1.2 seconds -> SEND IT
               timer.cancel();
@@ -2606,7 +2617,7 @@ class _ChatScreenState extends State<ChatScreen> {
               threadId: _wsService.threadId,
               modelPreference: 'fast', // Recommended for voice (Groq Llama)
             );
-            
+
             developer.log(
               'Voice audio sent (${base64Audio.length} bytes)',
               name: 'ChatScreen',
@@ -2633,7 +2644,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _liveTranscription = ''; // Clear transcription when AI speaks
     });
     _voiceDialogSetState?.call(() {});
-    
+
     // Haptic feedback for engagement
     if (!kIsWeb) {
       HapticFeedback.lightImpact();
@@ -3054,7 +3065,8 @@ class _ChatScreenState extends State<ChatScreen> {
         if (value == 'settings') {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const profile_page.ProfileScreen()),
+            MaterialPageRoute(
+                builder: (_) => const profile_page.ProfileScreen()),
           );
         } else if (value == 'logout') {
           await authProvider.signOut();
@@ -3513,7 +3525,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         // Voice message player
-                        if (message.audioUrl != null && message.text == '🎤 Audio Message')
+                        if (message.audioUrl != null &&
+                            message.text == '🎤 Audio Message')
                           Container(
                             padding: const EdgeInsets.all(8),
                             child: Row(
@@ -3522,20 +3535,25 @@ class _ChatScreenState extends State<ChatScreen> {
                                 // Play/Pause button
                                 IconButton(
                                   icon: Icon(
-                                    _playingAudioMessageId == message.id && _isPlayingAudio
+                                    _playingAudioMessageId == message.id &&
+                                            _isPlayingAudio
                                         ? Icons.pause_circle_filled
                                         : Icons.play_circle_filled,
                                     color: Colors.white,
                                     size: 32,
                                   ),
                                   onPressed: () {
-                                    if (_playingAudioMessageId == message.id && _isPlayingAudio) {
+                                    if (_playingAudioMessageId == message.id &&
+                                        _isPlayingAudio) {
                                       _audioPlayer.pause();
                                       setState(() => _isPlayingAudio = false);
-                                    } else if (_playingAudioMessageId == message.id && !_isPlayingAudio) {
+                                    } else if (_playingAudioMessageId ==
+                                            message.id &&
+                                        !_isPlayingAudio) {
                                       _resumeVoiceMessage();
                                     } else {
-                                      _playVoiceMessage(message.id, message.audioUrl!);
+                                      _playVoiceMessage(
+                                          message.id, message.audioUrl!);
                                     }
                                   },
                                 ),
@@ -3543,25 +3561,34 @@ class _ChatScreenState extends State<ChatScreen> {
                                 // Waveform placeholder / progress
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       // Progress bar
                                       Container(
                                         height: 3,
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(2),
-                                          color: Colors.white.withValues(alpha: 0.3),
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                          color: Colors.white
+                                              .withValues(alpha: 0.3),
                                         ),
                                         child: FractionallySizedBox(
                                           alignment: Alignment.centerLeft,
-                                          widthFactor: _playingAudioMessageId == message.id
-                                              ? (_audioDuration.inMilliseconds > 0
-                                                  ? _audioPosition.inMilliseconds / _audioDuration.inMilliseconds
+                                          widthFactor: _playingAudioMessageId ==
+                                                  message.id
+                                              ? (_audioDuration.inMilliseconds >
+                                                      0
+                                                  ? _audioPosition
+                                                          .inMilliseconds /
+                                                      _audioDuration
+                                                          .inMilliseconds
                                                   : 0.0)
                                               : 0.0,
                                           child: Container(
                                             decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(2),
+                                              borderRadius:
+                                                  BorderRadius.circular(2),
                                               color: Colors.white,
                                             ),
                                           ),
@@ -3575,7 +3602,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                             : 'Voice message',
                                         style: GoogleFonts.outfit(
                                           fontSize: 12,
-                                          color: Colors.white.withValues(alpha: 0.9),
+                                          color: Colors.white
+                                              .withValues(alpha: 0.9),
                                         ),
                                       ),
                                     ],
@@ -3623,7 +3651,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                           ),
                         // CHANGE: White text on Blue background (hide for voice messages)
-                        if (!(message.audioUrl != null && message.text == '🎤 Audio Message'))
+                        if (!(message.audioUrl != null &&
+                            message.text == '🎤 Audio Message'))
                           SelectableText(
                             message.text,
                             style: GoogleFonts.outfit(
@@ -3672,7 +3701,7 @@ class _ChatScreenState extends State<ChatScreen> {
       // --- AI MESSAGE (DM Sans Font + Styled Headers) ---
       // Check if this specific message is currently streaming
       final isStreaming = _currentStreamingMessageId == message.id;
-      
+
       return Container(
         margin: const EdgeInsets.symmetric(vertical: 16),
         padding: const EdgeInsets.only(right: 16),
@@ -3728,148 +3757,157 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   // 1. GEMINI REASONING BLOCK
                   // Replaced the old ExpansionTile with the new GeminiReasoningView
-                  if (message.reasoning != null && message.reasoning!.isNotEmpty)
+                  if (message.reasoning != null &&
+                      message.reasoning!.isNotEmpty)
                     GeminiReasoningView(
                       content: message.reasoning!,
                       // It is "thinking" if the final answer hasn't started streaming yet
-                      isThinking: message.text.isEmpty, 
+                      isThinking: message.text.isEmpty,
                     ),
 
                   // 2. MAIN ANSWER CONTENT
                   // Only show if there is actually content
                   if (message.text.isNotEmpty)
                     MarkdownBody(
-                      data: cleanContent(message.text), // Use cleanContent helper
-                    selectable: true, // Enable text selection for AI responses
-                    builders: {
-                      'latex': LatexElementBuilder(), // Use our new builder
-                      'mermaid': MermaidElementBuilder(),
-                      'a': YouTubeLinkBuilder(context, isDark, isStreaming: isStreaming), // Inline YouTube videos - defer until streaming done
-                    },
-                    extensionSet: md.ExtensionSet(
-                      [
-                        ...md.ExtensionSet.gitHubFlavored.blockSyntaxes,
-                        MermaidBlockSyntax(),
-                      ],
-                      [
-                        md.EmojiSyntax(),
-                        LatexSyntax(), // Correctly placed in inline syntaxes
-                        ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes,
-                      ],
-                    ),
-                    // ignore: deprecated_member_use
-                    imageBuilder: (uri, title, alt) {
-                      // A. Check if it's a Data URI (Base64)
-                      if (uri.scheme == 'data') {
-                        try {
-                          // Split 'data:image/png;base64,....' to get just the code
-                          final base64String = uri.toString().split(',').last;
+                      data:
+                          cleanContent(message.text), // Use cleanContent helper
+                      selectable:
+                          true, // Enable text selection for AI responses
+                      builders: {
+                        'latex': LatexElementBuilder(), // Use our new builder
+                        'mermaid': MermaidElementBuilder(),
+                        'a': YouTubeLinkBuilder(context, isDark,
+                            isStreaming:
+                                isStreaming), // Inline YouTube videos - defer until streaming done
+                      },
+                      extensionSet: md.ExtensionSet(
+                        [
+                          ...md.ExtensionSet.gitHubFlavored.blockSyntaxes,
+                          MermaidBlockSyntax(),
+                        ],
+                        [
+                          md.EmojiSyntax(),
+                          LatexSyntax(), // Correctly placed in inline syntaxes
+                          ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes,
+                        ],
+                      ),
+                      // ignore: deprecated_member_use
+                      imageBuilder: (uri, title, alt) {
+                        // A. Check if it's a Data URI (Base64)
+                        if (uri.scheme == 'data') {
+                          try {
+                            // Split 'data:image/png;base64,....' to get just the code
+                            final base64String = uri.toString().split(',').last;
 
-                          // Sanitize string (remove newlines/spaces if any)
-                          final cleanBase64 = base64String.replaceAll(
-                            RegExp(r'\s+'),
-                            '',
-                          );
+                            // Sanitize string (remove newlines/spaces if any)
+                            final cleanBase64 = base64String.replaceAll(
+                              RegExp(r'\s+'),
+                              '',
+                            );
 
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 8.0),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.grey.withValues(alpha: 0.3),
+                            return Container(
+                              margin: const EdgeInsets.symmetric(vertical: 8.0),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.grey.withValues(alpha: 0.3),
+                                ),
                               ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.memory(
-                                base64Decode(cleanBase64),
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text("⚠️ Image Decode Error"),
-                                  );
-                                },
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.memory(
+                                  base64Decode(cleanBase64),
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text("⚠️ Image Decode Error"),
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-                          );
-                        } catch (e) {
-                          return const Text("⚠️ Invalid Image Data");
+                            );
+                          } catch (e) {
+                            return const Text("⚠️ Invalid Image Data");
+                          }
                         }
-                      }
 
-                      // B. Fallback for standard URLs (like the Google Chart link)
-                      return CachedNetworkImage(
-                        imageUrl: uri.toString(),
-                        placeholder: (context, url) => const SizedBox(
-                          height: 100,
-                          child: Center(child: CircularProgressIndicator()),
+                        // B. Fallback for standard URLs (like the Google Chart link)
+                        return CachedNetworkImage(
+                          imageUrl: uri.toString(),
+                          placeholder: (context, url) => const SizedBox(
+                            height: 100,
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          errorWidget: (context, url, error) =>
+                              const SizedBox(), // Hide broken external links
+                        );
+                      },
+                      styleSheet: MarkdownStyleSheet(
+                        // CHANGE: Body text uses DM Sans (Better for long reading)
+                        p: GoogleFonts.dmSans(
+                          fontSize: 16,
+                          height: 1.6,
+                          color: theme.colorScheme.onSurface,
                         ),
-                        errorWidget: (context, url, error) =>
-                            const SizedBox(), // Hide broken external links
-                      );
-                    },
-                    styleSheet: MarkdownStyleSheet(
-                      // CHANGE: Body text uses DM Sans (Better for long reading)
-                      p: GoogleFonts.dmSans(
-                        fontSize: 16,
-                        height: 1.6,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                      // CHANGE: Headers use Outfit & Primary Color to pop
-                      h1: GoogleFonts.outfit(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: theme.primaryColor,
-                      ),
-                      h2: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: theme.primaryColor.withValues(alpha: 0.8),
-                      ),
-                      h3: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                      // CHANGE: Bold text is Darker/Stronger
-                      strong: GoogleFonts.dmSans(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                      // Code Blocks
-                      code: GoogleFonts.firaCode(
-                        backgroundColor:
-                            theme.colorScheme.surfaceContainerHighest,
-                        color: isDark ? Colors.amberAccent : Colors.blue[800],
-                        fontSize: 13,
-                      ),
-                      codeblockDecoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: theme.dividerColor.withValues(alpha: 0.1),
+                        // CHANGE: Headers use Outfit & Primary Color to pop
+                        h1: GoogleFonts.outfit(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: theme.primaryColor,
+                        ),
+                        h2: GoogleFonts.outfit(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: theme.primaryColor.withValues(alpha: 0.8),
+                        ),
+                        h3: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        // CHANGE: Bold text is Darker/Stronger
+                        strong: GoogleFonts.dmSans(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        // Code Blocks
+                        code: GoogleFonts.firaCode(
+                          backgroundColor:
+                              theme.colorScheme.surfaceContainerHighest,
+                          color: isDark ? Colors.amberAccent : Colors.blue[800],
+                          fontSize: 13,
+                        ),
+                        codeblockDecoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: theme.dividerColor.withValues(alpha: 0.1),
+                          ),
+                        ),
+                        blockquote: TextStyle(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                          fontStyle: FontStyle.italic,
+                        ),
+                        blockquoteDecoration: BoxDecoration(
+                          border: Border(
+                            left:
+                                BorderSide(color: theme.primaryColor, width: 4),
+                          ),
                         ),
                       ),
-                      blockquote: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.6,
-                        ),
-                        fontStyle: FontStyle.italic,
-                      ),
-                      blockquoteDecoration: BoxDecoration(
-                        border: Border(
-                          left: BorderSide(color: theme.primaryColor, width: 4),
-                        ),
-                      ),
-                    ),
                     )
                   // 3. FALLBACK LOADING (If absolutely nothing has arrived yet)
-                  else if (message.text.isEmpty && (message.reasoning == null || message.reasoning!.isEmpty))
-                     Padding(
-                       padding: const EdgeInsets.only(bottom: 8.0),
-                       child: _TypingIndicator(messageType: isStreaming ? _loadingMessageType : 'thinking'),
-                     ),
+                  else if (message.text.isEmpty &&
+                      (message.reasoning == null || message.reasoning!.isEmpty))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: _TypingIndicator(
+                          messageType:
+                              isStreaming ? _loadingMessageType : 'thinking'),
+                    ),
 
                   // 3. --- NEW: Quiz Widget ---
                   if (message.quizData != null)
@@ -3961,12 +3999,14 @@ class _ChatScreenState extends State<ChatScreen> {
                         Wrap(
                           children: [
                             // TTS controls - show different icons based on state
-                            if (_speakingMessageId == message.id && _isTtsSpeaking)
+                            if (_speakingMessageId == message.id &&
+                                _isTtsSpeaking)
                               ..._buildTtsControls(message)
                             else
                               _buildActionIcon(
                                 Icons.volume_up_outlined,
-                                () => _speak(message.text, messageId: message.id),
+                                () =>
+                                    _speak(message.text, messageId: message.id),
                                 tooltip: 'Listen',
                               ),
                             _buildActionIcon(
@@ -4303,9 +4343,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             size: 16,
                             color: theme.primaryColor,
                           ),
-                          backgroundColor: isDark 
-                              ? const Color(0xFF2A2A2A) 
-                              : Colors.white,
+                          backgroundColor:
+                              isDark ? const Color(0xFF2A2A2A) : Colors.white,
                           side: BorderSide(
                             color: theme.primaryColor.withValues(alpha: 0.3),
                           ),
@@ -4855,7 +4894,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
 class _TypingIndicator extends StatefulWidget {
   final String messageType; // 'thinking', 'analyzing', 'generating'
-  
+
   const _TypingIndicator({
     this.messageType = 'thinking',
   });
@@ -4903,7 +4942,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
         loadingText = 'Thinking...';
         break;
     }
-    
+
     return FadeTransition(
       opacity: _opacity,
       child: Text(
@@ -4963,8 +5002,12 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
   }
 
   Color _getStateColor() {
-    if (widget.isAiSpeaking) return const Color(0xFF6C63FF); // AI Speaking (Brand)
-    if (widget.isRecording) return const Color(0xFF00C853); // User Speaking (Green)
+    if (widget.isAiSpeaking) {
+      return const Color(0xFF6C63FF); // AI Speaking (Brand)
+    }
+    if (widget.isRecording) {
+      return const Color(0xFF00C853); // User Speaking (Green)
+    }
     return Colors.grey; // Processing/Thinking
   }
 
@@ -4989,7 +5032,9 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
                       animation: _pulseController,
                       builder: (context, child) {
                         final scale = widget.isRecording || widget.isAiSpeaking
-                            ? 1.0 + (_pulseController.value * 0.2) + (normalizedAmplitude * 0.3)
+                            ? 1.0 +
+                                (_pulseController.value * 0.2) +
+                                (normalizedAmplitude * 0.3)
                             : 1.0;
                         return Transform.scale(
                           scale: scale,
@@ -5001,7 +5046,8 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
                               color: color.withValues(alpha: 0.2),
                               boxShadow: [
                                 BoxShadow(
-                                  color: color.withValues(alpha: 0.6 * _pulseController.value),
+                                  color: color.withValues(
+                                      alpha: 0.6 * _pulseController.value),
                                   blurRadius: 50,
                                   spreadRadius: 10,
                                 )
@@ -5018,7 +5064,9 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
                                 child: Icon(
                                   widget.isAiSpeaking
                                       ? Icons.graphic_eq
-                                      : (widget.isRecording ? Icons.mic : Icons.more_horiz),
+                                      : (widget.isRecording
+                                          ? Icons.mic
+                                          : Icons.more_horiz),
                                   size: 60,
                                   color: Colors.white,
                                 ),
@@ -5034,7 +5082,10 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(5, (index) {
-                          final barHeight = 20.0 + (normalizedAmplitude * 40.0 * (index % 2 == 0 ? 1.0 : 0.7));
+                          final barHeight = 20.0 +
+                              (normalizedAmplitude *
+                                  40.0 *
+                                  (index % 2 == 0 ? 1.0 : 0.7));
                           return Container(
                             margin: const EdgeInsets.symmetric(horizontal: 3),
                             width: 4,
@@ -5072,8 +5123,8 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
                     style: GoogleFonts.outfit(
                       color: Colors.white,
                       fontSize: 16,
-                      fontStyle: widget.transcription == 'Transcribing...' 
-                          ? FontStyle.italic 
+                      fontStyle: widget.transcription == 'Transcribing...'
+                          ? FontStyle.italic
                           : FontStyle.normal,
                     ),
                   ),
@@ -5139,7 +5190,8 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
                           width: 2,
                         ),
                       ),
-                      child: const Icon(Icons.close, color: Colors.white, size: 28),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 28),
                     ),
                   ),
                 ],
@@ -5151,4 +5203,3 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
     );
   }
 }
-

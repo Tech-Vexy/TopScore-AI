@@ -6,7 +6,8 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
 
-import 'youtube_registry_stub.dart' if (dart.library.js_interop) 'youtube_registry_web.dart';
+import 'youtube_registry_stub.dart'
+    if (dart.library.js_interop) 'youtube_registry_web.dart';
 
 /// Extracts YouTube video information from a URL
 class YouTubeVideoInfo {
@@ -20,7 +21,8 @@ class YouTubeVideoInfo {
     this.title,
   });
 
-  String get thumbnailUrl => 'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
+  String get thumbnailUrl =>
+      'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
   String get embedUrl => 'https://www.youtube.com/embed/$videoId';
 }
 
@@ -41,7 +43,8 @@ class SingleYouTubeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final videoInfo = YouTubeVideoInfo(videoId: videoId, url: url, title: title);
+    final videoInfo =
+        YouTubeVideoInfo(videoId: videoId, url: url, title: title);
 
     return Container(
       width: double.infinity,
@@ -68,7 +71,8 @@ class SingleYouTubeCard extends StatelessWidget {
               fit: BoxFit.cover,
               placeholder: (context, url) => Container(
                 color: isDark ? Colors.grey[800] : Colors.grey[200],
-                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2)),
               ),
               errorWidget: (context, url, error) => Container(
                 color: isDark ? Colors.grey[800] : Colors.grey[200],
@@ -93,7 +97,8 @@ class SingleYouTubeCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(Icons.play_arrow, color: Colors.white, size: 36),
+                child:
+                    const Icon(Icons.play_arrow, color: Colors.white, size: 36),
               ),
             ),
             // Video title at bottom
@@ -139,7 +144,8 @@ class SingleYouTubeCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.play_circle_fill, size: 12, color: Colors.red[400]),
+                    Icon(Icons.play_circle_fill,
+                        size: 12, color: Colors.red[400]),
                     const SizedBox(width: 4),
                     Text(
                       'YouTube',
@@ -252,7 +258,7 @@ class YouTubeLinkBuilder extends MarkdownElementBuilder {
 /// Extracts all YouTube video URLs from markdown text
 List<YouTubeVideoInfo> extractYouTubeVideos(String text) {
   final List<YouTubeVideoInfo> videos = [];
-  
+
   // Pattern to match YouTube URLs (various formats)
   // Supports: youtube.com/watch?v=, youtu.be/, youtube.com/embed/
   final RegExp youtubeRegex = RegExp(
@@ -268,15 +274,15 @@ List<YouTubeVideoInfo> extractYouTubeVideos(String text) {
 
   // First, extract markdown links with titles
   final Set<String> processedIds = {};
-  
+
   for (final match in markdownLinkRegex.allMatches(text)) {
     final title = match.group(1);
     final url = match.group(2);
     final videoId = match.group(3);
-    
+
     // Skip if we couldn't extract required fields
     if (url == null || videoId == null || videoId.length != 11) continue;
-    
+
     if (!processedIds.contains(videoId)) {
       processedIds.add(videoId);
       videos.add(YouTubeVideoInfo(
@@ -291,10 +297,10 @@ List<YouTubeVideoInfo> extractYouTubeVideos(String text) {
   for (final match in youtubeRegex.allMatches(text)) {
     final videoId = match.group(1);
     final url = match.group(0);
-    
+
     // Skip if we couldn't extract required fields
     if (url == null || videoId == null || videoId.length != 11) continue;
-    
+
     if (!processedIds.contains(videoId)) {
       processedIds.add(videoId);
       videos.add(YouTubeVideoInfo(
@@ -351,7 +357,8 @@ class YouTubeEmbedWidget extends StatelessWidget {
             itemCount: videos.length,
             itemBuilder: (context, index) {
               final video = videos[index];
-              return _buildVideoCard(context, video, isDark, videos.length == 1);
+              return _buildVideoCard(
+                  context, video, isDark, videos.length == 1);
             },
           ),
         ),
@@ -359,7 +366,8 @@ class YouTubeEmbedWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildVideoCard(BuildContext context, YouTubeVideoInfo video, bool isDark, bool isSingle) {
+  Widget _buildVideoCard(BuildContext context, YouTubeVideoInfo video,
+      bool isDark, bool isSingle) {
     return GestureDetector(
       onTap: () => _openInAppPlayer(context, video),
       child: Container(
@@ -395,7 +403,7 @@ class YouTubeEmbedWidget extends StatelessWidget {
                   child: const Icon(Icons.error, color: Colors.red),
                 ),
               ),
-              
+
               // Dark gradient overlay for text readability
               Positioned.fill(
                 child: DecoratedBox(
@@ -412,7 +420,7 @@ class YouTubeEmbedWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               // Play button
               Center(
                 child: Container(
@@ -436,7 +444,7 @@ class YouTubeEmbedWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               // Video title (if available)
               if (video.title != null)
                 Positioned(
@@ -463,13 +471,14 @@ class YouTubeEmbedWidget extends StatelessWidget {
                     ),
                   ),
                 ),
-              
+
               // YouTube badge
               Positioned(
                 top: 8,
                 right: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(4),
@@ -527,8 +536,9 @@ class _YouTubePlayerDialogState extends State<YouTubePlayerDialog> {
   @override
   void initState() {
     super.initState();
-    _viewId = 'youtube-player-${widget.video.videoId}-${DateTime.now().millisecondsSinceEpoch}';
-    
+    _viewId =
+        'youtube-player-${widget.video.videoId}-${DateTime.now().millisecondsSinceEpoch}';
+
     if (kIsWeb) {
       _registerWebView();
     }
@@ -568,7 +578,8 @@ class _YouTubePlayerDialogState extends State<YouTubePlayerDialog> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: isDark ? Colors.grey[850] : Colors.grey[100],
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Row(
                 children: [
@@ -601,11 +612,12 @@ class _YouTubePlayerDialogState extends State<YouTubePlayerDialog> {
                 ],
               ),
             ),
-            
+
             // YouTube Player - Web iframe
             Flexible(
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(bottom: Radius.circular(16)),
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
                   child: kIsWeb

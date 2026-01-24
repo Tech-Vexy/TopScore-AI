@@ -146,9 +146,8 @@ class _LandingPageState extends State<LandingPage>
                         TextButton(
                           onPressed: () => _goToAuthScreen(isLogin: true),
                           style: TextButton.styleFrom(
-                            foregroundColor: isDark
-                                ? Colors.white70
-                                : Colors.black54,
+                            foregroundColor:
+                                isDark ? Colors.white70 : Colors.black54,
                           ),
                           child: Text(
                             'Log In',

@@ -527,7 +527,8 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: LinearProgressIndicator(
-                      value: (_currentQuestionIndex + 1) / quiz.questions.length,
+                      value:
+                          (_currentQuestionIndex + 1) / quiz.questions.length,
                       backgroundColor: Colors.grey[300],
                       valueColor: const AlwaysStoppedAnimation<Color>(
                         Color(0xFF6C63FF),
@@ -611,7 +612,9 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: borderColor ??
-                                (isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                                (isDark
+                                    ? Colors.grey[700]!
+                                    : Colors.grey[300]!),
                             width: isSelected || (_showResult && isCorrect)
                                 ? 2
                                 : 1,
@@ -632,10 +635,10 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
                                 child: Text(
                                   String.fromCharCode(65 + index),
                                   style: GoogleFonts.nunito(
-                                    color: isSelected ||
-                                            (_showResult && isCorrect)
-                                        ? Colors.white
-                                        : Colors.grey[600],
+                                    color:
+                                        isSelected || (_showResult && isCorrect)
+                                            ? Colors.white
+                                            : Colors.grey[600],
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -647,7 +650,8 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
                                 option,
                                 style: GoogleFonts.nunito(
                                   fontSize: 16,
-                                  fontWeight: isSelected ? FontWeight.w600 : null,
+                                  fontWeight:
+                                      isSelected ? FontWeight.w600 : null,
                                 ),
                               ),
                             ),
@@ -769,7 +773,7 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
   Widget _buildResultsView(ThemeData theme, bool isDark) {
     final quiz = _generatedQuiz!;
     final percentage = (_score / quiz.questions.length * 100).round();
-    
+
     Color gradeColor;
     String gradeText;
     IconData gradeIcon;
