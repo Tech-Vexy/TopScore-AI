@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 
 class WebSocketService {
   WebSocketChannel? _channel;
+  WebSocketChannel? _voiceChannel; // Dedicated channel for voice
   final StreamController<Map<String, dynamic>> _messageController =
       StreamController.broadcast();
   final StreamController<bool> _isConnectedController =
@@ -40,8 +41,14 @@ class WebSocketService {
   }
 
   String get _voiceWsUrl {
-    // Dedicated voice endpoint for low-latency voice interactions
+    // Legacy voice endpoint for STT -> LLM -> TTS pipeline
     return 'wss://agent.topscoreapp.ai/voice/ws/live/$sessionId';
+  }
+
+  /// NEW: Gemini Native Audio WebSocket endpoint
+  /// Uses gemini-2.5-flash-native-audio for end-to-end speech-to-speech
+  String get _geminiVoiceWsUrl {
+    return 'wss://agent.topscoreapp.ai/voice/ws/gemini/$sessionId';
   }
 
   void setThreadId(String newThreadId) {
@@ -114,6 +121,7 @@ class WebSocketService {
   }
 
   /// Transcribe audio file using Groq Whisper (server-side STT)
+  /// @deprecated Use transcribeAudioGemini for better quality
   Future<String?> transcribeAudio(String audioFilePath) async {
     try {
       final request = http.MultipartRequest(
@@ -132,6 +140,51 @@ class WebSocketService {
       }
     } catch (e) {
       debugPrint('Error transcribing audio: $e');
+    }
+    return null;
+  }
+
+  /// Transcribe audio using Gemini 2.5 Flash Native Audio
+  /// Higher quality transcription using the native audio model
+  Future<String?> transcribeAudioGemini(String audioFilePath) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl/voice/gemini/transcribe'),
+      );
+      request.files.add(
+        await http.MultipartFile.fromPath('file', audioFilePath),
+      );
+
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        final json = jsonDecode(responseData);
+        return json['text'];
+      }
+    } catch (e) {
+      debugPrint('Error transcribing audio with Gemini: $e');
+    }
+    return null;
+  }
+
+  /// Text-to-Speech using Gemini 2.5 Flash Native Audio
+  /// Returns base64-encoded audio or null on failure
+  Future<Map<String, dynamic>?> textToSpeechGemini(
+    String text, {
+    String voice = 'Aoede',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          '$_baseUrl/voice/gemini/speak?text=${Uri.encodeComponent(text)}&voice=$voice',
+        ),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('Error with Gemini TTS: $e');
     }
     return null;
   }
@@ -199,6 +252,7 @@ class WebSocketService {
   }
 
   /// Connect to dedicated voice WebSocket endpoint for live voice mode
+  /// @deprecated Use connectGeminiVoice for better quality
   void connectVoice() {
     if (_reconnectAttempts >= _maxReconnectAttempts) {
       debugPrint(
@@ -238,6 +292,105 @@ class WebSocketService {
       _isConnected = false;
       _isConnectedController.add(false);
       _scheduleReconnect();
+    }
+  }
+
+  /// Connect to Gemini Native Audio WebSocket for end-to-end speech-to-speech
+  /// This uses gemini-2.5-flash-native-audio for high-quality voice conversations
+  void connectGeminiVoice() {
+    if (_voiceChannel != null) return; // Already connected
+
+    try {
+      debugPrint('Gemini Voice WebSocket: Connecting to $_geminiVoiceWsUrl');
+      _voiceChannel = WebSocketChannel.connect(Uri.parse(_geminiVoiceWsUrl));
+
+      _voiceChannel!.stream.listen(
+        (message) {
+          try {
+            final data = jsonDecode(message) as Map<String, dynamic>;
+            _handleGeminiVoiceMessage(data);
+          } catch (e) {
+            debugPrint('Gemini Voice WebSocket: Error parsing message: $e');
+          }
+        },
+        onError: (error) {
+          debugPrint('Gemini Voice WebSocket: Connection error: $error');
+          _handleVoiceDisconnection();
+        },
+        onDone: () {
+          debugPrint('Gemini Voice WebSocket: Connection closed');
+          _handleVoiceDisconnection();
+        },
+      );
+    } catch (e) {
+      debugPrint('Gemini Voice WebSocket: Failed to connect: $e');
+      _handleVoiceDisconnection();
+    }
+  }
+
+  void _handleVoiceDisconnection() {
+    _voiceChannel = null;
+    debugPrint('Gemini Voice WebSocket: Disconnected state set');
+  }
+
+  void disconnectVoice() {
+    _voiceChannel?.sink.close();
+    _voiceChannel = null;
+  }
+
+  /// Handle messages from Gemini Native Audio WebSocket
+  void _handleGeminiVoiceMessage(Map<String, dynamic> data) {
+    final type = data['type'];
+
+    switch (type) {
+      case 'connected':
+        debugPrint('Gemini Voice: Connected - Model: ${data['model']}');
+        _isConnected = true;
+        _reconnectAttempts = 0;
+        _isConnectedController.add(true);
+        _startPingTimer();
+        _startKeepAliveTimer();
+        break;
+
+      case 'pong':
+        // Server responded to ping
+        break;
+
+      case 'status':
+        // Processing status: 'processing', 'generating', etc.
+        _messageController.add(data);
+        break;
+
+      case 'response':
+        // Main response with text AND audio
+        // data['text'] - Text transcription/response
+        // data['audio'] - Base64 encoded audio response
+        // data['audio_mime_type'] - MIME type of the audio
+        // data['latency'] - Processing time in seconds
+        debugPrint(
+          'Gemini Voice: Response received (latency: ${data['latency']}s)',
+        );
+        _messageController.add(data);
+        break;
+
+      case 'speech':
+        // TTS response (text was sent, audio returned)
+        _messageController.add(data);
+        break;
+
+      case 'error':
+        debugPrint('Gemini Voice Error: ${data['message']}');
+        _messageController.add(data);
+        break;
+
+      case 'timeout_warning':
+        debugPrint('Gemini Voice: ${data['message']}');
+        _messageController.add(data);
+        break;
+
+      default:
+        debugPrint('Gemini Voice: Unknown message type: $type');
+        _messageController.add(data);
     }
   }
 
@@ -393,8 +546,9 @@ class WebSocketService {
     _channel!.sink.add(jsonEncode(data));
   }
 
-  /// Send audio message for live voice mode
+  /// Send audio message for live voice mode (legacy endpoint)
   /// Audio should be base64-encoded m4a or wav format
+  /// @deprecated Use sendGeminiAudioMessage for better quality
   void sendAudioMessage({
     required String base64Audio,
     required String userId,
@@ -418,11 +572,61 @@ class WebSocketService {
     _channel!.sink.add(jsonEncode(data));
   }
 
+  /// Send audio message using Gemini Native Audio (speech-to-speech)
+  /// This provides end-to-end voice conversation with audio input AND output
+  ///
+  /// The server will respond with:
+  /// - type: 'response'
+  /// - text: The text transcription/response
+  /// - audio: Base64-encoded audio response (to play back)
+  /// - audio_mime_type: MIME type of the audio (usually 'audio/wav')
+  /// - latency: Processing time in seconds
+  void sendGeminiAudioMessage({
+    required String base64Audio,
+    String mimeType = 'audio/webm',
+  }) {
+    if (_voiceChannel == null) {
+      debugPrint('Gemini Voice WS Not connected');
+      return;
+    }
+
+    final Map<String, dynamic> data = {
+      "type": "audio",
+      "audio_data": base64Audio,
+      "user_id": userId,
+      "mime_type": mimeType,
+    };
+
+    debugPrint('Sending Gemini Audio Payload (${base64Audio.length} chars)');
+    _voiceChannel!.sink.add(jsonEncode(data));
+  }
+
+  /// Send text message for TTS using Gemini Native Audio
+  /// Server will respond with synthesized audio
+  void sendGeminiTextForSpeech({required String text, String voice = 'Aoede'}) {
+    if (_voiceChannel == null) {
+      debugPrint('Gemini Voice WS Not connected');
+      return;
+    }
+
+    final Map<String, dynamic> data = {
+      "type": "text",
+      "message": text,
+      "voice": voice,
+    };
+
+    debugPrint(
+      'Sending Gemini TTS request: ${text.substring(0, text.length > 50 ? 50 : text.length)}...',
+    );
+    _voiceChannel!.sink.add(jsonEncode(data));
+  }
+
   void dispose() {
     _reconnectTimer?.cancel();
     _keepAliveTimer?.cancel();
     _pingTimer?.cancel();
     _channel?.sink.close();
+    _voiceChannel?.sink.close();
     _messageController.close();
     _isConnectedController.close();
   }

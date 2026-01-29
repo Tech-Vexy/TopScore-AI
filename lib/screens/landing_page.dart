@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For Haptics
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
-import 'dart:ui' as ui; // Needed for ImageFilter
+import 'dart:ui' as ui;
 import '../constants/colors.dart';
 import '../providers/auth_provider.dart';
 import 'auth/auth_screen.dart';
@@ -26,12 +27,11 @@ class _LandingPageState extends State<LandingPage>
       subtitle: "Your Personal AI Tutor.\nLearn Smarter, Not Harder.",
       icon: FontAwesomeIcons.graduationCap,
       color: AppColors.accentTeal,
-      isWelcome: true,
     ),
     OnboardingContent(
       title: "Instant Answers",
       subtitle:
-          "Stuck on a problem? Snap a photo or type it in. Our AI explains concepts in seconds.",
+          "Stuck on a problem? Snap a photo. Our AI explains concepts in seconds.",
       icon: FontAwesomeIcons.bolt,
       color: Colors.amber,
     ),
@@ -45,7 +45,7 @@ class _LandingPageState extends State<LandingPage>
     OnboardingContent(
       title: "Smart Tools",
       subtitle:
-          "From scientific calculators to study schedulers, we have the tools you need to excel.",
+          "From scientific calculators to study schedulers, we have what you need.",
       icon: FontAwesomeIcons.screwdriverWrench,
       color: const Color(0xFFFF6B6B),
     ),
@@ -70,19 +70,25 @@ class _LandingPageState extends State<LandingPage>
     super.dispose();
   }
 
-  void _goToNextPage() {
+  void _nextPage() {
+    HapticFeedback.lightImpact();
     if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 600),
         curve: Curves.fastEaseInToSlowEaseOut,
       );
     } else {
-      // Defer auth: Enter Guest Mode with anonymous authentication
-      context.read<AuthProvider>().continueAsGuest();
+      _finishOnboarding();
     }
   }
 
-  void _goToAuthScreen({bool isLogin = true}) {
+  void _finishOnboarding() {
+    HapticFeedback.mediumImpact();
+    context.read<AuthProvider>().continueAsGuest();
+  }
+
+  void _goToAuth() {
+    HapticFeedback.selectionClick();
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AuthScreen()),
@@ -91,77 +97,78 @@ class _LandingPageState extends State<LandingPage>
 
   @override
   Widget build(BuildContext context) {
-    // Theme determination
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColors = isDark
-        ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
-        : [const Color(0xFFF8FAFC), const Color(0xFFE2E8F0)];
+
+    // Dynamic background gradient based on current page color
+    final activeColor = _pages[_currentPage].color;
+    final bgGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: isDark
+          ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
+          : [const Color(0xFFF8FAFC), const Color(0xFFE2E8F0)],
+    );
 
     return Scaffold(
       body: Stack(
         children: [
-          // 1. BACKGROUND LAYER (Animated Orbs)
+          // 1. BACKGROUND
           Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: bgColors,
-                ),
-              ),
-            ),
-          ),
-          // Ambient Orb 1 (Top Left)
-          Positioned(
-            top: -100,
-            left: -100,
-            child: _AnimatedOrb(
-              color: _pages[_currentPage].color.withValues(alpha: 0.3),
-            ),
-          ),
-          // Ambient Orb 2 (Bottom Right)
-          Positioned(
-            bottom: -50,
-            right: -50,
-            child: _AnimatedOrb(
-              color: AppColors.primaryPurple.withValues(alpha: 0.2),
+            child: AnimatedContainer(
+              duration: const Duration(seconds: 1),
+              decoration: BoxDecoration(gradient: bgGradient),
             ),
           ),
 
-          // 2. CONTENT LAYER
+          // Animated Orbs (Background Effects)
+          Positioned(
+            top: -100,
+            left: -50,
+            child: _AnimatedOrb(color: activeColor.withValues(alpha: 0.2)),
+          ),
+          Positioned(
+            bottom: -50,
+            right: -50,
+            child: _AnimatedOrb(color: activeColor.withValues(alpha: 0.15)),
+          ),
+
+          // 2. MAIN CONTENT
           SafeArea(
             child: Column(
               children: [
-                // --- TOP BAR (Skip Button) ---
+                // Top Bar (Skip / Login)
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (_currentPage < _pages.length - 1)
+                      // Smooth Page Indicator
+                      Row(
+                        children: List.generate(_pages.length, (index) {
+                          return _buildPageIndicator(
+                              index == _currentPage, activeColor, isDark);
+                        }),
+                      ),
+                      // Login Button
+                      if (!_pages[_currentPage].isLast)
                         TextButton(
-                          onPressed: () => _goToAuthScreen(isLogin: true),
+                          onPressed: _goToAuth,
                           style: TextButton.styleFrom(
                             foregroundColor:
                                 isDark ? Colors.white70 : Colors.black54,
                           ),
                           child: Text(
                             'Log In',
-                            style: GoogleFonts.nunito(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
+                            style:
+                                GoogleFonts.nunito(fontWeight: FontWeight.w700),
                           ),
                         ),
                     ],
                   ),
                 ),
 
-                // --- PAGE VIEW ---
+                // Content Area with Glassmorphism
                 Expanded(
                   child: PageView.builder(
                     controller: _pageController,
@@ -170,47 +177,24 @@ class _LandingPageState extends State<LandingPage>
                         setState(() => _currentPage = index),
                     itemCount: _pages.length,
                     itemBuilder: (context, index) {
-                      return _OnboardingPage(
-                        content: _pages[index],
-                        isDark: isDark,
-                      );
+                      // Only animate the content currently visible
+                      if (index == _currentPage) {
+                        return _buildGlassCard(_pages[index], isDark);
+                      } else {
+                        return const SizedBox(); // Optimization
+                      }
                     },
                   ),
                 ),
 
-                // --- BOTTOM NAVIGATION AREA ---
+                // Bottom Navigation (Morphing Button)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Page Indicators (Dots)
-                      Row(
-                        children: List.generate(_pages.length, (index) {
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.only(right: 6),
-                            height: 6,
-                            width: _currentPage == index ? 24 : 6,
-                            decoration: BoxDecoration(
-                              color: _currentPage == index
-                                  ? _pages[_currentPage].color
-                                  : (isDark ? Colors.white24 : Colors.black12),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          );
-                        }),
-                      ),
-
-                      // Circular Progress Button
-                      _CircularNavButton(
-                        progress: (_currentPage + 1) / _pages.length,
-                        color: _pages[_currentPage].color,
-                        isLastPage: _currentPage == _pages.length - 1,
-                        onTap: _goToNextPage,
-                        isDark: isDark,
-                      ),
-                    ],
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
+                  child: _MorphingNavButton(
+                    isLastPage: _pages[_currentPage].isLast,
+                    color: activeColor,
+                    onTap: _nextPage,
+                    isDark: isDark,
                   ),
                 ),
               ],
@@ -220,92 +204,126 @@ class _LandingPageState extends State<LandingPage>
       ),
     );
   }
-}
 
-// --- WIDGETS ---
+  Widget _buildPageIndicator(bool isActive, Color color, bool isDark) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(right: 6),
+      height: 6,
+      width: isActive ? 24 : 6,
+      decoration: BoxDecoration(
+        color: isActive ? color : (isDark ? Colors.white24 : Colors.black12),
+        borderRadius: BorderRadius.circular(3),
+      ),
+    );
+  }
 
-class _OnboardingPage extends StatelessWidget {
-  final OnboardingContent content;
-  final bool isDark;
-
-  const _OnboardingPage({required this.content, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildGlassCard(OnboardingContent content, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Icon Container with clean shadow
-          TweenAnimationBuilder<double>(
-            duration: const Duration(milliseconds: 600),
-            tween: Tween(begin: 0.0, end: 1.0),
-            curve: Curves.elasticOut,
-            builder: (context, val, child) {
-              return Transform.scale(scale: val, child: child);
-            },
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Center(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
-              height: 100,
-              width: 100,
+              padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: content.color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(24),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.white.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.white.withValues(alpha: 0.5),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: content.color.withValues(alpha: 0.2),
-                    blurRadius: 20,
+                    color: content.color.withValues(alpha: 0.15),
+                    blurRadius: 30,
+                    spreadRadius: 5,
                     offset: const Offset(0, 10),
+                  )
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Animated Icon
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 500),
+                    transitionBuilder: (child, animation) =>
+                        ScaleTransition(scale: animation, child: child),
+                    child: Container(
+                      key: ValueKey(content.icon),
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: content.color.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: FaIcon(content.icon,
+                            size: 45, color: content.color),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Animated Title
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    child: Text(
+                      content.title,
+                      key: ValueKey(content.title),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                        height: 1.1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Animated Subtitle
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    child: Text(
+                      content.subtitle,
+                      key: ValueKey(content.subtitle),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunito(
+                        fontSize: 18,
+                        color: isDark ? Colors.grey[300] : Colors.grey[600],
+                        height: 1.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              child: Center(
-                child: FaIcon(content.icon, size: 40, color: content.color),
-              ),
             ),
           ),
-          const SizedBox(height: 48),
-
-          // Title
-          Text(
-            content.title,
-            style: GoogleFonts.nunito(
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-              color: isDark ? Colors.white : const Color(0xFF1E293B),
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Subtitle
-          Text(
-            content.subtitle,
-            style: GoogleFonts.nunito(
-              fontSize: 18,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _CircularNavButton extends StatelessWidget {
-  final double progress;
-  final Color color;
+// --- MORPHING NAVIGATION BUTTON ---
+
+class _MorphingNavButton extends StatelessWidget {
   final bool isLastPage;
+  final Color color;
   final VoidCallback onTap;
   final bool isDark;
 
-  const _CircularNavButton({
-    required this.progress,
-    required this.color,
+  const _MorphingNavButton({
     required this.isLastPage,
+    required this.color,
     required this.onTap,
     required this.isDark,
   });
@@ -314,50 +332,55 @@ class _CircularNavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: SizedBox(
-        width: 70,
-        height: 70,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutBack,
+        height: 60,
+        width: isLastPage ? 240 : 60, // Morph width
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.4),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
         child: Stack(
           children: [
-            // Progress Indicator
+            // Center Content
             Center(
-              child: SizedBox(
-                width: 70,
-                height: 70,
-                child: CircularProgressIndicator(
-                  value: progress,
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
-                  backgroundColor: isDark ? Colors.white10 : Colors.black12,
-                ),
-              ),
-            ),
-            // Button Center
-            Center(
-              child: AnimatedContainer(
+              child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: FaIcon(
-                    isLastPage
-                        ? FontAwesomeIcons.check
-                        : FontAwesomeIcons.arrowRight,
-                    size: 20,
-                    color: Colors.white,
-                  ),
-                ),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                child: isLastPage
+                    ? Row(
+                        key: const ValueKey('text'),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Get Started",
+                            style: GoogleFonts.nunito(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward_rounded,
+                              color: Colors.white),
+                        ],
+                      )
+                    : const Icon(
+                        Icons.arrow_forward_rounded,
+                        key: ValueKey('icon'),
+                        color: Colors.white,
+                        size: 28,
+                      ),
               ),
             ),
           ],
@@ -367,9 +390,10 @@ class _CircularNavButton extends StatelessWidget {
   }
 }
 
+// --- ANIMATED BACKGROUND ORB ---
+
 class _AnimatedOrb extends StatefulWidget {
   final Color color;
-
   const _AnimatedOrb({required this.color});
 
   @override
@@ -403,10 +427,11 @@ class _AnimatedOrbState extends State<_AnimatedOrb>
         return Transform.scale(
           scale: 1.0 + (_controller.value * 0.2), // Breathe effect
           child: ImageFiltered(
-            imageFilter: ui.ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-            child: Container(
-              width: 300,
-              height: 300,
+            imageFilter: ui.ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 500),
+              width: 250,
+              height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: widget.color,
@@ -426,7 +451,6 @@ class OnboardingContent {
   final String subtitle;
   final IconData icon;
   final Color color;
-  final bool isWelcome;
   final bool isLast;
 
   OnboardingContent({
@@ -434,7 +458,6 @@ class OnboardingContent {
     required this.subtitle,
     required this.icon,
     required this.color,
-    this.isWelcome = false,
     this.isLast = false,
   });
 }

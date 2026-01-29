@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart'; // For platform detection
+import 'package:flutter/foundation.dart'; // For kIsWeb, defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-// Ensure you import your ChatScreen to show the AI results
 import '../../tutor_client/chat_screen.dart';
 
 class SmartScannerScreen extends StatefulWidget {
@@ -14,52 +13,60 @@ class SmartScannerScreen extends StatefulWidget {
   State<SmartScannerScreen> createState() => _SmartScannerScreenState();
 }
 
-class _SmartScannerScreenState extends State<SmartScannerScreen> {
+class _SmartScannerScreenState extends State<SmartScannerScreen>
+    with SingleTickerProviderStateMixin {
   final ImagePicker _picker = ImagePicker();
   bool _isProcessing = false;
   String? _errorMessage;
-
-  /// Helper to determine if we are on a mobile device (Android/iOS).
-  /// This works for both Native Apps and Mobile Web Browsers.
-  bool get _isMobileDevice {
-    return defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
-  }
+  late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
+    // Animation for the scanner box
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
   }
 
-  /// The Core Logic: Pick Image -> Send to AI
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
   Future<void> _pickImage(ImageSource source) async {
+    // 1. Permission Check (Mobile Only)
+    final hasPermission = await _checkPermissions(source);
+    if (!hasPermission) return;
+
     setState(() {
       _isProcessing = true;
       _errorMessage = null;
     });
 
     try {
-      // 1. CAPTURE IMAGE
       final XFile? photo = await _picker.pickImage(
         source: source,
-        imageQuality: 85, // Good balance of speed/quality
-        maxWidth: 1024, // AI doesn't need huge 4k images
+        imageQuality: 85,
+        maxWidth: 1024,
+        preferredCameraDevice: CameraDevice.rear,
       );
 
       if (photo == null) {
-        // User cancelled
-        setState(() => _isProcessing = false);
+        if (mounted) setState(() => _isProcessing = false);
         return;
       }
 
-      // 2. NAVIGATE TO AI TUTOR
       if (!mounted) return;
 
+      // 2. Navigate
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => ChatScreen(
-            initialImage: photo,
+            initialImage: photo, // XFile is cross-platform friendly
             initialMessage:
                 "Analyze this image and solve the problem step-by-step.",
           ),
@@ -67,208 +74,299 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
       );
     } catch (e) {
       debugPrint("Scanner Error: $e");
-      setState(() {
-        _errorMessage = "Could not access image source: $e";
-        _isProcessing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = "Failed to load image. Please try again.";
+          _isProcessing = false;
+        });
+      }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Check if camera should be enabled
-    final bool isCameraEnabled = _isMobileDevice;
+  Future<bool> _checkPermissions(ImageSource source) async {
+    if (kIsWeb) return true; // Web handles permissions via browser prompts
 
-    return Scaffold(
-      backgroundColor: Colors.black, // Sleek "Camera Mode" look
-      appBar: AppBar(
-        title: Text(
-          "Smart Scanner",
-          style: GoogleFonts.nunito(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (status.isDenied || status.isPermanentlyDenied) {
+        if (mounted) _showPermissionDialog("Camera");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _showPermissionDialog(String feature) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text("$feature Permission Required"),
+        content:
+            Text("Please enable $feature access in settings to scan problems."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel"),
           ),
-        ),
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
-      ),
-      body: Center(
-        child: _isProcessing
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(color: Color(0xFF6C63FF)),
-                  const SizedBox(height: 20),
-                  Text(
-                    "Processing Image...",
-                    style: GoogleFonts.nunito(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              )
-            : Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // --- SCANNER VISUAL ---
-                    Container(
-                      width: 280,
-                      height: 280,
-                      decoration: BoxDecoration(
-                        color: Colors.white10,
-                        border: Border.all(
-                          color: const Color(0xFF6C63FF),
-                          width: 2,
-                        ),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const FaIcon(
-                            FontAwesomeIcons.expand,
-                            size: 50,
-                            color: Color(0xFF6C63FF),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            "Tap to Scan",
-                            style: GoogleFonts.nunito(
-                              color: Colors.white54,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // --- ERROR MESSAGE ---
-                    if (_errorMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: Text(
-                          _errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.redAccent),
-                        ),
-                      ),
-
-                    const SizedBox(height: 50),
-
-                    // --- INSTRUCTIONS ---
-                    Text(
-                      "Solve Homework Instantly",
-                      style: GoogleFonts.nunito(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "Take a photo of any math problem, science question, or diagram.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.nunito(
-                        fontSize: 16,
-                        color: Colors.white60,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-
-                    // --- ACTION BUTTONS ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // 1. GALLERY (Always Enabled)
-                        _buildActionButton(
-                          icon: Icons.photo_library,
-                          label: "Gallery",
-                          isEnabled: true,
-                          isPrimary: false,
-                          onTap: () => _pickImage(ImageSource.gallery),
-                        ),
-                        const SizedBox(width: 30),
-
-                        // 2. CAMERA (Enabled only on Mobile/Tablets)
-                        _buildActionButton(
-                          icon: Icons.camera_alt,
-                          label: "Camera",
-                          isEnabled: isCameraEnabled,
-                          isPrimary: true,
-                          onTap: () {
-                            if (isCameraEnabled) {
-                              _pickImage(ImageSource.camera);
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "Please use 'Gallery' upload on desktops.",
-                                  ),
-                                  backgroundColor: Colors.grey,
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+            child: const Text("Settings"),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool isEnabled = true,
-    bool isPrimary = false,
-  }) {
-    // Determine visual style based on enabled state
-    final Color bgColor = isEnabled
-        ? (isPrimary ? const Color(0xFF6C63FF) : Colors.white12)
-        : Colors.white10; // Dimmer for disabled
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: Text(
+          "Smart Scanner",
+          style: GoogleFonts.nunito(
+              fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: _isProcessing
+          ? _buildLoadingState()
+          : SafeArea(
+              child: Column(
+                children: [
+                  const Spacer(flex: 1),
 
-    final Color iconColor = isEnabled ? Colors.white : Colors.white38;
-    final Color textColor = isEnabled ? Colors.white : Colors.white38;
+                  // --- VISUALIZER ---
+                  _buildScannerVisual(),
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: bgColor,
-              shape: BoxShape.circle,
-              boxShadow: (isEnabled && isPrimary)
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
+                  // --- ERROR ---
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                            color: Colors.redAccent, fontSize: 14),
+                        textAlign: TextAlign.center,
                       ),
-                    ]
-                  : [],
+                    ),
+
+                  const Spacer(flex: 1),
+
+                  // --- TEXT ---
+                  Text(
+                    "Snap & Solve",
+                    style: GoogleFonts.outfit(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: Text(
+                      "Capture math problems, science diagrams, or text to get instant AI help.",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunito(
+                          fontSize: 16, color: Colors.white54),
+                    ),
+                  ),
+
+                  const Spacer(flex: 2),
+
+                  // --- CONTROLS ---
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 40),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildControlButton(
+                          icon: Icons.photo_library_rounded,
+                          label: "Gallery",
+                          onTap: () => _pickImage(ImageSource.gallery),
+                        ),
+                        // Only show Camera button on mobile or allow it on web if preferred
+                        _buildCaptureButton(),
+                        _buildControlButton(
+                          icon: Icons
+                              .flash_on_rounded, // Placeholder for Flash toggle logic
+                          label: "Flash",
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      "Flash toggled (Hardware dependent)")),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Icon(icon, color: iconColor, size: 30),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 60,
+            height: 60,
+            child: CircularProgressIndicator(
+                color: Color(0xFF6C63FF), strokeWidth: 4),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 24),
           Text(
-            label,
-            style: GoogleFonts.nunito(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
+            "Analyzing Image...",
+            style: GoogleFonts.outfit(color: Colors.white, fontSize: 18),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildScannerVisual() {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Pulsing Ring
+        AnimatedBuilder(
+          animation: _pulseController,
+          builder: (context, child) {
+            return Container(
+              width: 300 + (_pulseController.value * 20),
+              height: 300 + (_pulseController.value * 20),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFF6C63FF)
+                      .withValues(alpha: 0.3 - (_pulseController.value * 0.3)),
+                  width: 2,
+                ),
+              ),
+            );
+          },
+        ),
+        // Main Box
+        Container(
+          width: 280,
+          height: 280,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white24, width: 1),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.crop_free_rounded,
+                  size: 60, color: Colors.white.withValues(alpha: 0.8)),
+            ],
+          ),
+        ),
+        // Corner Accents (The "Scanner" look)
+        Positioned(top: 0, left: 0, child: _buildCorner(false, false)),
+        Positioned(top: 0, right: 0, child: _buildCorner(true, false)),
+        Positioned(bottom: 0, left: 0, child: _buildCorner(false, true)),
+        Positioned(bottom: 0, right: 0, child: _buildCorner(true, true)),
+      ],
+    );
+  }
+
+  Widget _buildCorner(bool isRight, bool isBottom) {
+    const double size = 30;
+    const double thickness = 4;
+    const color = Color(0xFF6C63FF);
+
+    return Container(
+      width:
+          280, // Match container width to position corners correctly relative to stack
+      height: 280,
+      alignment: isBottom
+          ? (isRight ? Alignment.bottomRight : Alignment.bottomLeft)
+          : (isRight ? Alignment.topRight : Alignment.topLeft),
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          border: Border(
+            top: isBottom
+                ? BorderSide.none
+                : BorderSide(color: color, width: thickness),
+            bottom: isBottom
+                ? BorderSide(color: color, width: thickness)
+                : BorderSide.none,
+            left: isRight
+                ? BorderSide.none
+                : BorderSide(color: color, width: thickness),
+            right: isRight
+                ? BorderSide(color: color, width: thickness)
+                : BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCaptureButton() {
+    return GestureDetector(
+      onTap: () => _pickImage(ImageSource.camera),
+      child: Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          border: Border.all(color: Colors.grey.shade300, width: 4),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
+              blurRadius: 20,
+              spreadRadius: 2,
+            )
+          ],
+        ),
+        child:
+            const Icon(Icons.camera_alt_rounded, size: 36, color: Colors.black),
+      ),
+    );
+  }
+
+  Widget _buildControlButton(
+      {required IconData icon,
+      required String label,
+      required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(height: 4),
+            Text(label,
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }

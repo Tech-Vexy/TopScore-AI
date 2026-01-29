@@ -3,25 +3,41 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
 
-/// 1. Custom Syntax Parser for LaTeX ($ and $$)
+/// 1. Custom Syntax Parser for LaTeX (supports $ and \(...\) / \[...\] delimiters)
 class LatexSyntax extends md.InlineSyntax {
-  // Update Regex to capture multi-line $$ blocks correctly
-  LatexSyntax() : super(r'(\$\$[\s\S]*?\$\$)|(\$[^$]*\$)');
+  // Updated Regex to support both $ and \( \) / \[ \] delimiters
+  // Matches: $$...$$ (block), $...$ (inline), \[...\] (block), \(...\) (inline)
+  LatexSyntax()
+      : super(
+            r'(\$\$[\s\S]*?\$\$)|(\\\[[\s\S]*?\\\])|(\$[^$\n]+\$)|(\\\([\s\S]*?\\\))');
 
   @override
   bool onMatch(md.InlineParser parser, Match match) {
     final matchText = match[0]!;
 
-    // Check for double dollar signs
-    final isBlock = matchText.startsWith(r'$$') && matchText.endsWith(r'$$');
+    // Determine if block or inline based on delimiters
+    bool isBlock;
+    String content;
 
-    // Strip the delimiters ($ or $$)
-    final content = isBlock
-        ? matchText.substring(2, matchText.length - 2)
-        : matchText.substring(1, matchText.length - 1);
+    if (matchText.startsWith(r'$$') && matchText.endsWith(r'$$')) {
+      // Block: $$...$$
+      isBlock = true;
+      content = matchText.substring(2, matchText.length - 2);
+    } else if (matchText.startsWith(r'\[') && matchText.endsWith(r'\]')) {
+      // Block: \[...\]
+      isBlock = true;
+      content = matchText.substring(2, matchText.length - 2);
+    } else if (matchText.startsWith(r'\(') && matchText.endsWith(r'\)')) {
+      // Inline: \(...\)
+      isBlock = false;
+      content = matchText.substring(2, matchText.length - 2);
+    } else {
+      // Inline: $...$
+      isBlock = false;
+      content = matchText.substring(1, matchText.length - 1);
+    }
 
-    // Clean up newlines for the renderer
-    // flutter_math_fork handles \begin{array} better if trimmed
+    // Clean up content
     final cleanContent = content.trim();
 
     md.Element el = md.Element.text('latex', cleanContent);
@@ -71,8 +87,8 @@ String cleanContent(String input) {
   // Replace <u>text</u> with **text** (Bold) or similar.
   // Underlines are often bad in chat apps (look like links).
   return input
-      .replaceAll('<u>', '') // Option A: Just remove the tag (cleanest)
-      .replaceAll('</u>', '')
-  // Option B: Map to bold -> .replaceAll('<u>', '**').replaceAll('</u>', '**')
-  ;
+          .replaceAll('<u>', '') // Option A: Just remove the tag (cleanest)
+          .replaceAll('</u>', '')
+      // Option B: Map to bold -> .replaceAll('<u>', '**').replaceAll('</u>', '**')
+      ;
 }

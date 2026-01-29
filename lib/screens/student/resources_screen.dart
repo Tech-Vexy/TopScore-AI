@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Needed for pagination cursor
 
 import '../pdf_viewer_screen.dart';
 import '../../services/storage_service.dart';
@@ -13,29 +14,81 @@ class ResourcesScreen extends StatefulWidget {
 }
 
 class _ResourcesScreenState extends State<ResourcesScreen> {
-  late Future<List<FirebaseFile>> _filesFuture;
+  // Pagination State
+  final ScrollController _scrollController = ScrollController();
+  final List<FirebaseFile> _files = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  DocumentSnapshot? _lastDocument;
+  static const int _pageSize = 15;
+
+  // Admin State
+  bool _showMigrationButton = false;
 
   @override
   void initState() {
     super.initState();
-    _filesFuture = _fetchAndFilterFiles();
+    _fetchFiles(); // Initial Load
+
+    // Setup Pagination Listener
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
+          !_isLoading &&
+          _hasMore) {
+        _fetchFiles();
+      }
+    });
   }
 
-  // --- NEW: Fetch and Filter Logic ---
-  Future<List<FirebaseFile>> _fetchAndFilterFiles() async {
-    try {
-      final allFiles = await StorageService.getAllFilesFromFirestore();
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-      // Filter Client-Side
-      return allFiles.where((file) {
-        final name = file.name.toLowerCase();
-        return name.endsWith('.pdf') ||
-            name.endsWith('.doc') ||
-            name.endsWith('.docx');
-      }).toList();
+  // --- PAGINATION LOGIC ---
+  Future<void> _fetchFiles() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Fetch paginated data from Firestore
+      // Note: You need to update your StorageService to accept 'limit' and 'startAfter'
+      // If service update isn't possible, this logic mimics filtering client-side
+      // but ideally, this query should be:
+      // .where('extension', isEqualTo: '.pdf').limit(_pageSize).startAfterDocument(_lastDocument)
+
+      final newFiles = await StorageService.getPaginatedFiles(
+        limit: _pageSize,
+        lastDocument: _lastDocument,
+        fileType: '.pdf', // Ensure Service filters by PDF
+      );
+
+      if (newFiles.isEmpty) {
+        setState(() {
+          _hasMore = false;
+          _isLoading = false;
+          // Only show migration button if the VERY FIRST load is empty
+          if (_files.isEmpty) _showMigrationButton = true;
+        });
+        return;
+      }
+
+      setState(() {
+        _files.addAll(newFiles);
+        // Assuming your model stores the raw snapshot, or your service returns it.
+        // If not, you might need to change how you track the cursor.
+        _lastDocument = newFiles.last.snapshot;
+        _isLoading = false;
+
+        // Hide migration button if we successfully loaded files
+        _showMigrationButton = false;
+      });
     } catch (e) {
       debugPrint("Error fetching resources: $e");
-      return [];
+      setState(() => _isLoading = false);
     }
   }
 
@@ -50,22 +103,25 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     );
   }
 
-  // --- ADMIN: Migration Tool ---
+  // --- ADMIN: Migration Tool (Clear & Re-index) ---
   Future<void> _runMigration() async {
-    // ... (Keep existing migration logic)
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Migrate to Firestore?"),
-        content: const Text("Index all files to Firestore."),
+        title: const Text("Re-index Library?"),
+        content: const Text(
+          "This will DELETE all current indexes and re-scan Storage for PDF files only.\n\nThis may take a moment.",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text("Cancel"),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Migrate"),
+            child: const Text("Clear & Index",
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -73,18 +129,44 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
 
     if (confirm != true || !mounted) return;
 
+    setState(() => _isLoading = true);
+
     try {
-      await StorageService.migrateStorageToFirestore();
+      // 1. Clear existing collection
+      await StorageService.deleteAllFileIndexes();
+
+      // 2. Index ONLY .pdf files
+      await StorageService.migrateStorageToFirestore(
+        allowedExtensions: ['.pdf'], // Pass filter to service
+      );
+
+      // 3. Reset UI
       if (mounted) {
         setState(() {
-          _filesFuture = _fetchAndFilterFiles(); // Refresh filtered list
+          _files.clear();
+          _lastDocument = null;
+          _hasMore = true;
+          _showMigrationButton = false; // Hide button after success
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Migration complete!")));
+
+        // 4. Reload fresh data
+        await _fetchFiles();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Library successfully re-indexed!")),
+          );
+        }
       }
     } catch (e) {
-      // Handle error
+      debugPrint("Migration failed: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -106,65 +188,76 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.cloud_upload),
-            onPressed: () => _runMigration(),
-          ),
+          // Conditionally hide migration button
+          if (_showMigrationButton)
+            IconButton(
+              icon: const Icon(Icons.sync, color: Colors.orange),
+              tooltip: "Initialize Library",
+              onPressed: _runMigration,
+            ),
           IconButton(
             icon: const Icon(Icons.search),
-            onPressed: () async {
-              final files = await _filesFuture;
-              if (!context.mounted) return;
+            onPressed: () {
               showSearch(
                 context: context,
-                delegate: _FileSearchDelegate(files, _openFile),
+                // Pass full list for search (or implement server-side search)
+                delegate: _FileSearchDelegate(_files, _openFile),
               );
             },
           ),
         ],
       ),
-      body: FutureBuilder<List<FirebaseFile>>(
-        future: _filesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: _files.isEmpty && _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _files.isEmpty
+              ? _buildEmptyState(theme)
+              : ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  // Add +1 for the loading spinner at the bottom
+                  itemCount: _files.length + (_hasMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _files.length) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    final file = _files[index];
+                    return _buildFileCard(file, theme);
+                  },
+                ),
+    );
+  }
 
-          final files = snapshot.data ?? [];
-          if (files.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.folder_off, size: 70, color: theme.disabledColor),
-                  const SizedBox(height: 16),
-                  Text(
-                    "No documents found",
-                    style: GoogleFonts.nunito(
-                      color: theme.hintColor,
-                      fontSize: 18,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: files.length,
-            itemBuilder: (context, index) {
-              final file = files[index];
-              return _buildFileCard(file, theme);
-            },
-          );
-        },
+  Widget _buildEmptyState(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.picture_as_pdf, size: 70, color: theme.disabledColor),
+          const SizedBox(height: 16),
+          Text(
+            "No PDFs found",
+            style: GoogleFonts.nunito(
+              color: theme.hintColor,
+              fontSize: 18,
+            ),
+          ),
+          if (_showMigrationButton) ...[
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _runMigration,
+              icon: const Icon(Icons.cloud_upload),
+              label: const Text("Index Storage Now"),
+            )
+          ]
+        ],
       ),
     );
   }
 
   Widget _buildFileCard(FirebaseFile file, ThemeData theme) {
-    // ... (Keep existing UI)
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -180,7 +273,18 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: _getFileIcon(file.name),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.redAccent.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(
+            Icons.picture_as_pdf,
+            color: Colors.redAccent,
+            size: 24,
+          ),
+        ),
         title: Text(
           file.name,
           style: GoogleFonts.nunito(
@@ -191,6 +295,10 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
+        subtitle: Text(
+          "PDF Document",
+          style: TextStyle(fontSize: 12, color: theme.hintColor),
+        ),
         trailing: Icon(
           Icons.arrow_forward_ios,
           size: 16,
@@ -199,19 +307,6 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         onTap: () => _openFile(file),
       ),
     );
-  }
-
-  Widget _getFileIcon(String fileName) {
-    // Same icon logic as FilesScreen
-    final ext = fileName.split('.').last.toLowerCase();
-    if (ext == 'pdf') {
-      return const Icon(
-        Icons.picture_as_pdf,
-        color: Color(0xFFFF6B6B),
-        size: 28,
-      );
-    }
-    return const Icon(Icons.description, color: Color(0xFF4A90E2), size: 28);
   }
 }
 
@@ -238,21 +333,24 @@ class _FileSearchDelegate extends SearchDelegate {
 
   @override
   List<Widget>? buildActions(BuildContext context) => [
-    if (query.isNotEmpty)
-      IconButton(icon: const Icon(Icons.clear), onPressed: () => query = ''),
-  ];
+        if (query.isNotEmpty)
+          IconButton(
+              icon: const Icon(Icons.clear), onPressed: () => query = ''),
+      ];
 
   @override
   Widget? buildLeading(BuildContext context) => IconButton(
-    icon: const Icon(Icons.arrow_back),
-    onPressed: () => close(context, null),
-  );
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => close(context, null),
+      );
 
   @override
   Widget buildResults(BuildContext context) => buildSuggestions(context);
 
   @override
   Widget buildSuggestions(BuildContext context) {
+    // Only searching currently loaded files
+    // For large datasets, consider an Algolia/ElasticSearch backend integration
     final results = allFiles.where((file) {
       final q = query.toLowerCase();
       return file.name.toLowerCase().contains(q);
@@ -263,7 +361,7 @@ class _FileSearchDelegate extends SearchDelegate {
       itemBuilder: (context, index) {
         final file = results[index];
         return ListTile(
-          leading: const Icon(Icons.description, color: Colors.grey),
+          leading: const Icon(Icons.picture_as_pdf, color: Colors.redAccent),
           title: Text(file.name),
           onTap: () => onFileTap(file),
         );

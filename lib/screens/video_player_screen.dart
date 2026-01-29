@@ -53,16 +53,56 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         autoPlay: true,
         looping: false,
         aspectRatio: _videoController.value.aspectRatio,
+
+        // --- NEW: Smart Controls ---
+        allowFullScreen: true,
+        allowMuting: true,
+        showControls: true,
+        showOptions: false, // Cleaner UI
+
+        // --- NEW: UI Customization ---
+        placeholder: const Center(
+          child: CircularProgressIndicator(color: Color(0xFF6C63FF)),
+        ),
+
+        // --- NEW: Custom Error UI ---
         errorBuilder: (context, errorMessage) {
           return Center(
-            child: Text(
-              errorMessage,
-              style: const TextStyle(color: Colors.white),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  errorMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _isLoading = true;
+                      _errorMessage = null;
+                    });
+                    _initializePlayer();
+                  },
+                  child: const Text('Retry'),
+                )
+              ],
             ),
           );
         },
+
         // Customize the UI colors
         materialProgressColors: ChewieProgressColors(
+          playedColor: const Color(0xFF6C63FF),
+          handleColor: const Color(0xFF6C63FF),
+          backgroundColor: Colors.grey.withValues(alpha: 0.5),
+          bufferedColor: Colors.white24,
+        ),
+
+        // Cupertino (iOS) controls customization
+        cupertinoProgressColors: ChewieProgressColors(
           playedColor: const Color(0xFF6C63FF),
           handleColor: const Color(0xFF6C63FF),
           backgroundColor: Colors.grey,
@@ -111,9 +151,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       if (response.statusCode == 200) {
         final tempDir = await getTemporaryDirectory();
         final safeTitle = widget.title.replaceAll(RegExp(r'[^\w\s\.]'), '_');
-        final fileName = safeTitle.endsWith('.mp4')
-            ? safeTitle
-            : '$safeTitle.mp4';
+        final fileName =
+            safeTitle.endsWith('.mp4') ? safeTitle : '$safeTitle.mp4';
         final file = File('${tempDir.path}/$fileName');
 
         await file.writeAsBytes(response.bodyBytes);
@@ -167,8 +206,31 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           child: _isLoading
               ? const CircularProgressIndicator(color: Color(0xFF6C63FF))
               : _errorMessage != null
-              ? Text(_errorMessage!, style: const TextStyle(color: Colors.red))
-              : Chewie(controller: _chewieController!),
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline,
+                            color: Colors.red, size: 48),
+                        const SizedBox(height: 16),
+                        Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _isLoading = true;
+                              _errorMessage = null;
+                            });
+                            _initializePlayer();
+                          },
+                          child: const Text("Retry"),
+                        )
+                      ],
+                    )
+                  : Chewie(controller: _chewieController!),
         ),
       ),
     );

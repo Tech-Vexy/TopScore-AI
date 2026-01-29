@@ -13,7 +13,8 @@ class FirebaseFile {
   final String type; // File extension (pdf, jpg, etc.)
   final int? size; // File size in bytes
   final DateTime? uploadedAt;
-  final List<String>? tags; // Keywords for search
+  final List<String>? tags; // List of tags (e.g. "KCSE", "2023")
+  final DocumentSnapshot? snapshot; // For pagination cursor
 
   const FirebaseFile({
     this.id,
@@ -27,6 +28,7 @@ class FirebaseFile {
     this.size,
     this.uploadedAt,
     this.tags,
+    this.snapshot,
   });
 
   /// Create from Firebase Storage Reference (existing behavior)
@@ -57,6 +59,7 @@ class FirebaseFile {
       size: data['size'],
       uploadedAt: (data['uploadedAt'] as Timestamp?)?.toDate(),
       tags: (data['tags'] as List<dynamic>?)?.cast<String>(),
+      snapshot: doc,
     );
   }
 
