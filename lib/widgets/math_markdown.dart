@@ -7,10 +7,7 @@ import 'package:markdown/markdown.dart' as md;
 class LatexSyntax extends md.InlineSyntax {
   // Updated Regex to support both $ and \( \) / \[ \] delimiters
   // Matches: $$...$$ (block), $...$ (inline), \[...\] (block), \(...\) (inline)
-  LatexSyntax()
-      : super(
-          r'(\$\$[\s\S]*?\$\$)|(\$[^$\n]+\$)|(\\\([\s\S]*?\\\))',
-        );
+  LatexSyntax() : super(r'(\$\$[\s\S]*?\$\$)|(\$[^$\n]+\$)|(\\\([\s\S]*?\\\))');
 
   @override
   bool onMatch(md.InlineParser parser, Match match) {
@@ -144,6 +141,20 @@ class FactSyntax extends md.InlineSyntax {
   bool onMatch(md.InlineParser parser, Match match) {
     final content = match[1]!.trim();
     md.Element el = md.Element.text('fact', content);
+    parser.addNode(el);
+    return true;
+  }
+}
+
+/// 5b. Custom Syntax for Important/Warning/Alert
+/// Matches: :::important ... :::
+class ImportantSyntax extends md.InlineSyntax {
+  ImportantSyntax() : super(r':::important\s+([\s\S]*?)\s*:::');
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    final content = match[1]!.trim();
+    md.Element el = md.Element.text('important', content);
     parser.addNode(el);
     return true;
   }
