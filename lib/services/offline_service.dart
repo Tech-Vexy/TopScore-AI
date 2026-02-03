@@ -41,6 +41,8 @@ class OfflineService {
     String path,
     List<ResourceModel> resources,
   ) async {
+    if (!_isInitialized) return;
+
     try {
       final List<Map<String, dynamic>> serialized = resources
           .map((r) => r.toMap())
@@ -54,6 +56,7 @@ class OfflineService {
   /// Retrieve cached resources. Returns empty list on error or empty cache.
   List<ResourceModel> getCachedResources(String path) {
     if (!_isInitialized) return [];
+
     try {
       final data = _resourceBox.get(path);
 
@@ -72,6 +75,8 @@ class OfflineService {
 
   /// Cache a single individual resource (e.g., for Recently Opened)
   Future<void> cacheSingleResource(ResourceModel resource) async {
+    if (!_isInitialized) return;
+
     try {
       await _resourceBox.put('resource_${resource.id}', resource.toMap());
     } catch (e) {
@@ -81,6 +86,8 @@ class OfflineService {
 
   /// Retrieve a single resource
   ResourceModel? getCachedResource(String id) {
+    if (!_isInitialized) return null;
+
     try {
       final data = _resourceBox.get('resource_$id');
       if (data != null && data is Map) {
@@ -95,6 +102,7 @@ class OfflineService {
 
   /// Clear all cached resources (useful for Pull-to-Refresh or Logout)
   Future<void> clearAllResources() async {
+    if (!_isInitialized) return;
     await _resourceBox.clear();
   }
 
@@ -114,7 +122,8 @@ class OfflineService {
 
   /// Generic String List Getter (SharedPreferences style)
   List<String> getStringList(String key) {
-    if (!_isInitialized) return []; // Return empty list if not initialized (e.g., on web)
+    if (!_isInitialized) return [];
+
     try {
       final data = _settingsBox.get(key);
       if (data != null && data is List) {
@@ -128,12 +137,13 @@ class OfflineService {
 
   /// Generic String List Setter
   Future<void> setStringList(String key, List<String> value) async {
-    if (!_isInitialized) return; // Skip if not initialized (e.g., on web)
+    if (!_isInitialized) return;
     await _settingsBox.put(key, value);
   }
 
   /// Clear all settings
   Future<void> clearSettings() async {
+    if (!_isInitialized) return;
     await _settingsBox.clear();
   }
 }

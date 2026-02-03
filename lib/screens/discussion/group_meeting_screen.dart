@@ -265,7 +265,8 @@ class _GroupMeetingScreenState extends State<GroupMeetingScreen>
                   Navigator.pop(context);
                   SharePlus.instance.share(
                     ShareParams(
-                      text: "Join my study session: ${widget.meetingTopic}\nCode: ${widget.meetingId}",
+                      text:
+                          "Join my study session: ${widget.meetingTopic}\nCode: ${widget.meetingId}",
                     ),
                   );
                 },

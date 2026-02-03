@@ -24,16 +24,16 @@ class NotificationService {
     // Fix for iOS permissions - Defer request
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        );
 
     const InitializationSettings initializationSettings =
         InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsDarwin,
-    );
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsDarwin,
+        );
 
     await _localNotifications.initialize(initializationSettings);
   }
@@ -45,12 +45,9 @@ class NotificationService {
     // Request Permissions for Local Notifications (iOS)
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   /// Schedule a weekly reminder for a class
@@ -129,6 +126,93 @@ class NotificationService {
 
   Future<void> cancelNotification(int id) async {
     await _localNotifications.cancel(id);
+  }
+
+  static const int _inactivityNotificationId = 999;
+  static const String _generalTopic = 'general_updates';
+
+  /// Call this when the app starts or resumes
+  Future<void> onAppUsage() async {
+    // 1. Cancel any pending "we miss you" notification
+    await cancelNotification(_inactivityNotificationId);
+
+    // 2. Schedule a new one for 24 hours from now
+    await scheduleInactivityReminder();
+  }
+
+  /// Schedule a notification if the user hasn't opened the app for 24 hours
+  Future<void> scheduleInactivityReminder() async {
+    if (kIsWeb) return; // Not supported on web
+    try {
+      final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+      final tz.TZDateTime scheduledDate = now.add(const Duration(hours: 24));
+
+      await _localNotifications.zonedSchedule(
+        _inactivityNotificationId,
+        "We miss you! 🎓",
+        "You haven't studied in a day. Keep your streak alive to ace your exams!",
+        scheduledDate,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'inactivity_channel',
+            'Inactivity Reminders',
+            channelDescription: 'Reminders to keep studying',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        // ignore: missing_required_param
+        // uiLocalNotificationDateInterpretation: omitted to fix web build error
+      );
+      debugPrint("✅ Scheduled inactivity reminder for $scheduledDate");
+    } catch (e) {
+      debugPrint("❌ Error scheduling inactivity reminder: $e");
+    }
+  }
+
+  /// Initialize FCM Listeners for "New Feature" / "New File" alerts
+  Future<void> initializeFCMListeners() async {
+    // Subscribe to general topic (Not supported on Web)
+    if (!kIsWeb) {
+      try {
+        await _fcm.subscribeToTopic(_generalTopic);
+        debugPrint("✅ Subscribed to $_generalTopic");
+      } catch (e) {
+        debugPrint("❌ Error subscribing to topic: $e");
+      }
+    }
+
+    // Handle Foreground Messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint(
+        "📩 Received Foreground Notification: ${message.notification?.title}",
+      );
+
+      // Show as local notification immediately
+      if (message.notification != null) {
+        final androidDetails = const AndroidNotificationDetails(
+          'updates_channel',
+          'App Updates',
+          channelDescription: 'Notifications about new features and files',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
+        final iOSDetails = const DarwinNotificationDetails();
+        final details = NotificationDetails(
+          android: androidDetails,
+          iOS: iOSDetails,
+        );
+
+        _localNotifications.show(
+          message.hashCode,
+          message.notification!.title,
+          message.notification!.body,
+          details,
+        );
+      }
+    });
   }
 
   int _getWeekdayIndex(String day) {

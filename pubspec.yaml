@@ -34,10 +34,10 @@ dependencies:
   firebase_messaging: ^16.1.1
 
   # --- Google & AI ---
-  google_sign_in: ^7.2.0
+  google_sign_in: ^6.2.2
   google_generative_ai: ^0.4.6
   googleapis: ^15.0.0
-  extension_google_sign_in_as_googleapis_auth: ^3.0.0
+  extension_google_sign_in_as_googleapis_auth: ^2.0.12
 
   # --- Modern Web Support (The Fix for your errors) ---
   web: ^1.1.0               # Forces modern web support
@@ -78,6 +78,7 @@ dependencies:
   # --- Media & Input ---
   record: ^6.1.2
   audioplayers: ^6.0.0
+  just_audio: ^0.9.36
   flutter_tts: ^4.0.2
   camera: ^0.11.0
   image_picker: ^1.1.1

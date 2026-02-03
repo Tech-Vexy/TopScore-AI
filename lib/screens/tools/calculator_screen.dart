@@ -62,7 +62,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         }
       } else if (text == '=') {
         try {
-          GrammarParser p = GrammarParser();
+          ShuntingYardParser p = ShuntingYardParser();
           Expression exp = p.parse(
             _convertDegreesToRadians(
               _expression,

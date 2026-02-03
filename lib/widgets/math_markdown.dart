@@ -8,8 +8,9 @@ class LatexSyntax extends md.InlineSyntax {
   // Updated Regex to support both $ and \( \) / \[ \] delimiters
   // Matches: $$...$$ (block), $...$ (inline), \[...\] (block), \(...\) (inline)
   LatexSyntax()
-      : super(
-            r'(\$\$[\s\S]*?\$\$)|(\\\[[\s\S]*?\\\])|(\$[^$\n]+\$)|(\\\([\s\S]*?\\\))');
+    : super(
+        r'(\$\$[\s\S]*?\$\$)|(\\\[[\s\S]*?\\\])|(\$[^$\n]+\$)|(\\\([\s\S]*?\\\))',
+      );
 
   @override
   bool onMatch(md.InlineParser parser, Match match) {
@@ -81,14 +82,119 @@ class LatexElementBuilder extends MarkdownElementBuilder {
   }
 }
 
-/// 3. Pre-processor to handle HTML tags like <u>
+/// 3. Custom Syntax for Theories and Laws
+/// Matches: :::theory ... :::
+class TheorySyntax extends md.InlineSyntax {
+  TheorySyntax() : super(r':::theory\s+([\s\S]*?)\s*:::');
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    final content = match[1]!.trim();
+    md.Element el = md.Element.text('theory', content);
+    parser.addNode(el);
+    return true;
+  }
+}
+
+/// 4. Custom Syntax for Laws
+/// Matches: :::law ... :::
+class LawSyntax extends md.InlineSyntax {
+  LawSyntax() : super(r':::law\s+([\s\S]*?)\s*:::');
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    final content = match[1]!.trim();
+    md.Element el = md.Element.text('law', content);
+    parser.addNode(el);
+    return true;
+  }
+}
+
+/// 5. Custom Syntax for Important Facts
+/// Matches: :::fact ... :::
+class FactSyntax extends md.InlineSyntax {
+  FactSyntax() : super(r':::fact\s+([\s\S]*?)\s*:::');
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    final content = match[1]!.trim();
+    md.Element el = md.Element.text('fact', content);
+    parser.addNode(el);
+    return true;
+  }
+}
+
+/// 6. Builder to render Theory/Law/Fact with premium styling
+class TheoryElementBuilder extends MarkdownElementBuilder {
+  final Color color;
+  final String label;
+  final IconData icon;
+
+  TheoryElementBuilder({
+    required this.color,
+    required this.label,
+    required this.icon,
+  });
+
+  @override
+  Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final content = element.textContent;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: (preferredStyle ?? const TextStyle()).copyWith(
+              color: color.withValues(alpha: 0.9),
+              fontWeight: FontWeight.w500,
+              fontSize: 16,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 7. Pre-processor to handle HTML tags like <u>
 /// Flutter Markdown strips HTML by default. We map <u> to simple Bold or Italic.
 String cleanContent(String input) {
   // Replace <u>text</u> with **text** (Bold) or similar.
   // Underlines are often bad in chat apps (look like links).
   return input
-          .replaceAll('<u>', '') // Option A: Just remove the tag (cleanest)
-          .replaceAll('</u>', '')
-      // Option B: Map to bold -> .replaceAll('<u>', '**').replaceAll('</u>', '**')
-      ;
+      .replaceAll('<u>', '') // Option A: Just remove the tag (cleanest)
+      .replaceAll('</u>', '');
 }

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:uuid/uuid.dart';
-import 'package:http/http.dart' as http;
+
 import 'package:flutter/foundation.dart';
 
 import 'connection_manager.dart';
@@ -67,7 +67,6 @@ class EnhancedWebSocketService {
     });
   }
 
-  String get _baseUrl => 'https://agent.topscoreapp.ai';
   String get _wsUrl => 'wss://agent.topscoreapp.ai/ws/chat/$sessionId';
   String get _geminiVoiceWsUrl =>
       'wss://agent.topscoreapp.ai/voice/ws/gemini/$sessionId';

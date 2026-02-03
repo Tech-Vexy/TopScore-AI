@@ -27,10 +27,13 @@ class WebSocketService {
   final String userId;
   String sessionId = const Uuid().v4(); // Session ID for WebSocket path
   String threadId = const Uuid().v4(); // Thread ID for chat history
+  String? studentName;
+  String? academicLevel;
 
   WebSocketService({required this.userId});
 
   // Configure these based on your deployment
+  // PRODUCTION: Using agent.topscoreapp.ai
   String get _baseUrl {
     return 'https://agent.topscoreapp.ai';
   }
@@ -57,6 +60,11 @@ class WebSocketService {
 
   void setSessionId(String newSessionId) {
     sessionId = newSessionId;
+  }
+
+  void setStudentInfo({String? name, String? level}) {
+    studentName = name;
+    academicLevel = level;
   }
 
   /// DEPRECATED: Use Firebase Realtime Database directly
@@ -358,38 +366,40 @@ class WebSocketService {
 
       case 'status':
         // Processing status: 'processing', 'generating', etc.
+        data['source'] = 'voice';
         _messageController.add(data);
         break;
 
       case 'response':
         // Main response with text AND audio
-        // data['text'] - Text transcription/response
-        // data['audio'] - Base64 encoded audio response
-        // data['audio_mime_type'] - MIME type of the audio
-        // data['latency'] - Processing time in seconds
         debugPrint(
           'Gemini Voice: Response received (latency: ${data['latency']}s)',
         );
+        data['source'] = 'voice';
         _messageController.add(data);
         break;
 
       case 'speech':
         // TTS response (text was sent, audio returned)
+        data['source'] = 'voice';
         _messageController.add(data);
         break;
 
       case 'error':
         debugPrint('Gemini Voice Error: ${data['message']}');
+        data['source'] = 'voice';
         _messageController.add(data);
         break;
 
       case 'timeout_warning':
         debugPrint('Gemini Voice: ${data['message']}');
+        data['source'] = 'voice';
         _messageController.add(data);
         break;
 
       default:
         debugPrint('Gemini Voice: Unknown message type: $type');
+        data['source'] = 'voice';
         _messageController.add(data);
     }
   }
@@ -412,25 +422,37 @@ class WebSocketService {
         _sendPong();
         break;
 
+      case 'pong':
+        // Server responded to our keep-alive ping - connection is healthy
+        break;
+
       case 'chunk':
       case 'resume':
       case 'status':
       case 'error':
       case 'title_updated':
-      // NEW: Handle these explicitly to identify them in logs or logic if needed
       case 'response_start':
       case 'tool_start':
       case 'done':
+      case 'complete': // Signals response completion
+      case 'end': // Signals response end
+      case 'message': // Full message response
+      case 'response': // Gemini Native Audio response with text and audio
+      case 'speech': // TTS response
+      case 'audio': // Audio response from server
+      case 'reasoning_chunk': // Chain of thought reasoning chunks
       // Voice-specific message types
       case 'transcription': // User's speech transcribed to text
       case 'listening': // Status: listening for audio
       case 'transcribing': // Status: processing audio
         // Forward to message stream for UI handling
+        data['source'] = 'main';
         _messageController.add(data);
         break;
 
       default:
         debugPrint('WebSocket: Unknown message type: $type');
+        data['source'] = 'main';
         _messageController.add(data);
     }
   }
@@ -523,8 +545,15 @@ class WebSocketService {
       "message": message, // Script uses "message", not "content"
       "user_id": userId,
       "thread_id": threadId ?? this.threadId,
-      "model_preference": modelPreference ?? "smart", // Default to smart
+      "model_preference":
+          modelPreference ?? "auto", // Default to auto (let Agent decide)
       "timestamp": DateTime.now().millisecondsSinceEpoch,
+      "metadata": {
+        "is_voice_mode": false,
+        if (studentName != null) "student_name": studentName,
+        if (academicLevel != null) "academic_level": academicLevel,
+        if (extraData?['metadata'] is Map) ...extraData?['metadata'],
+      },
     };
 
     // 2. Add File URL (Critical for Vision)

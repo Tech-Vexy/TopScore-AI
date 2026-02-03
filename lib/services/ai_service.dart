@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:http/http.dart' as http;
-import '../models/flashcard_model.dart';
 import '../models/quiz_model.dart';
 
 // Data models for structured responses
@@ -54,7 +52,6 @@ class AIService {
   // Use 10.0.2.2 for Android emulator, localhost for iOS/Web
   // static const String _wsUrl = 'ws://10.0.2.2:8080/ws';
   static const String _wsUrl = 'wss://agent.topscoreapp.ai/ws';
-  static const String _baseUrl = 'https://agent.topscoreapp.ai';
 
   WebSocketChannel? _channel;
 
@@ -101,8 +98,7 @@ class AIService {
       final responsePayload = await _channel!.stream.first;
       final data = jsonDecode(responsePayload);
 
-      final responseText =
-          data['text'] ??
+      final responseText = data['text'] ??
           "I'm having trouble thinking right now. Can you ask again?";
 
       return _parseResponseWithVisualization(responseText);
@@ -123,8 +119,7 @@ class AIService {
     required int grade,
   }) async {
     try {
-      final prompt =
-          """
+      final prompt = """
 Create a visual example for: $concept
 Subject: $subject, Grade: $grade
 
@@ -157,8 +152,7 @@ DATA: [Any numbers, values, or key facts in simple format]
     required String subject,
   }) async {
     try {
-      final prompt =
-          """
+      final prompt = """
 Give me $count visual examples for: $topic (Subject: $subject)
 
 For each example, provide:
@@ -278,10 +272,8 @@ Make it fun and easy to visualize!
     for (var section in sections) {
       if (section.trim().isEmpty) continue;
 
-      final lines = section
-          .split('\n')
-          .where((l) => l.trim().isNotEmpty)
-          .toList();
+      final lines =
+          section.split('\n').where((l) => l.trim().isNotEmpty).toList();
       if (lines.isEmpty) continue;
 
       final title = lines.first.replaceAll(RegExp(r'^\*+\s*'), '').trim();
@@ -299,100 +291,104 @@ Make it fun and easy to visualize!
     return examples;
   }
 
+  /// Generate a quiz based on the given topic and number of questions
+  Future<Quiz> generateQuiz({
+    String? userId,
+    required String topic,
+    int? questionCount,
+    int? numberOfQuestions,
+    String? difficulty,
+    String? level,
+    String? sourceText,
+  }) async {
+    try {
+      final numQuestions = questionCount ?? numberOfQuestions ?? 5;
+      final prompt = sourceText != null && sourceText.isNotEmpty
+          ? 'Generate a quiz with $numQuestions multiple choice questions based on the following text: $sourceText. Topic: $topic. Difficulty: ${difficulty ?? "medium"}. Level: ${level ?? "High School"}'
+          : 'Generate a quiz with $numQuestions multiple choice questions about: $topic. Difficulty: ${difficulty ?? "medium"}. Level: ${level ?? "High School"}';
+
+      final response = await sendMessage(
+        prompt,
+        context: {
+          'type': 'quiz_generation',
+          'topic': topic,
+          'num_questions': numQuestions,
+          'difficulty': difficulty ?? 'medium',
+          'level': level ?? 'High School',
+          if (userId != null) 'user_id': userId,
+          if (sourceText != null) 'source_text': sourceText,
+        },
+      );
+
+      // Parse the response to create Quiz object
+      final quiz = Quiz(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: 'Quiz: $topic',
+        description: 'Auto-generated quiz about $topic',
+        questions: _parseQuizQuestions(response.text, numQuestions),
+        createdAt: DateTime.now(),
+        createdBy: userId,
+      );
+
+      return quiz;
+    } catch (e) {
+      debugPrint('Error generating quiz: $e');
+      rethrow;
+    }
+  }
+
+  /// Parse quiz questions from AI response text
+  List<QuizQuestion> _parseQuizQuestions(
+      String responseText, int expectedCount) {
+    final questions = <QuizQuestion>[];
+
+    // Simple parsing - split by question pattern
+    final questionPattern = RegExp(
+      r'(?:Question|Q)\s*\d+[.:\s]+([^(?:A\.|B\.|C\.|D\.)]+)',
+      multiLine: true,
+    );
+
+    final matches = questionPattern.allMatches(responseText);
+
+    for (var i = 0; i < matches.length && i < expectedCount; i++) {
+      final match = matches.elementAt(i);
+      final questionText = match.group(1)?.trim() ?? 'Question ${i + 1}';
+
+      // Simple option parsing
+      final options = ['Option A', 'Option B', 'Option C', 'Option D'];
+
+      questions.add(
+        QuizQuestion(
+          id: '$i',
+          question: questionText,
+          options: options,
+          correctAnswer: options[0],
+          explanation: 'This is the correct answer.',
+        ),
+      );
+    }
+
+    // If no questions were parsed, create defaults
+    if (questions.isEmpty) {
+      for (int i = 0; i < expectedCount; i++) {
+        questions.add(
+          QuizQuestion(
+            id: '$i',
+            question: 'Question ${i + 1}',
+            options: ['Option A', 'Option B', 'Option C', 'Option D'],
+            correctAnswer: 'Option A',
+            explanation: 'Explanation for this answer.',
+          ),
+        );
+      }
+    }
+
+    return questions;
+  }
+
   // Reset chat session
   void resetChat() {
     _channel?.sink.close();
     _connect();
-  }
-
-  /// Generate AI-powered flashcards from a topic or source text
-  /// 
-  /// [userId] - The ID of the student (for personalization/logging)
-  /// [topic] - The main subject or topic (e.g., "Photosynthesis")
-  /// [amount] - Number of cards to generate (default: 5, max: 20)
-  /// [level] - Education level (default: "High School")
-  /// [sourceText] - Optional text content to generate cards from
-  Future<FlashcardSet> generateFlashcards({
-    required String userId,
-    required String topic,
-    int amount = 5,
-    String level = 'High School',
-    String? sourceText,
-  }) async {
-    final url = Uri.parse('$_baseUrl/flashcards/generate');
-
-    final payload = {
-      'user_id': userId,
-      'topic': topic,
-      'amount': amount,
-      'level': level,
-      if (sourceText != null && sourceText.isNotEmpty) 'source_text': sourceText,
-    };
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return FlashcardSet.fromJson(data);
-      } else {
-        debugPrint('Flashcard API error: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to generate flashcards: ${response.body}');
-      }
-    } catch (e) {
-      debugPrint('Error generating flashcards: $e');
-      throw Exception('Error connecting to server: $e');
-    }
-  }
-
-  /// Generate an AI-powered quiz from a topic or source text
-  /// 
-  /// [userId] - The ID of the student (for personalization/logging)
-  /// [topic] - The main subject or topic (e.g., "World War I")
-  /// [questionCount] - Number of questions to generate (default: 5, max: 10)
-  /// [difficulty] - Difficulty level: "Easy", "Medium", "Hard" (default: "Medium")
-  /// [level] - Education level (default: "High School")
-  /// [sourceText] - Optional text content to generate quiz from
-  Future<Quiz> generateQuiz({
-    required String userId,
-    required String topic,
-    int questionCount = 5,
-    String difficulty = 'Medium',
-    String level = 'High School',
-    String? sourceText,
-  }) async {
-    final url = Uri.parse('$_baseUrl/quiz/generate');
-
-    final payload = {
-      'user_id': userId,
-      'topic': topic,
-      'question_count': questionCount,
-      'difficulty': difficulty,
-      'level': level,
-      if (sourceText != null && sourceText.isNotEmpty) 'source_text': sourceText,
-    };
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return Quiz.fromJson(data);
-      } else {
-        debugPrint('Quiz API error: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to generate quiz: ${response.body}');
-      }
-    } catch (e) {
-      debugPrint('Error generating quiz: $e');
-      throw Exception('Error connecting to server: $e');
-    }
   }
 }

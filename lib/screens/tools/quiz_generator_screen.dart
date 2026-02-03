@@ -499,11 +499,11 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: _getDifficultyColor(quiz.difficulty),
+                      color: _getDifficultyColor(quiz.difficulty ?? 'Medium'),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      quiz.difficulty,
+                      quiz.difficulty ?? 'Medium',
                       style: GoogleFonts.nunito(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -564,7 +564,7 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
                     ],
                   ),
                   child: Text(
-                    currentQuestion.questionText,
+                    currentQuestion.questionText ?? currentQuestion.question,
                     style: GoogleFonts.nunito(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -668,7 +668,7 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
                 }),
 
                 // Explanation (shown after submitting)
-                if (_showResult && currentQuestion.explanation.isNotEmpty)
+                if (_showResult && (currentQuestion.explanation?.isNotEmpty ?? false))
                   Container(
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.all(16),
@@ -690,7 +690,7 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            currentQuestion.explanation,
+                            currentQuestion.explanation ?? '',
                             style: GoogleFonts.nunito(
                               fontSize: 14,
                               color: Colors.blue[900],
@@ -879,8 +879,8 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildSummaryRow('Topic', quiz.topic),
-                _buildSummaryRow('Difficulty', quiz.difficulty),
+                _buildSummaryRow('Topic', quiz.topic ?? 'Unknown'),
+                _buildSummaryRow('Difficulty', quiz.difficulty ?? 'Medium'),
                 _buildSummaryRow('Questions', '${quiz.questions.length}'),
                 _buildSummaryRow('Correct', '$_score'),
                 _buildSummaryRow(

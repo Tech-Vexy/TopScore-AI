@@ -3,12 +3,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-  bool _googleSignInInitialized = false;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   UserModel? _userModel;
   UserModel? get userModel => _userModel;
@@ -17,6 +20,10 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   // Guest Mode logic
+  String? _guestId;
+  String get effectiveUserId =>
+      _userModel?.uid ?? _auth.currentUser?.uid ?? _guestId ?? 'guest';
+
   bool _isGuest = false;
   bool get isGuest => _isGuest;
 
@@ -80,10 +87,22 @@ class AuthProvider with ChangeNotifier {
   Future<void> init() async {
     _setLoading(true);
     try {
+      // Initialize persistent guest ID
+      final prefs = await SharedPreferences.getInstance();
+      _guestId = prefs.getString('local_guest_id');
+      if (_guestId == null) {
+        _guestId = 'guest_${const Uuid().v4()}';
+        await prefs.setString('local_guest_id', _guestId!);
+      }
+
       User? user = _auth.currentUser;
       if (user != null) {
-        DocumentSnapshot doc =
-            await _firestore.collection('users').doc(user.uid).get();
+        await user.reload();
+        user = _auth.currentUser;
+        DocumentSnapshot doc = await _firestore
+            .collection('users')
+            .doc(user!.uid)
+            .get();
         if (doc.exists) {
           _userModel = UserModel.fromMap(
             doc.data() as Map<String, dynamic>,
@@ -95,68 +114,97 @@ class AuthProvider with ChangeNotifier {
       debugPrint("AuthProvider init error: $e");
     } finally {
       _setLoading(false);
+      notifyListeners(); // Ensure listeners know about the guest ID
     }
   }
 
   // --- GOOGLE SIGN IN ---
-  Future<void> _ensureGoogleSignInInitialized() async {
-    if (!_googleSignInInitialized) {
-      await _googleSignIn.initialize();
-      _googleSignInInitialized = true;
+
+  /// Helper to call backend migration endpoint
+  Future<void> _migrateAnonymousData(String fromUid, String toUid) async {
+    if (fromUid == toUid) return;
+    try {
+      debugPrint("Migrating data from $fromUid to $toUid...");
+      final backendUrl = _getBackendUrl();
+      await http.post(
+        Uri.parse('$backendUrl/api/migrate'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'from_user_id': fromUid, 'to_user_id': toUid}),
+      );
+      debugPrint("Migration request sent.");
+    } catch (e) {
+      debugPrint("Migration failed: $e");
     }
   }
+
+  String _getBackendUrl() {
+    // Simplified for now, usually stored in config.
+    // Assuming localhost for Android/Emulator or Web logic from ChatScreen
+    // For this provider, we might default to the deployed URL or logic similar to ChatScreen
+    return 'https://agent.topscoreapp.ai';
+  }
+
+  // --- GOOGLE SIGN IN ---
 
   Future<bool> signInWithGoogle() async {
     try {
       _setLoading(true);
 
-      await _ensureGoogleSignInInitialized();
+      final account = await _googleSignIn.signIn();
+      if (account == null) {
+        _setLoading(false);
+        return false;
+      }
 
-      final account = await _googleSignIn.authenticate();
-
-      // Get the ID token from authentication
-      final idToken = account.authentication.idToken;
-
-      // For Firebase Auth, we need to get an access token via authorization
-      // Request authorization for basic scopes to get access token
-      final authorization = await account.authorizationClient
-          .authorizeScopes(['email', 'profile']);
+      final GoogleSignInAuthentication authentication =
+          await account.authentication;
 
       final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: authorization.accessToken,
-        idToken: idToken,
+        accessToken: authentication.accessToken,
+        idToken: authentication.idToken,
       );
 
-      // Check current user state for anonymous upgrade
       final currentUser = _auth.currentUser;
+      String? anonUid;
+      if (currentUser != null && currentUser.isAnonymous) {
+        anonUid = currentUser.uid;
+      }
+
       UserCredential userCredential;
 
       if (currentUser != null && currentUser.isAnonymous) {
         try {
-          // Link the anonymous user to the new Google credential
+          // Try to link first (Preferred: Keeps UID same)
           userCredential = await currentUser.linkWithCredential(credential);
-          debugPrint(
-              "Successfully linked anonymous account to Google credential");
+          debugPrint("Successfully linked anonymous account to Google.");
         } on FirebaseAuthException catch (e) {
           if (e.code == 'credential-already-in-use') {
-            // Account already exists, so we sign in to it (merging/overwriting guest session)
-            // Ideally prompt user, but for now we switch to the existing account
-            debugPrint("Credential in use, switching to existing account");
+            // Context: Account exists. We must switch to it.
+            // But we lose the anonymous UID session. We MUST migrate.
+            debugPrint("Credential in use, switching and migrating...");
             userCredential = await _auth.signInWithCredential(credential);
+
+            // Trigger Backend Migration
+            if (anonUid != null && userCredential.user != null) {
+              await _migrateAnonymousData(anonUid, userCredential.user!.uid);
+            }
           } else {
             rethrow;
           }
         }
       } else {
-        // Standard sign in
+        // Standard ID
         userCredential = await _auth.signInWithCredential(credential);
       }
 
       User? user = userCredential.user;
 
       if (user != null) {
-        DocumentSnapshot doc =
-            await _firestore.collection('users').doc(user.uid).get();
+        // ... (Existing logic for fetching/creating user doc) ...
+        DocumentSnapshot doc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get();
 
         if (doc.exists) {
           _userModel = UserModel.fromMap(
@@ -167,7 +215,6 @@ class AuthProvider with ChangeNotifier {
           _setLoading(false);
           return true;
         } else {
-          // New User Setup
           UserModel newUser = UserModel(
             uid: user.uid,
             email: user.email ?? '',
@@ -175,7 +222,7 @@ class AuthProvider with ChangeNotifier {
             photoURL: user.photoURL,
             role: '',
             grade: null,
-            schoolName: '', // Default empty
+            schoolName: '',
           );
 
           await _firestore
@@ -197,6 +244,195 @@ class AuthProvider with ChangeNotifier {
     _setLoading(false);
     return false;
   }
+
+  // --- EMAIL AND PASSWORD AUTH ---
+
+  Future<bool> signUpWithEmail({
+    required String email,
+    required String password,
+    required String displayName,
+  }) async {
+    try {
+      _setLoading(true);
+
+      UserCredential userCredential;
+      final currentUser = _auth.currentUser;
+
+      // If anonymous, try to link first to preserve UID
+      if (currentUser != null && currentUser.isAnonymous) {
+        try {
+          final credential = EmailAuthProvider.credential(
+            email: email,
+            password: password,
+          );
+          userCredential = await currentUser.linkWithCredential(credential);
+        } on FirebaseAuthException catch (e) {
+          // If email already in use, we can't link.
+          // We shouldn't switch automatically because that's a Sign In flow.
+          // We just let it fail or handle specifically.
+          // For now, fall back to standard create (will fail with email-already-in-use)
+          if (e.code == 'email-already-in-use') {
+            rethrow;
+          }
+          // Fallback
+          userCredential = await _auth.createUserWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+        }
+      } else {
+        userCredential = await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      }
+
+      User? user = userCredential.user;
+      if (user != null) {
+        await user.updateDisplayName(displayName);
+
+        // Standard Firestore creation logic
+        UserModel newUser = UserModel(
+          uid: user.uid,
+          email: email,
+          displayName: displayName,
+          role: 'student',
+          schoolName: '',
+          grade: null,
+          isSubscribed: false,
+          xp: 0,
+          level: 1,
+          badges: [],
+        );
+
+        // Use Set (merge to be safe if checking existingdoc, but usually new)
+        await _firestore.collection('users').doc(user.uid).set(newUser.toMap());
+        _userModel = newUser;
+
+        // Verify email?
+        try {
+          await user.sendEmailVerification();
+        } catch (_) {}
+
+        notifyListeners();
+        return true;
+      }
+    } on FirebaseAuthException catch (e) {
+      debugPrint("Sign Up Error: ${e.code} - ${e.message}");
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+    return false;
+  }
+
+  Future<bool> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      _setLoading(true);
+
+      final currentUser = _auth.currentUser;
+      String? anonUid;
+      if (currentUser != null && currentUser.isAnonymous) {
+        anonUid = currentUser.uid;
+      }
+
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      User? user = userCredential.user;
+      if (user != null) {
+        // Migration Check
+        if (anonUid != null) {
+          await _migrateAnonymousData(anonUid, user.uid);
+        }
+
+        // Reload user to get latest verification status
+        await user.reload();
+
+        DocumentSnapshot doc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists) {
+          _userModel = UserModel.fromMap(
+            doc.data() as Map<String, dynamic>,
+            user.uid,
+          );
+          notifyListeners();
+          return true;
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      debugPrint("Sign In Error: ${e.code} - ${e.message}");
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+    return false;
+  }
+
+  /// Generic signIn method that delegates to signInWithEmail
+  Future<void> signIn(String email, String password) async {
+    await signInWithEmail(email: email, password: password);
+  }
+
+  Future<void> sendEmailVerification() async {
+    try {
+      User? user = _auth.currentUser;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+      }
+    } catch (e) {
+      debugPrint("Error sending verification email: $e");
+      rethrow;
+    }
+  }
+
+  bool get isEmailVerified {
+    return _auth.currentUser?.emailVerified ?? false;
+  }
+
+  /// Password validation logic
+  static String? validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters long';
+    }
+    if (!value.contains(RegExp(r'[A-Z]'))) {
+      return 'Password must contain at least one uppercase letter';
+    }
+    if (!value.contains(RegExp(r'[a-z]'))) {
+      return 'Password must contain at least one lowercase letter';
+    }
+    if (!value.contains(RegExp(r'[0-9]'))) {
+      return 'Password must contain at least one number';
+    }
+    if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+      return 'Password must contain at least one special character';
+    }
+    return null;
+  }
+
+  Future<void> signOut() async {
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+    _userModel = null;
+    _isGuest = false;
+    _guestMessageCount = 0;
+    _guestDocumentCount = 0;
+    notifyListeners();
+  }
+
+  // --- MISSING METHODS ---
+
+  // --- ADDITIONAL AUTH METHODS ---
 
   /// Clears the current anonymous session effectively "resetting" the guest user.
   /// Useful for shared devices.
@@ -269,20 +505,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Email/Password methods removed as per request to remove email/password auth.
-
-  Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    await _auth.signOut();
-    _userModel = null;
-    _isGuest = false;
-    _guestMessageCount = 0;
-    _guestDocumentCount = 0;
-    notifyListeners();
-  }
-
-  // --- MISSING METHODS ---
-
   Future<void> updateLanguage(String lang) async {
     if (_userModel == null) return;
     await _firestore.collection('users').doc(_userModel!.uid).update({
@@ -315,40 +537,9 @@ class AuthProvider with ChangeNotifier {
     });
 
     // Update local
-    // Using copyWith is safer now that I verified/added it in UserModel
     _userModel = _userModel!.copyWith(
       isSubscribed: true,
-      subscriptionExpiry:
-          expiry, // copyWith doesn't have expiry? I should check my previous step.
-      // Checked UserModel copyWith: yes I added subscriptionExpiry?
-      // Wait, previous step code:
-      // copyWith only had: role, grade, schoolName, preferredLanguage.
-      // I missed adding all fields to `copyWith`.
-      // I must re-implement copyWith in UserModel OR use manual construction here.
-      // For safety, manual construction is better if copyWith is incomplete.
-    );
-
-    _userModel = UserModel(
-      uid: _userModel!.uid,
-      email: _userModel!.email,
-      displayName: _userModel!.displayName,
-      photoURL: _userModel!.photoURL,
-      role: _userModel!.role,
-      grade: _userModel!.grade,
-      schoolName: _userModel!.schoolName,
-      educationLevel: _userModel!.educationLevel,
-      subjects: _userModel!.subjects,
-      isSubscribed: true,
       subscriptionExpiry: expiry,
-      preferredLanguage: _userModel!.preferredLanguage,
-      linkCode: _userModel!.linkCode,
-      parentIds: _userModel!.parentIds,
-      childrenIds: _userModel!.childrenIds,
-      xp: _userModel!.xp,
-      level: _userModel!.level,
-      badges: _userModel!.badges,
-      interests: _userModel!.interests,
-      careerMode: _userModel!.careerMode,
     );
     notifyListeners();
   }
@@ -357,8 +548,10 @@ class AuthProvider with ChangeNotifier {
     User? user = _auth.currentUser;
     if (user != null) {
       await user.reload();
-      DocumentSnapshot doc =
-          await _firestore.collection('users').doc(user.uid).get();
+      DocumentSnapshot doc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (doc.exists) {
         _userModel = UserModel.fromMap(
           doc.data() as Map<String, dynamic>,

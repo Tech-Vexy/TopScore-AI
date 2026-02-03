@@ -1,13 +1,19 @@
 {
-    "name": "TopScore AI",
+    "name": "TopScore AI - Kenya's #1 AI Tutor",
     "short_name": "TopScore AI",
-    "start_url": ".",
+    "start_url": "./?source=pwa",
     "display": "standalone",
     "background_color": "#FFFFFF",
-    "theme_color": "#FFFFFF",
-    "description": "TopScore AI - Your Personalized Learning Assistant",
+    "theme_color": "#4285F4",
+    "description": "Kenya's leading AI-powered learning platform for CBC and 8-4-4 students. Get instant homework help, KCSE & KCPE exam prep, AI flashcards, and smart study tools.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "lang": "en-KE",
+    "dir": "ltr",
+    "categories": ["education", "productivity"],
+    "iarc_rating_id": "",
+    "scope": "/",
+    "id": "topscoreai",
     "icons": [
         {
             "src": "icons/Icon-192.png",

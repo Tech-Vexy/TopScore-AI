@@ -12,6 +12,8 @@ class NavigationProvider extends ChangeNotifier {
 
   String? get pendingMessage => _pendingMessage;
   XFile? get pendingImage => _pendingImage;
+  String? _pendingFileUrl;
+  String? get pendingFileUrl => _pendingFileUrl;
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -30,9 +32,15 @@ class NavigationProvider extends ChangeNotifier {
   }
 
   /// Helper to go specifically to AI Tutor with data
-  void navigateToChat({String? message, XFile? image, BuildContext? context}) {
+  void navigateToChat({
+    String? message,
+    XFile? image,
+    String? fileUrl,
+    BuildContext? context,
+  }) {
     _pendingMessage = message;
     _pendingImage = image;
+    _pendingFileUrl = fileUrl;
     setIndex(2); // Updates index and persists it
 
     // If we are deep in a stack (e.g., PDF Viewer), go back to Home
@@ -45,6 +53,7 @@ class NavigationProvider extends ChangeNotifier {
   void clearPendingData() {
     _pendingMessage = null;
     _pendingImage = null;
+    _pendingFileUrl = null;
     // We don't notifyListeners here to avoid rebuild loops
   }
 }

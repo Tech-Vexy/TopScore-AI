@@ -62,11 +62,7 @@ class MermaidElementBuilder extends MarkdownElementBuilder {
               placeholder: (context, url) => Container(
                 height: 150,
                 alignment: Alignment.center,
-                child: const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+                child: const SizedBox.shrink(), // Remove redundant spinner
               ),
               errorWidget: (context, url, error) {
                 return Container(

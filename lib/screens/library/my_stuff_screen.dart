@@ -6,6 +6,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../providers/navigation_provider.dart'; // Import NavigationProvider
+import 'package:provider/provider.dart';
+
 class MyStuffScreen extends StatelessWidget {
   const MyStuffScreen({super.key});
 
@@ -177,6 +180,25 @@ class _ArtifactCard extends StatelessWidget {
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.send_rounded, size: 16),
+                      color: Colors.blue,
+                      tooltip: 'Ask AI Tutor',
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.all(4),
+                      onPressed: () {
+                        final nav = Provider.of<NavigationProvider>(
+                          context,
+                          listen: false,
+                        );
+                        nav.navigateToChat(
+                          message:
+                              "I have a question about this ${type == 'image' ? 'image' : 'file'}.",
+                          fileUrl: content,
+                          context: context,
+                        );
+                      },
                     ),
                   ],
                 ),

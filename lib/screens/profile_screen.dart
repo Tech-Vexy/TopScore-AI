@@ -6,7 +6,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/colors.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
-import '../utils/image_cache_manager.dart';
 import 'subscription/subscription_screen.dart';
 import 'legal/privacy_policy_screen.dart';
 import 'legal/terms_of_use_screen.dart';
@@ -229,7 +228,6 @@ class ProfileScreen extends StatelessWidget {
                     ? DecorationImage(
                         image: CachedNetworkImageProvider(
                           user.photoURL!,
-                          cacheManager: ProfileImageCacheManager(),
                         ),
                         fit: BoxFit.cover,
                       )

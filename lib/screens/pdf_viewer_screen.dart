@@ -20,6 +20,9 @@ import 'package:provider/provider.dart';
 import '../providers/navigation_provider.dart';
 import '../tutor_client/chat_screen.dart';
 
+/// Enum for embedded chat panel state
+enum _ChatPanelState { closed, minimized, expanded }
+
 class PdfViewerScreen extends StatefulWidget {
   final String? storagePath; // Firebase path OR full URL
   final String? url; // Web URL
@@ -52,12 +55,21 @@ class PdfViewerScreen extends StatefulWidget {
 class _PdfViewerScreenState extends State<PdfViewerScreen> {
   final PdfViewerController _pdfViewerController = PdfViewerController();
   final GlobalKey _pdfRepaintKey = GlobalKey(); // Key for screenshot capture
+  final GlobalKey<_EmbeddedChatPanelState> _chatPanelKey = GlobalKey();
 
   Uint8List? _pdfBytes;
   bool _isLoading = true;
   String? _errorMessage;
   bool _isSubscriptionError = false;
   OverlayEntry? _overlayEntry;
+
+  // Embedded chat panel state
+  _ChatPanelState _chatPanelState = _ChatPanelState.closed;
+  XFile? _pendingChatImage;
+  String? _pendingChatMessage;
+
+  // Store document URL for sharing
+  String? _documentUrl;
 
   @override
   void dispose() {
@@ -194,12 +206,19 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       if (widget.bytes != null) {
         loadedBytes = widget.bytes;
       } else if (widget.url != null) {
+        _documentUrl = widget.url;
         loadedBytes = await _downloadFromUrl(widget.url!);
       } else if (widget.storagePath != null) {
         if (widget.storagePath!.startsWith('http')) {
+          _documentUrl = widget.storagePath;
           loadedBytes = await _downloadFromUrl(widget.storagePath!);
         } else {
           try {
+            // Get download URL for sharing
+            _documentUrl = await FirebaseStorage.instance
+                .ref(widget.storagePath!)
+                .getDownloadURL();
+
             loadedBytes = await FirebaseStorage.instance
                 .ref(widget.storagePath!)
                 .getData(30 * 1024 * 1024);
@@ -408,6 +427,42 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                   _sendToAI(croppedBytes);
                 },
               ),
+              if (_documentUrl != null) ...[
+                const Divider(),
+                ListTile(
+                  leading: FaIcon(
+                    FontAwesomeIcons.share,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  title: Text(
+                    'Share Document with AI',
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  subtitle: Text(
+                    'Share the document link for AI to analyze',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _shareDocumentWithAI();
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.link, color: theme.colorScheme.secondary),
+                  title: Text(
+                    'Copy Document Link',
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  subtitle: Text(
+                    'Copy the document URL to share',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _copyDocumentLink();
+                  },
+                ),
+              ],
               const SizedBox(height: 12),
             ],
           ),
@@ -438,10 +493,10 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
       if (!mounted) return;
 
-      Provider.of<NavigationProvider>(context, listen: false).navigateToChat(
+      // Open embedded chat panel with the image
+      _openEmbeddedChat(
         image: xFile,
-        message: "Help me understand this section.",
-        context: context,
+        message: "Help me understand this section from '${widget.title}'.",
       );
     } catch (e) {
       debugPrint("AI Send Error: $e");
@@ -456,23 +511,76 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
-  void _openAiTutorDialog() {
-    showDialog(
-      context: context,
-      useSafeArea: false,
-      builder: (ctx) => Dialog.fullscreen(
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('AI Tutor'),
-            leading: IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.of(ctx).pop(),
-            ),
-          ),
-          body: const ChatScreen(),
-        ),
-      ),
+  /// Opens embedded chat panel with optional image and message
+  void _openEmbeddedChat({XFile? image, String? message}) {
+    setState(() {
+      _pendingChatImage = image;
+      _pendingChatMessage = message;
+      _chatPanelState = _ChatPanelState.expanded;
+    });
+    // Give feedback
+    HapticFeedback.mediumImpact();
+  }
+
+  /// Minimizes the chat panel
+  void _minimizeChatPanel() {
+    setState(() {
+      _chatPanelState = _ChatPanelState.minimized;
+    });
+  }
+
+  /// Expands the chat panel from minimized state
+  void _expandChatPanel() {
+    setState(() {
+      _chatPanelState = _ChatPanelState.expanded;
+    });
+  }
+
+  /// Closes the chat panel completely
+  void _closeChatPanel() {
+    setState(() {
+      _chatPanelState = _ChatPanelState.closed;
+      _pendingChatImage = null;
+      _pendingChatMessage = null;
+    });
+  }
+
+  /// Share document link with AI Tutor
+  void _shareDocumentWithAI() {
+    final url = _documentUrl;
+    if (url == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Document link not available')),
+      );
+      return;
+    }
+
+    _openEmbeddedChat(
+      message:
+          "I'm reading '${widget.title}'. Here's the document link:\n$url\n\nCan you help me understand this document?",
     );
+  }
+
+  /// Copy document link to clipboard
+  void _copyDocumentLink() {
+    final url = _documentUrl;
+    if (url == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Document link not available')),
+      );
+      return;
+    }
+
+    Clipboard.setData(ClipboardData(text: url));
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Document link copied to clipboard!')),
+    );
+  }
+
+  void _openAiTutorDialog() {
+    // Opens embedded chat panel for general questions
+    _openEmbeddedChat();
   }
 
   /// --- 6. UI BUILD ---
@@ -491,6 +599,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             fontWeight: FontWeight.w600,
             color: colorScheme.onSurface,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
@@ -520,26 +629,142 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             ),
           ],
 
-          // Download
-          if (_pdfBytes != null)
-            IconButton(
-              icon: const Icon(Icons.download_rounded),
-              tooltip: 'Download PDF',
-              onPressed: _downloadFile,
-            ),
-
-          // Crop/AI
+          // More options menu
           if (!_isLoading && _pdfBytes != null)
-            IconButton(
-              icon: const Icon(Icons.crop),
-              tooltip: 'Capture & Ask AI',
-              onPressed: _captureAndAction,
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              tooltip: 'More options',
+              onSelected: (value) {
+                switch (value) {
+                  case 'download':
+                    _downloadFile();
+                    break;
+                  case 'capture':
+                    _captureAndAction();
+                    break;
+                  case 'share_ai':
+                    _shareDocumentWithAI();
+                    break;
+                  case 'copy_link':
+                    _copyDocumentLink();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'download',
+                  child: ListTile(
+                    leading: Icon(Icons.download_rounded),
+                    title: Text('Download PDF'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'capture',
+                  child: ListTile(
+                    leading: Icon(Icons.crop),
+                    title: Text('Capture & Ask AI'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                if (_documentUrl != null) ...[
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'share_ai',
+                    child: ListTile(
+                      leading: FaIcon(
+                        FontAwesomeIcons.share,
+                        color: colorScheme.primary,
+                      ),
+                      title: const Text('Share with AI Tutor'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'copy_link',
+                    child: ListTile(
+                      leading: Icon(Icons.link),
+                      title: Text('Copy Document Link'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ],
             ),
         ],
       ),
-      body: _buildBody(theme),
-      // Themed Floating Action Button
-      floatingActionButton: !_isLoading && _pdfBytes != null
+      body: Stack(
+        children: [
+          // PDF Viewer Body
+          _buildBody(theme),
+
+          // Embedded Chat Panel
+          if (_chatPanelState != _ChatPanelState.closed)
+            _EmbeddedChatPanel(
+              key: _chatPanelKey,
+              panelState: _chatPanelState,
+              initialImage: _pendingChatImage,
+              initialMessage: _pendingChatMessage,
+              onMinimize: _minimizeChatPanel,
+              onExpand: _expandChatPanel,
+              onClose: _closeChatPanel,
+              documentTitle: widget.title,
+            ),
+
+          // Minimized chat indicator
+          if (_chatPanelState == _ChatPanelState.minimized)
+            Positioned(
+              bottom: 80,
+              right: 16,
+              child: GestureDetector(
+                onTap: _expandChatPanel,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FaIcon(
+                        FontAwesomeIcons.wandMagicSparkles,
+                        size: 16,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'AI Chat',
+                        style: TextStyle(
+                          color: colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.expand_less,
+                        size: 20,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+      // Themed Floating Action Button - hidden when chat is expanded
+      floatingActionButton: !_isLoading &&
+              _pdfBytes != null &&
+              _chatPanelState != _ChatPanelState.expanded
           ? FloatingActionButton.extended(
               onPressed: _openAiTutorDialog,
               backgroundColor: colorScheme.primary,
@@ -652,6 +877,199 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Embedded Chat Panel Widget
+/// A resizable, minimizable chat panel that overlays the PDF viewer
+class _EmbeddedChatPanel extends StatefulWidget {
+  final _ChatPanelState panelState;
+  final XFile? initialImage;
+  final String? initialMessage;
+  final VoidCallback onMinimize;
+  final VoidCallback onExpand;
+  final VoidCallback onClose;
+  final String documentTitle;
+
+  const _EmbeddedChatPanel({
+    super.key,
+    required this.panelState,
+    this.initialImage,
+    this.initialMessage,
+    required this.onMinimize,
+    required this.onExpand,
+    required this.onClose,
+    required this.documentTitle,
+  });
+
+  @override
+  State<_EmbeddedChatPanel> createState() => _EmbeddedChatPanelState();
+}
+
+class _EmbeddedChatPanelState extends State<_EmbeddedChatPanel>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _heightAnimation;
+
+  // Panel height percentage (0.4 = 40% of screen, 0.85 = 85%)
+  double _panelHeightRatio = 0.5;
+  bool _isDragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _heightAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    );
+
+    if (widget.panelState == _ChatPanelState.expanded) {
+      _animationController.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_EmbeddedChatPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.panelState == _ChatPanelState.expanded &&
+        oldWidget.panelState != _ChatPanelState.expanded) {
+      _animationController.forward();
+    } else if (widget.panelState == _ChatPanelState.minimized &&
+        oldWidget.panelState == _ChatPanelState.expanded) {
+      _animationController.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = screenWidth > 700;
+
+    if (widget.panelState == _ChatPanelState.minimized) {
+      return const SizedBox.shrink();
+    }
+
+    return AnimatedBuilder(
+      animation: _heightAnimation,
+      builder: (context, child) {
+        final panelHeight =
+            screenHeight * _panelHeightRatio * _heightAnimation.value;
+
+        return Positioned(
+          bottom: 0,
+          left: isWideScreen ? screenWidth * 0.15 : 0,
+          right: isWideScreen ? screenWidth * 0.15 : 0,
+          height: panelHeight.clamp(0.0, screenHeight * 0.85),
+          child: Material(
+            elevation: 16,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            color: theme.scaffoldBackgroundColor,
+            child: Column(
+              children: [
+                // Drag Handle & Header
+                GestureDetector(
+                  onVerticalDragStart: (_) => _isDragging = true,
+                  onVerticalDragUpdate: (details) {
+                    if (_isDragging) {
+                      setState(() {
+                        _panelHeightRatio -= details.delta.dy / screenHeight;
+                        _panelHeightRatio = _panelHeightRatio.clamp(0.3, 0.85);
+                      });
+                    }
+                  },
+                  onVerticalDragEnd: (_) => _isDragging = false,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        // Drag handle
+                        Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: colorScheme.onSurface.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        // Header bar
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 8),
+                              FaIcon(
+                                FontAwesomeIcons.wandMagicSparkles,
+                                size: 16,
+                                color: colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'AI Tutor',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              // Minimize button
+                              IconButton(
+                                icon: const Icon(Icons.minimize),
+                                iconSize: 20,
+                                tooltip: 'Minimize',
+                                onPressed: widget.onMinimize,
+                              ),
+                              // Close button
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                iconSize: 20,
+                                tooltip: 'Close',
+                                onPressed: widget.onClose,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Chat content
+                Expanded(
+                  child: ClipRRect(
+                    child: ChatScreen(
+                      initialImage: widget.initialImage,
+                      initialMessage: widget.initialMessage,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

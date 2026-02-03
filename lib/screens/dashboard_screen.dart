@@ -5,7 +5,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
 import '../tutor_client/chat_screen.dart';
-import '../utils/image_cache_manager.dart';
 import 'student/resources_screen.dart';
 import 'tools/tools_screen.dart';
 import 'support/support_screen.dart';
@@ -71,7 +70,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     backgroundImage: user?.photoURL != null
                         ? CachedNetworkImageProvider(
                             user!.photoURL!,
-                            cacheManager: ProfileImageCacheManager(),
                           )
                         : null,
                     child: user?.photoURL == null

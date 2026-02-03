@@ -18,6 +18,7 @@ import 'router.dart' as app_router;
 import 'screens/home_screen.dart';
 import 'screens/landing_page.dart';
 import 'screens/subscription/subscription_screen.dart';
+import 'screens/auth/verify_email_screen.dart';
 
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
@@ -33,7 +34,8 @@ void main() async {
   // Enable clean URLs for web (removes # from URLs)
   usePathUrlStrategy();
   debugPrint(
-      '[TOPSCORE] 2. WidgetsFlutterBinding initialized & URL strategy set');
+    '[TOPSCORE] 2. WidgetsFlutterBinding initialized & URL strategy set',
+  );
 
   // Load environment variables with error handling
   try {
@@ -104,8 +106,8 @@ void main() async {
 }
 
 Future<void> setupInteractedMessage() async {
-  RemoteMessage? initialMessage =
-      await FirebaseMessaging.instance.getInitialMessage();
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance
+      .getInitialMessage();
   if (initialMessage != null) {
     _handleMessage(initialMessage);
   }
@@ -195,13 +197,17 @@ class _MyAppState extends State<MyApp> {
       providers: [
         ChangeNotifierProvider<AuthProvider>.value(value: _authProvider),
         ChangeNotifierProvider<ResourceProvider>.value(
-            value: _resourceProvider),
+          value: _resourceProvider,
+        ),
         ChangeNotifierProvider<DownloadProvider>.value(
-            value: _downloadProvider),
+          value: _downloadProvider,
+        ),
         ChangeNotifierProvider<SettingsProvider>.value(
-            value: _settingsProvider),
+          value: _settingsProvider,
+        ),
         ChangeNotifierProvider<NavigationProvider>.value(
-            value: _navigationProvider),
+          value: _navigationProvider,
+        ),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
@@ -258,6 +264,11 @@ class AuthWrapper extends StatelessWidget {
 
     if (authProvider.userModel == null) {
       return const LandingPage();
+    }
+
+    // Enforce email verification (exclude anonymous/guests)
+    if (!authProvider.isGuest && !authProvider.isEmailVerified) {
+      return const VerifyEmailScreen();
     }
 
     // Always route to student home screen - teacher and parent screens disabled
