@@ -191,9 +191,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
             // Limit button size for wide screens
             final maxButtonWidth = (availableWidth / 5) - 8;
-            final finalButtonHeight = buttonHeight > maxButtonWidth
-                ? maxButtonWidth
-                : buttonHeight;
+            final finalButtonHeight =
+                buttonHeight > maxButtonWidth ? maxButtonWidth : buttonHeight;
 
             // Responsive font sizes for display
             final expressionFontSize = (displayHeight * 0.2).clamp(18.0, 32.0);

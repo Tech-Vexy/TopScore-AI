@@ -44,9 +44,8 @@ class OfflineService {
     if (!_isInitialized) return;
 
     try {
-      final List<Map<String, dynamic>> serialized = resources
-          .map((r) => r.toMap())
-          .toList();
+      final List<Map<String, dynamic>> serialized =
+          resources.map((r) => r.toMap()).toList();
       await _resourceBox.put(path, serialized);
     } catch (e) {
       debugPrint("❌ Error caching resources for path $path: $e");

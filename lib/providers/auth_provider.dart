@@ -99,10 +99,8 @@ class AuthProvider with ChangeNotifier {
       if (user != null) {
         await user.reload();
         user = _auth.currentUser;
-        DocumentSnapshot doc = await _firestore
-            .collection('users')
-            .doc(user!.uid)
-            .get();
+        DocumentSnapshot doc =
+            await _firestore.collection('users').doc(user!.uid).get();
         if (doc.exists) {
           _userModel = UserModel.fromMap(
             doc.data() as Map<String, dynamic>,
@@ -201,10 +199,8 @@ class AuthProvider with ChangeNotifier {
 
       if (user != null) {
         // ... (Existing logic for fetching/creating user doc) ...
-        DocumentSnapshot doc = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .get();
+        DocumentSnapshot doc =
+            await _firestore.collection('users').doc(user.uid).get();
 
         if (doc.exists) {
           _userModel = UserModel.fromMap(
@@ -354,10 +350,8 @@ class AuthProvider with ChangeNotifier {
         // Reload user to get latest verification status
         await user.reload();
 
-        DocumentSnapshot doc = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .get();
+        DocumentSnapshot doc =
+            await _firestore.collection('users').doc(user.uid).get();
         if (doc.exists) {
           _userModel = UserModel.fromMap(
             doc.data() as Map<String, dynamic>,
@@ -548,10 +542,8 @@ class AuthProvider with ChangeNotifier {
     User? user = _auth.currentUser;
     if (user != null) {
       await user.reload();
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      DocumentSnapshot doc =
+          await _firestore.collection('users').doc(user.uid).get();
       if (doc.exists) {
         _userModel = UserModel.fromMap(
           doc.data() as Map<String, dynamic>,

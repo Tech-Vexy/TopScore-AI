@@ -382,8 +382,7 @@ class _GroupMeetingScreenState extends State<GroupMeetingScreen>
                           child: CircularProgressIndicator(color: Colors.white),
                         );
                       }
-                      final participantsMap =
-                          snapshot.data!['participants']
+                      final participantsMap = snapshot.data!['participants']
                               as Map<dynamic, dynamic>? ??
                           {};
                       final participants = participantsMap.values.toList();
@@ -687,9 +686,8 @@ class _GroupMeetingScreenState extends State<GroupMeetingScreen>
                     final msg = messages[index];
                     final isMe = msg['senderId'] == user?.uid;
                     return Align(
-                      alignment: isMe
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
+                      alignment:
+                          isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),

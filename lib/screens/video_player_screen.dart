@@ -111,16 +111,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       if (response.statusCode == 200) {
         final tempDir = await getTemporaryDirectory();
         final safeTitle = widget.title.replaceAll(RegExp(r'[^\w\s\.]'), '_');
-        final fileName = safeTitle.endsWith('.mp4')
-            ? safeTitle
-            : '$safeTitle.mp4';
+        final fileName =
+            safeTitle.endsWith('.mp4') ? safeTitle : '$safeTitle.mp4';
         final file = File('${tempDir.path}/$fileName');
 
         await file.writeAsBytes(response.bodyBytes);
 
         if (mounted) {
           await SharePlus.instance.share(
-            ShareParams(files: [XFile(file.path)], text: 'Sharing ${widget.title}'),
+            ShareParams(
+                files: [XFile(file.path)], text: 'Sharing ${widget.title}'),
           );
         }
       }
@@ -164,8 +164,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           child: _isLoading
               ? const CircularProgressIndicator(color: Color(0xFF6C63FF))
               : _errorMessage != null
-              ? Text(_errorMessage!, style: const TextStyle(color: Colors.red))
-              : Chewie(controller: _chewieController!),
+                  ? Text(_errorMessage!,
+                      style: const TextStyle(color: Colors.red))
+                  : Chewie(controller: _chewieController!),
         ),
       ),
     );

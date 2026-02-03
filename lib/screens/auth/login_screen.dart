@@ -8,7 +8,6 @@ import '../../constants/strings.dart';
 
 // import '../../utils/recaptcha/recaptcha_util.dart'; // Handled by Firebase
 
-
 class LoginScreen extends StatefulWidget {
   final VoidCallback onToggle;
   const LoginScreen({super.key, required this.onToggle});
@@ -34,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       try {
         // reCAPTCHA is now handled by Firebase Auth automatically for web
-        
+
         if (!mounted) return;
 
         await Provider.of<AuthProvider>(
@@ -150,7 +149,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter an email';
                                 }
-                                final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                                final emailRegex =
+                                    RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
                                 if (!emailRegex.hasMatch(value)) {
                                   return 'Enter a valid email address';
                                 }
@@ -182,8 +182,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   () => _obscurePassword = !_obscurePassword,
                                 ),
                               ),
-                              validator: (value) =>
-                                  value != null && value.length >= 6
+                              validator: (value) => value != null &&
+                                      value.length >= 6
                                   ? null
                                   : "Password must be at least 6 characters",
                             ),
@@ -343,9 +343,8 @@ class _LoginScreenState extends State<LoginScreen> {
         prefixIconConstraints: const BoxConstraints(minWidth: 50),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: isDark
-            ? AppColors.surfaceVariantDark
-            : AppColors.surfaceVariant,
+        fillColor:
+            isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariant,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -490,9 +489,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 }
               },
         style: OutlinedButton.styleFrom(
-          backgroundColor: isDark
-              ? AppColors.surfaceVariantDark
-              : AppColors.surface,
+          backgroundColor:
+              isDark ? AppColors.surfaceVariantDark : AppColors.surface,
           side: BorderSide(
             color: isDark
                 ? Colors.white.withValues(alpha: 0.1)

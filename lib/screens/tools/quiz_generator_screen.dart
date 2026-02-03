@@ -668,7 +668,8 @@ class _QuizGeneratorScreenState extends State<QuizGeneratorScreen> {
                 }),
 
                 // Explanation (shown after submitting)
-                if (_showResult && (currentQuestion.explanation?.isNotEmpty ?? false))
+                if (_showResult &&
+                    (currentQuestion.explanation?.isNotEmpty ?? false))
                   Container(
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.all(16),
