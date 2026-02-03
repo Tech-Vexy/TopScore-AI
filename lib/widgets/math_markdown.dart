@@ -8,9 +8,9 @@ class LatexSyntax extends md.InlineSyntax {
   // Updated Regex to support both $ and \( \) / \[ \] delimiters
   // Matches: $$...$$ (block), $...$ (inline), \[...\] (block), \(...\) (inline)
   LatexSyntax()
-    : super(
-        r'(\$\$[\s\S]*?\$\$)|(\$[^$\n]+\$)|(\\\([\s\S]*?\\\))',
-      );
+      : super(
+          r'(\$\$[\s\S]*?\$\$)|(\$[^$\n]+\$)|(\\\([\s\S]*?\\\))',
+        );
 
   @override
   bool onMatch(md.InlineParser parser, Match match) {
