@@ -136,6 +136,8 @@ class _QuizWidgetState extends State<QuizWidget> {
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface,
           ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 3,
         ),
         const SizedBox(height: 16),
 

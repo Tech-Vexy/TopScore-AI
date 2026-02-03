@@ -9,7 +9,7 @@ class LatexSyntax extends md.InlineSyntax {
   // Matches: $$...$$ (block), $...$ (inline), \[...\] (block), \(...\) (inline)
   LatexSyntax()
     : super(
-        r'(\$\$[\s\S]*?\$\$)|(\\\[[\s\S]*?\\\])|(\$[^$\n]+\$)|(\\\([\s\S]*?\\\))',
+        r'(\$\$[\s\S]*?\$\$)|(\$[^$\n]+\$)|(\\\([\s\S]*?\\\))',
       );
 
   @override
@@ -22,10 +22,6 @@ class LatexSyntax extends md.InlineSyntax {
 
     if (matchText.startsWith(r'$$') && matchText.endsWith(r'$$')) {
       // Block: $$...$$
-      isBlock = true;
-      content = matchText.substring(2, matchText.length - 2);
-    } else if (matchText.startsWith(r'\[') && matchText.endsWith(r'\]')) {
-      // Block: \[...\]
       isBlock = true;
       content = matchText.substring(2, matchText.length - 2);
     } else if (matchText.startsWith(r'\(') && matchText.endsWith(r'\)')) {
@@ -45,6 +41,35 @@ class LatexSyntax extends md.InlineSyntax {
     el.attributes['type'] = isBlock ? 'block' : 'inline';
     parser.addNode(el);
     return true;
+  }
+}
+
+/// 1b. Block Syntax for display LaTeX \[ ... \]
+class LatexBlockSyntax extends md.BlockSyntax {
+  @override
+  RegExp get pattern => RegExp(r'^\s*\\\[');
+
+  @override
+  md.Node parse(md.BlockParser parser) {
+    var lines = <String>[];
+    parser.advance(); // consume the opening \[ line
+
+    while (!parser.isDone) {
+      var line = parser.current.content;
+      if (line.trim().endsWith(r'\]')) {
+        // Found the closing \]
+        lines.add(line.substring(0, line.lastIndexOf(r'\]')));
+        parser.advance();
+        break;
+      }
+      lines.add(line);
+      parser.advance();
+    }
+
+    final content = lines.join('\n').trim();
+    md.Element el = md.Element.text('latex', content);
+    el.attributes['type'] = 'block';
+    return el;
   }
 }
 
@@ -189,12 +214,13 @@ class TheoryElementBuilder extends MarkdownElementBuilder {
   }
 }
 
-/// 7. Pre-processor to handle HTML tags like <u>
+/// 7. Pre-processor to handle HTML tags like <u> and escaped newlines
 /// Flutter Markdown strips HTML by default. We map <u> to simple Bold or Italic.
 String cleanContent(String input) {
-  // Replace <u>text</u> with **text** (Bold) or similar.
-  // Underlines are often bad in chat apps (look like links).
+  // Replace escaped newline characters with actual newlines
+  // Handle both \\n (escaped in JSON) and \n (literal string)
   return input
+      .replaceAll('\\n', '\n') // Convert escaped newlines to actual newlines
       .replaceAll('<u>', '') // Option A: Just remove the tag (cleanest)
       .replaceAll('</u>', '');
 }

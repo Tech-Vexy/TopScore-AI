@@ -4432,6 +4432,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ), // Use cleanContent helper
                       selectable:
                           true, // Enable text selection for AI responses
+                      softLineBreak: true, // Enable proper text wrapping
                       builders: {
                         'latex': LatexElementBuilder(), // Use our new builder
                         'mermaid': MermaidElementBuilder(),
@@ -4460,6 +4461,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         [
                           ...md.ExtensionSet.gitHubFlavored.blockSyntaxes,
                           MermaidBlockSyntax(),
+                          LatexBlockSyntax(),
                         ],
                         [
                           md.EmojiSyntax(),
@@ -4635,9 +4637,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                         ),
                       ),
-                    )
+                    ),
                   // 3. FALLBACK LOADING (If absolutely nothing has arrived yet)
-                  else if (message.text.isEmpty &&
+                  if (message.text.isEmpty &&
                       (message.reasoning == null || message.reasoning!.isEmpty))
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),

@@ -163,18 +163,21 @@ class _MathStepperWidgetState extends State<MathStepperWidget> {
     return SizedBox(
       key: ValueKey<int>(_currentStep), // For animation
       width: double.infinity,
-      child: MarkdownBody(
-        data: content,
-        styleSheet: MarkdownStyleSheet(
-          p: GoogleFonts.dmSans(
-            fontSize: 18,
-            height: 1.5,
-            color: theme.colorScheme.onSurface,
-          ),
-          code: GoogleFonts.firaCode(
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            color: theme.primaryColor,
-            fontWeight: FontWeight.bold,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: MarkdownBody(
+          data: content,
+          styleSheet: MarkdownStyleSheet(
+            p: GoogleFonts.dmSans(
+              fontSize: 18,
+              height: 1.5,
+              color: theme.colorScheme.onSurface,
+            ),
+            code: GoogleFonts.firaCode(
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              color: theme.primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
@@ -204,13 +207,16 @@ class _MathStepperWidgetState extends State<MathStepperWidget> {
             ),
           ),
           const SizedBox(height: 8),
-          MarkdownBody(
-            data: widget.finalAnswer!,
-            styleSheet: MarkdownStyleSheet(
-              p: GoogleFonts.dmSans(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: MarkdownBody(
+              data: widget.finalAnswer!,
+              styleSheet: MarkdownStyleSheet(
+                p: GoogleFonts.dmSans(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
             ),
           ),

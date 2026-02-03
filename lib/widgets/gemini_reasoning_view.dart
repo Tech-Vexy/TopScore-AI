@@ -116,15 +116,18 @@ class _GeminiReasoningViewState extends State<GeminiReasoningView>
                             height: 1,
                             color: theme.dividerColor.withValues(alpha: 0.1)),
                         const SizedBox(height: 12),
-                        MarkdownBody(
-                          data: widget.content,
-                          styleSheet: MarkdownStyleSheet(
-                            p: GoogleFonts.firaCode(
-                              // Monospace for code-like feel
-                              fontSize: 12,
-                              height: 1.5,
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.7),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: MarkdownBody(
+                            data: widget.content,
+                            styleSheet: MarkdownStyleSheet(
+                              p: GoogleFonts.firaCode(
+                                // Monospace for code-like feel
+                                fontSize: 12,
+                                height: 1.5,
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.7),
+                              ),
                             ),
                           ),
                         ),
