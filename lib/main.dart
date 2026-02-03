@@ -23,6 +23,7 @@ import 'screens/auth/verify_email_screen.dart';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
 import 'services/offline_service.dart';
+import 'services/update/update_service.dart';
 import 'config/app_theme.dart'; // <--- Import the new theme file
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -159,6 +160,11 @@ class _MyAppState extends State<MyApp> {
       _authProvider.init();
       _downloadProvider.init();
       _navigationProvider.init();
+
+      // Initialize Auto-Update Service (Web Only)
+      if (kIsWeb) {
+        UpdateService().init(context);
+      }
     });
   }
 

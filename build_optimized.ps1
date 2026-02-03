@@ -11,6 +11,22 @@ flutter clean
 Write-Host "`n📥 Getting dependencies..." -ForegroundColor Yellow
 flutter pub get
 
+# Extract version from pubspec.yaml
+$pubspec = Get-Content pubspec.yaml
+$versionLine = $pubspec | Select-String "version: "
+$version = $versionLine.ToString().Split(":")[1].Trim()
+Write-Host "`n🔖 Version detected: $version" -ForegroundColor Cyan
+
+# Create version.json in web/ folder (so it's copied to build/web)
+$versionJson = @{
+    version = $version
+    build_date = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+} | ConvertTo-Json
+
+$versionFile = "web\version.json"
+$versionJson | Out-File $versionFile -Encoding utf8
+Write-Host "📄 Generated $versionFile" -ForegroundColor Cyan
+
 # Build with optimizations
 Write-Host "`n🔨 Building with optimizations..." -ForegroundColor Yellow
 Write-Host "   - Release mode (minification + tree shaking)" -ForegroundColor Gray
