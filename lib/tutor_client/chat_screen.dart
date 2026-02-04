@@ -5,7 +5,7 @@ import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// import 'package:pasteboard/pasteboard.dart'; // Removed
+import 'package:pasteboard/pasteboard.dart'; // For image paste support
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
@@ -414,10 +414,10 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     });
 
-    // Handle Enter key to send message
+    // --- KEYBOARD HANDLING (Enter & Paste) ---
     _messageFocusNode.onKeyEvent = (node, event) {
       if (event is KeyDownEvent) {
-        // Enter to Send
+        // 1. Send on Enter
         if (event.logicalKey == LogicalKeyboardKey.enter &&
             !HardwareKeyboard.instance.isShiftPressed) {
           if (_textController.text.trim().isNotEmpty) {
@@ -425,11 +425,18 @@ class _ChatScreenState extends State<ChatScreen> {
             return KeyEventResult.handled;
           }
         }
+        
+        // 2. Paste Image on Ctrl+V / Cmd+V
+        if (event.logicalKey == LogicalKeyboardKey.keyV &&
+            (HardwareKeyboard.instance.isControlPressed ||
+                HardwareKeyboard.instance.isMetaPressed)) {
+          _handleImagePaste();
+          // Return ignored so text pasting still works if no image is found
+          return KeyEventResult.ignored;
+        }
       }
       return KeyEventResult.ignored;
     };
-
-    // registerPasteHandler removed
 
     _initLiveVoice();
 
@@ -2224,9 +2231,62 @@ class _ChatScreenState extends State<ChatScreen> {
     // 15. Remove HTML tags: <tag>content</tag> or <tag/>
     cleaned = cleaned.replaceAll(RegExp(r'<[^>]+>'), '');
 
-    // 16. Clean up multiple newlines and whitespace
-    cleaned = cleaned.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-    cleaned = cleaned.replaceAll(RegExp(r'[ \t]+'), ' ');
+    // 16. Remove emojis and other unicode symbols
+    cleaned = cleaned.replaceAll(
+      RegExp(
+        r'[\u{1F600}-\u{1F64F}]|'  // Emoticons
+        r'[\u{1F300}-\u{1F5FF}]|'  // Misc Symbols and Pictographs
+        r'[\u{1F680}-\u{1F6FF}]|'  // Transport and Map
+        r'[\u{1F1E0}-\u{1F1FF}]|'  // Flags
+        r'[\u{2600}-\u{26FF}]|'    // Misc symbols
+        r'[\u{2700}-\u{27BF}]|'    // Dingbats
+        r'[\u{FE00}-\u{FE0F}]|'    // Variation Selectors
+        r'[\u{1F900}-\u{1F9FF}]|'  // Supplemental Symbols and Pictographs
+        r'[\u{1FA00}-\u{1FA6F}]|'  // Chess Symbols
+        r'[\u{1FA70}-\u{1FAFF}]|'  // Symbols and Pictographs Extended-A
+        r'[\u{231A}-\u{231B}]|'    // Watch, Hourglass
+        r'[\u{23E9}-\u{23F3}]|'    // Media control symbols
+        r'[\u{23F8}-\u{23FA}]|'    // More media controls
+        r'[\u{25AA}-\u{25AB}]|'    // Squares
+        r'[\u{25B6}]|[\u{25C0}]|'  // Play buttons
+        r'[\u{25FB}-\u{25FE}]|'    // More squares
+        r'[\u{2614}-\u{2615}]|'    // Umbrella, Hot beverage
+        r'[\u{2648}-\u{2653}]|'    // Zodiac
+        r'[\u{267F}]|[\u{2693}]|'  // Wheelchair, Anchor
+        r'[\u{26A1}]|[\u{26AA}-\u{26AB}]|'  // High voltage, circles
+        r'[\u{26BD}-\u{26BE}]|'    // Soccer, Baseball
+        r'[\u{26C4}-\u{26C5}]|'    // Snowman, Sun
+        r'[\u{26CE}]|[\u{26D4}]|'  // Ophiuchus, No entry
+        r'[\u{26EA}]|[\u{26F2}-\u{26F3}]|'  // Church, Fountain, Golf
+        r'[\u{26F5}]|[\u{26FA}]|'  // Sailboat, Tent
+        r'[\u{26FD}]|[\u{2702}]|'  // Fuel pump, Scissors
+        r'[\u{2705}]|[\u{2708}-\u{270D}]|'  // Check mark, Airplane, etc
+        r'[\u{270F}]|[\u{2712}]|'  // Pencil, Black nib
+        r'[\u{2714}]|[\u{2716}]|'  // Check marks
+        r'[\u{271D}]|[\u{2721}]|'  // Cross, Star of David
+        r'[\u{2728}]|[\u{2733}-\u{2734}]|'  // Sparkles, Eight spoked asterisk
+        r'[\u{2744}]|[\u{2747}]|'  // Snowflake, Sparkle
+        r'[\u{274C}]|[\u{274E}]|'  // Cross marks
+        r'[\u{2753}-\u{2755}]|'    // Question marks
+        r'[\u{2757}]|[\u{2763}-\u{2764}]|'  // Exclamation, Hearts
+        r'[\u{2795}-\u{2797}]|'    // Plus, Minus, Divide
+        r'[\u{27A1}]|[\u{27B0}]|'  // Arrows
+        r'[\u{27BF}]|[\u{2934}-\u{2935}]|'  // Loop, arrows
+        r'[\u{2B05}-\u{2B07}]|'    // Arrows
+        r'[\u{2B1B}-\u{2B1C}]|'    // Squares
+        r'[\u{2B50}]|[\u{2B55}]|'  // Star, Circle
+        r'[\u{3030}]|[\u{303D}]|'  // Wavy dash, Part alternation mark
+        r'[\u{3297}]|[\u{3299}]',  // Circled Ideograph
+        unicode: true,
+      ),
+      '',
+    );
+
+    // 17. Replace newlines with spaces for natural speech flow
+    cleaned = cleaned.replaceAll(RegExp(r'\n+'), ' ');
+
+    // 18. Clean up multiple spaces
+    cleaned = cleaned.replaceAll(RegExp(r'\s{2,}'), ' ');
 
     return cleaned.trim();
   }
@@ -2361,7 +2421,41 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // _handleImagePaste removed
+  /// Handle image paste - preview immediately and upload in background
+  Future<void> _handleImagePaste() async {
+    try {
+      final imageBytes = await Pasteboard.image;
+      if (imageBytes != null) {
+        final base64Image = base64Encode(imageBytes);
+        
+        setState(() {
+          _isUploading = true;
+          _pendingPreviewData = 'data:image/png;base64,$base64Image';
+          _pendingFileName = "Pasted Image.png";
+          _pendingFileType = "image/png";
+        });
+
+        // Upload to Firebase in background
+        final url = await _uploadToFirebase(
+          imageBytes,
+          'pasted_image_${DateTime.now().millisecondsSinceEpoch}.png',
+          'image/png',
+        );
+
+        if (mounted) {
+          setState(() {
+            _pendingFileUrl = url;
+            _isUploading = false;
+          });
+        }
+      }
+    } catch (e) {
+      developer.log('Paste Error: $e', name: 'ChatScreen');
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
+    }
+  }
 
   // Logic to handle "Edit and Send Back" with dialog
   void _handleUserEdit(ChatMessage message) {
@@ -5383,8 +5477,26 @@ class _ChatScreenState extends State<ChatScreen> {
                                     BuildContext context,
                                     EditableTextState editableTextState,
                                   ) {
-                                    return AdaptiveTextSelectionToolbar.editableText(
-                                      editableTextState: editableTextState,
+                                    // Get default text selection buttons (Copy, Paste, etc.)
+                                    final List<ContextMenuButtonItem> buttonItems = 
+                                        editableTextState.contextMenuButtonItems;
+                                    
+                                    // Insert "Paste Image" button at the beginning
+                                    buttonItems.insert(
+                                      0,
+                                      ContextMenuButtonItem(
+                                        label: 'Paste Image',
+                                        onPressed: () {
+                                          // Close menu and handle image paste
+                                          ContextMenuController.removeAny();
+                                          _handleImagePaste();
+                                        },
+                                      ),
+                                    );
+
+                                    return AdaptiveTextSelectionToolbar.buttonItems(
+                                      anchors: editableTextState.contextMenuAnchors,
+                                      buttonItems: buttonItems,
                                     );
                                   },
                               style: GoogleFonts.inter(

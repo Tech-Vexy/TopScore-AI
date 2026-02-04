@@ -234,44 +234,99 @@
     </div>
   </noscript>
   
-  <!-- Force fetch latest version on new deployments -->
+  <!-- Service Worker Auto-Update with Safety Brake -->
   <script>
-    // Version check for cache busting
+    // Auto-Update Service Worker Implementation
     (function() {
-      const APP_VERSION = '2026020301'; // Update this with each deployment
-      const STORED_VERSION = localStorage.getItem('topscoreai_version');
-      
-      if (STORED_VERSION && STORED_VERSION !== APP_VERSION) {
-        // New version detected - clear caches and reload
-        console.log('New version detected. Clearing caches...');
+      // 1. The "Refreshing" flag prevents double-reloads on the SAME page instance
+      let refreshing = false;
+
+      // 2. The "Safety Brake" prevents infinite loops across DIFFERENT page loads
+      function safeReload() {
+        if (refreshing) return;
+        refreshing = true;
+
+        const lastReload = sessionStorage.getItem('last_sw_reload');
+        const now = Date.now();
+
+        // If we reloaded less than 10 seconds ago, STOP.
+        if (lastReload && (now - parseInt(lastReload)) < 10000) {
+          console.warn('[TopScore] ⚠️ Loop protection: Auto-reload blocked. Update will apply on next manual visit.');
+          return;
+        }
+
+        // Mark this reload time and reload
+        sessionStorage.setItem('last_sw_reload', now);
+        console.log('[TopScore] 🔄 New version found. Auto-reloading...');
         
-        // Clear service worker caches
+        // Clear caches for clean reload
         if ('caches' in window) {
           caches.keys().then(function(names) {
             names.forEach(function(name) {
               caches.delete(name);
             });
+          }).finally(function() {
+            window.location.reload();
           });
+        } else {
+          window.location.reload();
         }
-        
-        // Unregister service workers
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            registrations.forEach(function(registration) {
-              registration.unregister();
-            });
+      }
+
+      // 3. Listen for the Service Worker taking control (The Trigger)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('controllerchange', safeReload);
+
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/flutter_service_worker.js').then(function(reg) {
+            console.log('[TopScore] Service Worker registered:', reg.scope);
+            
+            // Case A: A waiting worker exists (e.g., from a previous partial load)
+            if (reg.waiting) {
+              console.log('[TopScore] Service Worker already waiting - activating immediately');
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              return;
+            }
+
+            // Check for updates periodically (every 60 seconds)
+            setInterval(function() {
+              reg.update();
+            }, 60000);
+
+            // Case B: A new update is found
+            reg.onupdatefound = function() {
+              const installingWorker = reg.installing;
+              installingWorker.onstatechange = function() {
+                if (installingWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    // New update installed! IMMEDIATELY activate it (Auto-Update)
+                    console.log('[TopScore] ✨ New version detected - auto-updating...');
+                    installingWorker.postMessage({ type: 'SKIP_WAITING' });
+                  } else {
+                    console.log('[TopScore] Content is cached for offline use.');
+                  }
+                }
+              };
+            };
+          }).catch(function(err) {
+            console.log('[TopScore] Service Worker registration failed:', err);
           });
-        }
-        
-        // Store new version and reload
+        });
+      }
+      
+      // Fallback: Version check for non-service-worker scenarios
+      const APP_VERSION = '2026020401'; // Update this with each deployment
+      const STORED_VERSION = localStorage.getItem('topscoreai_version');
+      
+      if (STORED_VERSION && STORED_VERSION !== APP_VERSION) {
+        console.log('[TopScore] New version detected via version check:', APP_VERSION);
         localStorage.setItem('topscoreai_version', APP_VERSION);
         
-        // Force hard reload after a brief delay
-        setTimeout(function() {
-          window.location.reload(true);
-        }, 100);
+        // Auto-reload for non-service-worker browsers
+        if (!('serviceWorker' in navigator)) {
+          safeReload();
+        }
       } else if (!STORED_VERSION) {
-        // First visit - store version
         localStorage.setItem('topscoreai_version', APP_VERSION);
       }
     })();

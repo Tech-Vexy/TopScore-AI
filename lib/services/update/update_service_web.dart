@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:web/web.dart' as web;
 import 'update_service.dart';
 
 UpdateService getUpdateService() => UpdateServiceWeb();
@@ -13,12 +12,13 @@ class UpdateServiceWeb implements UpdateService {
   String? _currentVersion;
   bool _isUpdateAvailable = false;
 
-  // Poll every 15 minutes
-  static const Duration _pollInterval = Duration(minutes: 15);
+  // Poll every 5 minutes (service worker handles auto-updates at 60 seconds)
+  static const Duration _pollInterval = Duration(minutes: 5);
 
   @override
   void init(BuildContext context) {
-    debugPrint('[UpdateService] Initializing auto-update check (Web)...');
+    debugPrint('[UpdateService] Initializing version monitoring (Web)...');
+    debugPrint('[UpdateService] Auto-updates handled by Service Worker');
     _checkVersion(context); // Check immediately on startup
 
     _timer = Timer.periodic(_pollInterval, (_) {
@@ -28,6 +28,11 @@ class UpdateServiceWeb implements UpdateService {
 
   Future<void> _checkVersion(BuildContext context) async {
     try {
+      // Don't check if update already detected
+      if (_isUpdateAvailable) {
+        return;
+      }
+
       // 1. Get current running version
       if (_currentVersion == null) {
         final packageInfo = await PackageInfo.fromPlatform();
@@ -48,9 +53,9 @@ class UpdateServiceWeb implements UpdateService {
 
         if (_isNewerVersion(latestVersion, _currentVersion!)) {
           debugPrint('[UpdateService] New version available: $latestVersion');
-          if (!_isUpdateAvailable && context.mounted) {
+          debugPrint('[UpdateService] Service Worker will auto-update within 60 seconds');
+          if (!_isUpdateAvailable) {
             _isUpdateAvailable = true;
-            _showUpdatePrompt(context);
           }
         } else {
           debugPrint('[UpdateService] Client is up to date.');
@@ -63,26 +68,6 @@ class UpdateServiceWeb implements UpdateService {
 
   bool _isNewerVersion(String latest, String current) {
     return latest != current;
-  }
-
-  void _showUpdatePrompt(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'A new version of TopScore AI is available!',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.indigo,
-        duration: const Duration(days: 1), // Persistent
-        action: SnackBarAction(
-          label: 'Reload',
-          textColor: Colors.amber,
-          onPressed: () {
-            web.window.location.reload();
-          },
-        ),
-      ),
-    );
   }
 
   void dispose() {

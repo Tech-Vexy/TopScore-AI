@@ -170,6 +170,28 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     }
   }
 
+  // --- RESYNC: Refresh the file list ---
+  Future<void> _resyncFiles() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _files.clear();
+      _lastDocument = null;
+      _hasMore = true;
+    });
+
+    await _fetchFiles();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Files synced successfully!"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -188,6 +210,18 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
         actions: [
+          // Sync button - always visible for manual refresh
+          IconButton(
+            icon: _isLoading 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.sync),
+            tooltip: "Sync Files",
+            onPressed: _isLoading ? null : _resyncFiles,
+          ),
           // Conditionally hide migration button
           if (_showMigrationButton)
             IconButton(

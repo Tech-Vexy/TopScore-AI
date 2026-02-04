@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:universal_io/io.dart';
 import 'dart:ui' as ui;
+import 'dart:js_interop'; // For web type conversions
 
-import 'package:clipboard/clipboard.dart';
 import 'package:croppy/croppy.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
@@ -12,23 +12,27 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart'; // Provides XFile
+import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:clipboard/clipboard.dart'; // for text
+import 'package:pasteboard/pasteboard.dart'; // for image on mobile
 
 import 'package:provider/provider.dart';
 import '../providers/navigation_provider.dart';
 import '../tutor_client/chat_screen.dart';
 
-/// Enum for embedded chat panel state
+// NEW: Modern web interop
+import 'package:web/web.dart' as web;
+
 enum _ChatPanelState { closed, minimized, expanded }
 
 class PdfViewerScreen extends StatefulWidget {
-  final String? storagePath; // Firebase path OR full URL
-  final String? url; // Web URL
-  final String? assetPath; // Local Asset
-  final Uint8List? bytes; // Raw Data
-  final File? file; // Local File
+  final String? storagePath;
+  final String? url;
+  final String? assetPath;
+  final Uint8List? bytes;
+  final File? file;
   final String title;
 
   const PdfViewerScreen({
@@ -54,7 +58,7 @@ class PdfViewerScreen extends StatefulWidget {
 
 class _PdfViewerScreenState extends State<PdfViewerScreen> {
   final PdfViewerController _pdfViewerController = PdfViewerController();
-  final GlobalKey _pdfRepaintKey = GlobalKey(); // Key for screenshot capture
+  final GlobalKey _pdfRepaintKey = GlobalKey();
   final GlobalKey<_EmbeddedChatPanelState> _chatPanelKey = GlobalKey();
 
   Uint8List? _pdfBytes;
@@ -63,12 +67,10 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   bool _isSubscriptionError = false;
   OverlayEntry? _overlayEntry;
 
-  // Embedded chat panel state
   _ChatPanelState _chatPanelState = _ChatPanelState.closed;
   XFile? _pendingChatImage;
   String? _pendingChatMessage;
 
-  // Store document URL for sharing
   String? _documentUrl;
 
   @override
@@ -90,20 +92,18 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
-  /// --- THEMED CONTEXT MENU ---
   void _showContextMenu(
-      BuildContext context, PdfTextSelectionChangedDetails details) {
+    BuildContext context,
+    PdfTextSelectionChangedDetails details,
+  ) {
     _checkAndCloseContextMenu();
 
     final OverlayState overlayState = Overlay.of(context);
     if (details.globalSelectedRegion == null) return;
 
-    // Theme Data extraction
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Use "Inverse Surface" for high contrast against the PDF (usually white)
-    // In Light Mode: Dark Gray background. In Dark Mode: Light Gray background.
     final backgroundColor = colorScheme.inverseSurface;
     final contentColor = colorScheme.onInverseSurface;
 
@@ -126,7 +126,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                   blurRadius: 8,
                   color: Colors.black.withValues(alpha: 0.2),
                   offset: const Offset(0, 2),
-                )
+                ),
               ],
             ),
             child: Row(
@@ -136,16 +136,17 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                   onPressed: () {
                     final selectedText = details.selectedText;
                     if (selectedText != null) {
-                      Clipboard.setData(ClipboardData(text: selectedText));
+                      FlutterClipboard.copy(selectedText);
                       _checkAndCloseContextMenu();
                       _pdfViewerController.clearSelection();
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              'Copied to clipboard',
+                              'Text copied to clipboard',
                               style: TextStyle(
-                                  color: colorScheme.onInverseSurface),
+                                color: colorScheme.onInverseSurface,
+                              ),
                             ),
                             backgroundColor: colorScheme.inverseSurface,
                           ),
@@ -159,13 +160,11 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                     style: TextStyle(color: contentColor, fontSize: 14),
                   ),
                 ),
-                // Separation Divider
                 Container(
                   width: 1,
                   height: 20,
                   color: contentColor.withValues(alpha: 0.3),
                 ),
-                // "Explain" Button
                 TextButton.icon(
                   onPressed: () {
                     final selectedText = details.selectedText;
@@ -173,17 +172,20 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                       _checkAndCloseContextMenu();
                       _pdfViewerController.clearSelection();
 
-                      // Navigate to AI Chat
-                      Provider.of<NavigationProvider>(context, listen: false)
-                          .navigateToChat(
-                        message:
-                            "Please explain this text:\n\n\"$selectedText\"",
+                      Provider.of<NavigationProvider>(
+                        context,
+                        listen: false,
+                      ).navigateToChat(
+                        message: "Please explain this text:\n\n\"$selectedText\"",
                         context: context,
                       );
                     }
                   },
-                  icon: FaIcon(FontAwesomeIcons.wandMagicSparkles,
-                      color: contentColor, size: 14),
+                  icon: FaIcon(
+                    FontAwesomeIcons.wandMagicSparkles,
+                    color: contentColor,
+                    size: 14,
+                  ),
                   label: Text(
                     'Explain',
                     style: TextStyle(color: contentColor, fontSize: 14),
@@ -198,7 +200,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     overlayState.insert(_overlayEntry!);
   }
 
-  /// --- 1. LOADING LOGIC ---
   Future<void> _loadPdfData() async {
     try {
       Uint8List? loadedBytes;
@@ -214,7 +215,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           loadedBytes = await _downloadFromUrl(widget.storagePath!);
         } else {
           try {
-            // Get download URL for sharing
             _documentUrl = await FirebaseStorage.instance
                 .ref(widget.storagePath!)
                 .getDownloadURL();
@@ -270,42 +270,85 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
-  /// --- 2. DOWNLOAD FILE FEATURE ---
   Future<void> _downloadFile() async {
     if (_pdfBytes == null) return;
 
     try {
-      if (kIsWeb) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Download not supported on Web yet')),
-        );
-        return;
-      }
-
-      final tempDir = await getTemporaryDirectory();
       final safeTitle = widget.title.replaceAll(RegExp(r'[^\w\s\.]'), '_');
-      final fileName =
-          safeTitle.endsWith('.pdf') ? safeTitle : '$safeTitle.pdf';
-      final file = File('${tempDir.path}/$fileName');
+      final fileName = safeTitle.endsWith('.pdf') ? safeTitle : '$safeTitle.pdf';
 
-      await file.writeAsBytes(_pdfBytes!);
-
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          text: 'Sharing $fileName',
-        ),
-      );
+      if (kIsWeb) {
+        final blob = web.Blob(
+          [_pdfBytes!.toJS].toJS,
+          web.BlobPropertyBag(type: 'application/pdf'),
+        );
+        final url = web.URL.createObjectURL(blob);
+        final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
+        anchor.href = url;
+        anchor.download = fileName;
+        web.document.body?.append(anchor);
+        anchor.click();
+        anchor.remove();
+        web.URL.revokeObjectURL(url);
+      } else {
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/$fileName');
+        await file.writeAsBytes(_pdfBytes!);
+        await SharePlus.instance.share(
+          ShareParams(files: [XFile(file.path)], text: 'Sharing $fileName'),
+        );
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Download failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e')),
+        );
       }
     }
   }
 
-  /// --- 3. CAPTURE & ACTIONS ---
+  Future<void> _copyImageToClipboard(Uint8List imageBytes) async {
+    try {
+      if (kIsWeb) {
+        final blob = web.Blob(
+          [imageBytes.toJS].toJS,
+          web.BlobPropertyBag(type: 'image/png'),
+        );
+
+        final jsMap = <String, web.Blob>{
+          'image/png': blob,
+        }.jsify() as JSObject;
+
+        final item = web.ClipboardItem(jsMap);
+        
+        await web.window.navigator.clipboard.write([item].toJS).toDart;
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Image copied to clipboard!')),
+          );
+        }
+      } else {
+        await Pasteboard.writeImage(imageBytes);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Image copied to clipboard!')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Clipboard error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not copy image: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
 
   Future<Uint8List?> _captureVisibleArea() async {
     try {
@@ -314,7 +357,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
       if (boundary == null) return null;
 
-      // Capture at device pixel ratio for clarity
       final image = await boundary.toImage(
         pixelRatio: MediaQuery.of(context).devicePixelRatio,
       );
@@ -346,14 +388,11 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     if (cropResult == null || !mounted) return;
 
     final croppedImage = cropResult.uiImage;
-    final byteData = await croppedImage.toByteData(
-      format: ui.ImageByteFormat.png,
-    );
+    final byteData = await croppedImage.toByteData(format: ui.ImageByteFormat.png);
     final croppedBytes = byteData?.buffer.asUint8List();
 
     if (croppedBytes == null || !mounted) return;
 
-    // THEMED BOTTOM SHEET
     await showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -366,7 +405,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Drag Handle
               Container(
                 margin: const EdgeInsets.only(top: 8, bottom: 8),
                 width: 40,
@@ -388,22 +426,11 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               ),
               ListTile(
                 leading: Icon(Icons.copy, color: theme.colorScheme.secondary),
-                title: Text(
-                  'Copy to Clipboard',
-                  style: theme.textTheme.bodyLarge,
-                ),
-                subtitle: Text(
-                  'Paste it into notes or other apps',
-                  style: theme.textTheme.bodySmall,
-                ),
+                title: Text('Copy to Clipboard'),
+                subtitle: Text('Paste it into notes or other apps'),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  await FlutterClipboard.copyImage(croppedBytes);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Copied to clipboard!')),
-                    );
-                  }
+                  await _copyImageToClipboard(croppedBytes);
                 },
               ),
               ListTile(
@@ -418,51 +445,12 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                subtitle: Text(
-                  'Get an explanation or solution instantly',
-                  style: theme.textTheme.bodySmall,
-                ),
+                subtitle: Text('Get an explanation or solution instantly'),
                 onTap: () async {
                   Navigator.pop(ctx);
                   _sendToAI(croppedBytes);
                 },
               ),
-              if (_documentUrl != null) ...[
-                const Divider(),
-                ListTile(
-                  leading: FaIcon(
-                    FontAwesomeIcons.share,
-                    color: theme.colorScheme.tertiary,
-                  ),
-                  title: Text(
-                    'Share Document with AI',
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                  subtitle: Text(
-                    'Share the document link for AI to analyze',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _shareDocumentWithAI();
-                  },
-                ),
-                ListTile(
-                  leading: Icon(Icons.link, color: theme.colorScheme.secondary),
-                  title: Text(
-                    'Copy Document Link',
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                  subtitle: Text(
-                    'Copy the document URL to share',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _copyDocumentLink();
-                  },
-                ),
-              ],
               const SizedBox(height: 12),
             ],
           ),
@@ -471,7 +459,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     );
   }
 
-  /// --- 4. AI SENDING LOGIC ---
   Future<void> _sendToAI(Uint8List imageBytes) async {
     try {
       XFile xFile;
@@ -493,7 +480,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
       if (!mounted) return;
 
-      // Open embedded chat panel with the image
       _openEmbeddedChat(
         image: xFile,
         message: "Help me understand this section from '${widget.title}'.",
@@ -511,32 +497,27 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
-  /// Opens embedded chat panel with optional image and message
   void _openEmbeddedChat({XFile? image, String? message}) {
     setState(() {
       _pendingChatImage = image;
       _pendingChatMessage = message;
       _chatPanelState = _ChatPanelState.expanded;
     });
-    // Give feedback
     HapticFeedback.mediumImpact();
   }
 
-  /// Minimizes the chat panel
   void _minimizeChatPanel() {
     setState(() {
       _chatPanelState = _ChatPanelState.minimized;
     });
   }
 
-  /// Expands the chat panel from minimized state
   void _expandChatPanel() {
     setState(() {
       _chatPanelState = _ChatPanelState.expanded;
     });
   }
 
-  /// Closes the chat panel completely
   void _closeChatPanel() {
     setState(() {
       _chatPanelState = _ChatPanelState.closed;
@@ -545,7 +526,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     });
   }
 
-  /// Share document link with AI Tutor
   void _shareDocumentWithAI() {
     final url = _documentUrl;
     if (url == null) {
@@ -561,7 +541,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     );
   }
 
-  /// Copy document link to clipboard
   void _copyDocumentLink() {
     final url = _documentUrl;
     if (url == null) {
@@ -579,11 +558,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   }
 
   void _openAiTutorDialog() {
-    // Opens embedded chat panel for general questions
     _openEmbeddedChat();
   }
-
-  /// --- 6. UI BUILD ---
 
   @override
   Widget build(BuildContext context) {
@@ -605,16 +581,13 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: colorScheme.onSurface),
         actions: [
-          // Zoom Controls
           if (!_isLoading && _pdfBytes != null) ...[
             IconButton(
               icon: const Icon(Icons.zoom_out),
               tooltip: 'Zoom Out',
               onPressed: () {
                 final newZoom = _pdfViewerController.zoomLevel - 0.25;
-                if (newZoom >= 1.0) {
-                  _pdfViewerController.zoomLevel = newZoom;
-                }
+                if (newZoom >= 1.0) _pdfViewerController.zoomLevel = newZoom;
               },
             ),
             IconButton(
@@ -622,14 +595,10 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               tooltip: 'Zoom In',
               onPressed: () {
                 final newZoom = _pdfViewerController.zoomLevel + 0.25;
-                if (newZoom <= 50.0) {
-                  _pdfViewerController.zoomLevel = newZoom;
-                }
+                if (newZoom <= 50.0) _pdfViewerController.zoomLevel = newZoom;
               },
             ),
           ],
-
-          // More options menu
           if (!_isLoading && _pdfBytes != null)
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
@@ -680,7 +649,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'copy_link',
                     child: ListTile(
                       leading: Icon(Icons.link),
@@ -695,10 +664,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       ),
       body: Stack(
         children: [
-          // PDF Viewer Body
           _buildBody(theme),
-
-          // Embedded Chat Panel
           if (_chatPanelState != _ChatPanelState.closed)
             _EmbeddedChatPanel(
               key: _chatPanelKey,
@@ -710,8 +676,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               onClose: _closeChatPanel,
               documentTitle: widget.title,
             ),
-
-          // Minimized chat indicator
           if (_chatPanelState == _ChatPanelState.minimized)
             Positioned(
               bottom: 80,
@@ -761,7 +725,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             ),
         ],
       ),
-      // Themed Floating Action Button - hidden when chat is expanded
       floatingActionButton: !_isLoading &&
               _pdfBytes != null &&
               _chatPanelState != _ChatPanelState.expanded
@@ -769,10 +732,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               onPressed: _openAiTutorDialog,
               backgroundColor: colorScheme.primary,
               foregroundColor: colorScheme.onPrimary,
-              icon: const FaIcon(
-                FontAwesomeIcons.wandMagicSparkles,
-                size: 20,
-              ),
+              icon: const FaIcon(FontAwesomeIcons.wandMagicSparkles, size: 20),
               label: const Text(
                 'Ask AI',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -786,9 +746,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     final colorScheme = theme.colorScheme;
 
     if (_isLoading) {
-      return Center(
-        child: CircularProgressIndicator(color: colorScheme.primary),
-      );
+      return Center(child: CircularProgressIndicator(color: colorScheme.primary));
     }
 
     if (_isSubscriptionError) {
@@ -808,8 +766,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             const SizedBox(height: 8),
             Text(
               "Please subscribe to access this document.",
-              style: TextStyle(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7)),
+              style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7)),
             ),
           ],
         ),
@@ -846,12 +803,10 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
     if (_pdfBytes == null) {
       return Center(
-        child:
-            Text("No PDF Data", style: TextStyle(color: colorScheme.onSurface)),
+        child: Text("No PDF Data", style: TextStyle(color: colorScheme.onSurface)),
       );
     }
 
-    // --- PDF VIEWER ---
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 850),
@@ -864,10 +819,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             canShowScrollStatus: true,
             enableDoubleTapZooming: true,
             enableTextSelection: true,
-            // Styling the PDF background to match app scaffold might break readability
-            // of standard white-page PDFs, so we usually keep the viewer default (gray/white).
-            // However, we can style the Scroll Status:
-            onTextSelectionChanged: (PdfTextSelectionChangedDetails details) {
+            onTextSelectionChanged: (details) {
               if (details.selectedText == null && _overlayEntry != null) {
                 _checkAndCloseContextMenu();
               } else if (details.selectedText != null) {
@@ -881,8 +833,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   }
 }
 
-/// Embedded Chat Panel Widget
-/// A resizable, minimizable chat panel that overlays the PDF viewer
 class _EmbeddedChatPanel extends StatefulWidget {
   final _ChatPanelState panelState;
   final XFile? initialImage;
@@ -911,8 +861,6 @@ class _EmbeddedChatPanelState extends State<_EmbeddedChatPanel>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _heightAnimation;
-
-  // Panel height percentage (0.4 = 40% of screen, 0.85 = 85%)
   double _panelHeightRatio = 0.5;
   bool _isDragging = false;
 
@@ -934,7 +882,7 @@ class _EmbeddedChatPanelState extends State<_EmbeddedChatPanel>
   }
 
   @override
-  void didUpdateWidget(_EmbeddedChatPanel oldWidget) {
+  void didUpdateWidget(covariant _EmbeddedChatPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.panelState == _ChatPanelState.expanded &&
         oldWidget.panelState != _ChatPanelState.expanded) {
@@ -980,7 +928,6 @@ class _EmbeddedChatPanelState extends State<_EmbeddedChatPanel>
             color: theme.scaffoldBackgroundColor,
             child: Column(
               children: [
-                // Drag Handle & Header
                 GestureDetector(
                   onVerticalDragStart: (_) => _isDragging = true,
                   onVerticalDragUpdate: (details) {
@@ -1001,7 +948,6 @@ class _EmbeddedChatPanelState extends State<_EmbeddedChatPanel>
                     ),
                     child: Column(
                       children: [
-                        // Drag handle
                         Container(
                           margin: const EdgeInsets.only(top: 8),
                           width: 40,
@@ -1011,7 +957,6 @@ class _EmbeddedChatPanelState extends State<_EmbeddedChatPanel>
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
-                        // Header bar
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -1035,14 +980,12 @@ class _EmbeddedChatPanelState extends State<_EmbeddedChatPanel>
                                   ),
                                 ),
                               ),
-                              // Minimize button
                               IconButton(
                                 icon: const Icon(Icons.minimize),
                                 iconSize: 20,
                                 tooltip: 'Minimize',
                                 onPressed: widget.onMinimize,
                               ),
-                              // Close button
                               IconButton(
                                 icon: const Icon(Icons.close),
                                 iconSize: 20,
@@ -1056,7 +999,6 @@ class _EmbeddedChatPanelState extends State<_EmbeddedChatPanel>
                     ),
                   ),
                 ),
-                // Chat content
                 Expanded(
                   child: ClipRRect(
                     child: ChatScreen(

@@ -165,11 +165,20 @@
         ]
       },
       {
-        "source": "**/*.@(json|xml|txt)",
+        "source": "**/*.@(xml|txt)",
         "headers": [
           {
             "key": "Cache-Control",
             "value": "public, max-age=3600"
+          }
+        ]
+      },
+      {
+        "source": "**/*.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=300"
           }
         ]
       },
