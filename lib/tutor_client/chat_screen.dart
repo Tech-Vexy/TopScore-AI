@@ -2156,32 +2156,77 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   String _cleanMarkdown(String text) {
-    // 1. Remove Images completely: ![Alt](url)
-    var cleaned = text.replaceAll(RegExp(r'!\[.*?\]\(.*?\)'), '');
+    // 1. Remove fenced code blocks completely: ```language\ncode\n```
+    var cleaned = text.replaceAll(RegExp(r'```[\s\S]*?```'), '');
 
-    // 2. Replace Links with text: [Link Text](url) -> Link Text
+    // 2. Remove Images completely: ![Alt](url)
+    cleaned = cleaned.replaceAll(RegExp(r'!\[.*?\]\(.*?\)'), '');
+
+    // 3. Replace Links with text: [Link Text](url) -> Link Text
     cleaned = cleaned.replaceAllMapped(
       RegExp(r'\[(.*?)\]\(.*?\)'),
       (m) => m[1] ?? '',
     );
 
-    // 3. Remove Headers: # Header -> Header
-    cleaned = cleaned.replaceAll(RegExp(r'^#+\s*', multiLine: true), '');
+    // 4. Remove Headers: # Header -> Header
+    cleaned = cleaned.replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '');
 
-    // 4. Remove Bold/Italic: **text** or __text__ -> text
-    cleaned = cleaned.replaceAll(RegExp(r'(\*\*|__)(.*?)\1'), r'$2');
+    // 5. Remove Bold: **text** or __text__ -> text
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'\*\*(.*?)\*\*'),
+      (m) => m[1] ?? '',
+    );
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'__(.*?)__'),
+      (m) => m[1] ?? '',
+    );
 
-    // 5. Remove Single Asterisk/Underscore: *text* or _text_ -> text
-    cleaned = cleaned.replaceAll(RegExp(r'(\*|_)(.*?)\1'), r'$2');
+    // 6. Remove Italic: *text* or _text_ -> text
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'\*(.*?)\*'),
+      (m) => m[1] ?? '',
+    );
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'_(.*?)_'),
+      (m) => m[1] ?? '',
+    );
 
-    // 6. Remove Code Backticks: `text` -> text
-    cleaned = cleaned.replaceAll('`', '');
+    // 7. Remove Strikethrough: ~~text~~ -> text
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'~~(.*?)~~'),
+      (m) => m[1] ?? '',
+    );
 
-    // 7. Remove Blockquotes: > text -> text
+    // 8. Remove inline code backticks: `text` -> text
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'`([^`]+)`'),
+      (m) => m[1] ?? '',
+    );
+
+    // 9. Remove Blockquotes: > text -> text
     cleaned = cleaned.replaceAll(RegExp(r'^>\s*', multiLine: true), '');
 
-    // 8. Remove LaTeX delimiters: $$ or $ -> (empty)
-    cleaned = cleaned.replaceAll(r'$$', '').replaceAll(r'$', '');
+    // 10. Remove horizontal rules: ---, ***, ___
+    cleaned = cleaned.replaceAll(RegExp(r'^[\-\*_]{3,}\s*$', multiLine: true), '');
+
+    // 11. Remove unordered list markers: - item, * item, + item
+    cleaned = cleaned.replaceAll(RegExp(r'^\s*[\-\*\+]\s+', multiLine: true), '');
+
+    // 12. Remove ordered list markers: 1. item, 2) item
+    cleaned = cleaned.replaceAll(RegExp(r'^\s*\d+[\.\)]\s+', multiLine: true), '');
+
+    // 13. Remove LaTeX block delimiters: $$ equation $$
+    cleaned = cleaned.replaceAll(RegExp(r'\$\$[\s\S]*?\$\$'), '');
+
+    // 14. Remove inline LaTeX: $ equation $
+    cleaned = cleaned.replaceAll(RegExp(r'\$[^\$]+\$'), '');
+
+    // 15. Remove HTML tags: <tag>content</tag> or <tag/>
+    cleaned = cleaned.replaceAll(RegExp(r'<[^>]+>'), '');
+
+    // 16. Clean up multiple newlines and whitespace
+    cleaned = cleaned.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    cleaned = cleaned.replaceAll(RegExp(r'[ \t]+'), ' ');
 
     return cleaned.trim();
   }

@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:web/web.dart' as web;
 import 'update_service.dart';
 
 UpdateService getUpdateService() => UpdateServiceWeb();
@@ -48,7 +48,7 @@ class UpdateServiceWeb implements UpdateService {
 
         if (_isNewerVersion(latestVersion, _currentVersion!)) {
           debugPrint('[UpdateService] New version available: $latestVersion');
-          if (!_isUpdateAvailable) {
+          if (!_isUpdateAvailable && context.mounted) {
             _isUpdateAvailable = true;
             _showUpdatePrompt(context);
           }
@@ -78,7 +78,7 @@ class UpdateServiceWeb implements UpdateService {
           label: 'Reload',
           textColor: Colors.amber,
           onPressed: () {
-            html.window.location.reload();
+            web.window.location.reload();
           },
         ),
       ),
