@@ -1,8 +1,13 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart'; // For kIsWeb, defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:croppy/croppy.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../tutor_client/chat_screen.dart';
 
@@ -49,8 +54,7 @@ class _SmartScannerScreenState extends State<SmartScannerScreen>
     try {
       final XFile? photo = await _picker.pickImage(
         source: source,
-        imageQuality: 85,
-        maxWidth: 1024,
+        imageQuality: 100, // Max quality for cropping
         preferredCameraDevice: CameraDevice.rear,
       );
 
@@ -61,17 +65,77 @@ class _SmartScannerScreenState extends State<SmartScannerScreen>
 
       if (!mounted) return;
 
-      // 2. Navigate
-      Navigator.pushReplacement(
+      // --- CROP LOGIC ---
+      final bytes = await photo.readAsBytes();
+      final imageProvider = MemoryImage(bytes);
+
+      if (!mounted) return;
+
+      final cropResult = await showMaterialImageCropper(
         context,
-        MaterialPageRoute(
-          builder: (context) => ChatScreen(
-            initialImage: photo, // XFile is cross-platform friendly
-            initialMessage:
-                "Analyze this image and solve the problem step-by-step.",
-          ),
-        ),
+        imageProvider: imageProvider,
       );
+
+      // If user cancelled crop, stop
+      if (cropResult == null) {
+        if (mounted) setState(() => _isProcessing = false);
+        return;
+      }
+
+      // Process cropped image
+      final ui.Image croppedImage = cropResult.uiImage;
+      final ByteData? byteData = await croppedImage.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+
+      if (byteData == null) {
+        if (mounted) setState(() => _isProcessing = false);
+        return;
+      }
+
+      final Uint8List croppedBytes = byteData.buffer.asUint8List();
+
+      if (!mounted) return;
+
+      // Save to temp file for ChatScreen
+      if (kIsWeb) {
+        // Web: Use XFile directly from bytes
+        final xfile = XFile.fromData(
+          croppedBytes,
+          mimeType: 'image/png',
+          name: 'cropped_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              initialImage: xfile,
+              initialMessage:
+                  "Analyze this cropped image and solve the problem step-by-step.",
+            ),
+          ),
+        );
+      } else {
+        // Mobile: Save to temporary file
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File(
+          '${tempDir.path}/cropped_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+        await tempFile.writeAsBytes(croppedBytes);
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              initialImageFile: tempFile,
+              initialMessage:
+                  "Analyze this cropped image and solve the problem step-by-step.",
+            ),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint("Scanner Error: $e");
       if (mounted) {

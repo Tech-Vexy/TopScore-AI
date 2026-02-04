@@ -150,24 +150,24 @@ class CachedMessage {
   });
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'thread_id': threadId,
-    'content': content,
-    'role': role,
-    'timestamp': timestamp.toIso8601String(),
-    'synced': synced,
-    'metadata': metadata,
-  };
+        'id': id,
+        'thread_id': threadId,
+        'content': content,
+        'role': role,
+        'timestamp': timestamp.toIso8601String(),
+        'synced': synced,
+        'metadata': metadata,
+      };
 
   factory CachedMessage.fromJson(Map<String, dynamic> json) => CachedMessage(
-    id: json['id'],
-    threadId: json['thread_id'],
-    content: json['content'],
-    role: json['role'],
-    timestamp: DateTime.parse(json['timestamp']),
-    synced: json['synced'] ?? false,
-    metadata: json['metadata'],
-  );
+        id: json['id'],
+        threadId: json['thread_id'],
+        content: json['content'],
+        role: json['role'],
+        timestamp: DateTime.parse(json['timestamp']),
+        synced: json['synced'] ?? false,
+        metadata: json['metadata'],
+      );
 }
 
 /// A message pending to be sent
@@ -191,34 +191,34 @@ class PendingMessage {
   });
 
   PendingMessage copyWith({int? retryCount}) => PendingMessage(
-    id: id,
-    threadId: threadId,
-    userId: userId,
-    content: content,
-    createdAt: createdAt,
-    retryCount: retryCount ?? this.retryCount,
-    extraData: extraData,
-  );
+        id: id,
+        threadId: threadId,
+        userId: userId,
+        content: content,
+        createdAt: createdAt,
+        retryCount: retryCount ?? this.retryCount,
+        extraData: extraData,
+      );
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'thread_id': threadId,
-    'user_id': userId,
-    'content': content,
-    'created_at': createdAt.toIso8601String(),
-    'retry_count': retryCount,
-    'extra_data': extraData,
-  };
+        'id': id,
+        'thread_id': threadId,
+        'user_id': userId,
+        'content': content,
+        'created_at': createdAt.toIso8601String(),
+        'retry_count': retryCount,
+        'extra_data': extraData,
+      };
 
   factory PendingMessage.fromJson(Map<String, dynamic> json) => PendingMessage(
-    id: json['id'],
-    threadId: json['thread_id'],
-    userId: json['user_id'],
-    content: json['content'],
-    createdAt: DateTime.parse(json['created_at']),
-    retryCount: json['retry_count'] ?? 0,
-    extraData: json['extra_data'],
-  );
+        id: json['id'],
+        threadId: json['thread_id'],
+        userId: json['user_id'],
+        content: json['content'],
+        createdAt: DateTime.parse(json['created_at']),
+        retryCount: json['retry_count'] ?? 0,
+        extraData: json['extra_data'],
+      );
 }
 
 /// Sync manager for offline messages
@@ -283,4 +283,98 @@ class SyncResult {
   final String? message;
 
   SyncResult({required this.synced, required this.failed, this.message});
+}
+
+/// Export messages to various formats
+class MessageExporter {
+  /// Export messages to Markdown format
+  static String exportToMarkdown(List<CachedMessage> messages,
+      {String? title}) {
+    final buffer = StringBuffer();
+
+    // Header
+    if (title != null) {
+      buffer.writeln('# $title');
+      buffer.writeln();
+    }
+    buffer.writeln('**Exported:** ${DateTime.now().toString()}');
+    buffer.writeln();
+    buffer.writeln('---');
+    buffer.writeln();
+
+    // Messages
+    for (final message in messages) {
+      final timestamp = message.timestamp.toString().substring(0, 19);
+      final role = message.role == 'user' ? '**You**' : '**AI Tutor**';
+
+      buffer.writeln('## $role ($timestamp)');
+      buffer.writeln();
+      buffer.writeln(message.content);
+      buffer.writeln();
+
+      // Add file attachments if any
+      if (message.metadata?['file_url'] != null) {
+        buffer.writeln('📎 Attachment: ${message.metadata!['file_url']}');
+        buffer.writeln();
+      }
+
+      buffer.writeln('---');
+      buffer.writeln();
+    }
+
+    return buffer.toString();
+  }
+
+  /// Export messages to plain text format
+  static String exportToText(List<CachedMessage> messages, {String? title}) {
+    final buffer = StringBuffer();
+
+    if (title != null) {
+      buffer.writeln(title);
+      buffer.writeln('=' * title.length);
+      buffer.writeln();
+    }
+
+    buffer.writeln('Exported: ${DateTime.now()}');
+    buffer.writeln();
+
+    for (final message in messages) {
+      final timestamp = message.timestamp.toString().substring(0, 19);
+      final role = message.role == 'user' ? 'You' : 'AI Tutor';
+
+      buffer.writeln('[$role - $timestamp]');
+      buffer.writeln(message.content);
+      buffer.writeln();
+    }
+
+    return buffer.toString();
+  }
+
+  /// Export messages to JSON format
+  static String exportToJson(List<CachedMessage> messages, {String? title}) {
+    final export = {
+      'title': title,
+      'exported_at': DateTime.now().toIso8601String(),
+      'message_count': messages.length,
+      'messages': messages.map((m) => m.toJson()).toList(),
+    };
+
+    return jsonEncode(export);
+  }
+
+  /// Get export statistics
+  static Map<String, dynamic> getExportStats(List<CachedMessage> messages) {
+    final userMessages = messages.where((m) => m.role == 'user').length;
+    final aiMessages = messages.where((m) => m.role == 'assistant').length;
+    final totalChars =
+        messages.fold<int>(0, (sum, m) => sum + m.content.length);
+
+    return {
+      'total_messages': messages.length,
+      'user_messages': userMessages,
+      'ai_messages': aiMessages,
+      'total_characters': totalChars,
+      'estimated_words': (totalChars / 5).round(),
+    };
+  }
 }

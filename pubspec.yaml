@@ -78,6 +78,7 @@ dependencies:
 
   # --- Media & Input ---
   record: ^6.1.2
+  flutter_image_compress: ^2.3.0
   audioplayers: ^6.0.0
   just_audio: ^0.9.36
   flutter_tts: ^4.0.2

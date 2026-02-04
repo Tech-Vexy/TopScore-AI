@@ -27,6 +27,8 @@ class AudioPlaybackQueue {
   bool get isPaused => _isPaused;
   int get queueLength => _queue.length;
   AudioQueueItem? get currentItem => _currentItem;
+  double get playbackSpeed => _playbackSpeed;
+  double get volume => _volume;
 
   void _setupPlayerListeners() {
     _player.playerStateStream.listen((state) {
@@ -153,10 +155,19 @@ class AudioPlaybackQueue {
     _emitState();
   }
 
-  /// Set playback speed
+  /// Set playback speed (0.5x to 2.0x)
   Future<void> setSpeed(double speed) async {
+    final oldSpeed = _playbackSpeed;
     _playbackSpeed = speed.clamp(0.5, 2.0);
-    await _player.setSpeed(_playbackSpeed);
+
+    if (_isPlaying) {
+      await _player.setSpeed(_playbackSpeed);
+    }
+
+    if (oldSpeed != _playbackSpeed) {
+      debugPrint('Playback speed changed: ${oldSpeed}x → ${_playbackSpeed}x');
+      _emitState();
+    }
   }
 
   /// Set volume

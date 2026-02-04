@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:intl/intl.dart';
 import 'dart:math'; // For generating Notification IDs
 
 // Import services
@@ -41,6 +42,18 @@ class _TimetableScreenState extends State<TimetableScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// Helper to parse time string "08:00 AM" to minutes since midnight
+  int _parseTime(String timeStr) {
+    try {
+      final format = DateFormat.jm(); // 12-hour format with AM/PM
+      final dt = format.parse(timeStr);
+      return dt.hour * 60 + dt.minute;
+    } catch (e) {
+      debugPrint('Time parsing error: $e');
+      return 0;
+    }
   }
 
   void _addClass(BuildContext context, String userId) {
@@ -109,9 +122,65 @@ class _TimetableScreenState extends State<TimetableScreen>
             child: const Text("Cancel"),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (subject.isNotEmpty) {
-                // Generate a unique numeric ID for the notification
+                // 1. CONFLICT CHECK
+                final startMin = _parseTime(startTime);
+                final endMin = _parseTime(endTime);
+
+                // Validate time range
+                if (endMin <= startMin) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("End time must be after start time."),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                // Fetch existing classes for that day
+                final snapshot = await FirebaseDatabase.instance
+                    .ref('users/$userId/timetable/$selectedDay')
+                    .get();
+
+                bool hasConflict = false;
+                if (snapshot.exists && snapshot.value is Map) {
+                  final classes =
+                      Map<String, dynamic>.from(snapshot.value as Map);
+                  for (final classData in classes.values) {
+                    if (classData is Map) {
+                      final data = Map<String, dynamic>.from(classData);
+                      final existingStart =
+                          _parseTime(data['startTime'] ?? '00:00 AM');
+                      final existingEnd =
+                          _parseTime(data['endTime'] ?? '00:00 AM');
+
+                      // Check overlap
+                      if (startMin < existingEnd && endMin > existingStart) {
+                        hasConflict = true;
+                        break;
+                      }
+                    }
+                  }
+                }
+
+                if (hasConflict) {
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "⚠️ Conflict! You already have a class at this time.",
+                      ),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                  return;
+                }
+
+                // 2. No conflict - proceed to save
                 int notificationId = Random().nextInt(100000);
 
                 final newClassKey = FirebaseDatabase.instance
@@ -120,19 +189,16 @@ class _TimetableScreenState extends State<TimetableScreen>
                     .key;
 
                 if (newClassKey != null) {
-                  // 1. Save to Firebase
                   FirebaseDatabase.instance
                       .ref('users/$userId/timetable/$selectedDay/$newClassKey')
                       .set({
-                        'id': newClassKey,
-                        'notificationId':
-                            notificationId, // Save ID to cancel later
-                        'subject': subject,
-                        'startTime': startTime,
-                        'endTime': endTime,
-                      });
+                    'id': newClassKey,
+                    'notificationId': notificationId,
+                    'subject': subject,
+                    'startTime': startTime,
+                    'endTime': endTime,
+                  });
 
-                  // 2. Schedule Notification
                   _notificationService.scheduleClassReminder(
                     id: notificationId,
                     title: "Upcoming: $subject",
@@ -142,6 +208,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                     timeString: startTime,
                   );
                 }
+                if (!context.mounted) return;
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -187,9 +254,8 @@ class _TimetableScreenState extends State<TimetableScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: _days
-            .map((day) => _DayView(userId: user.uid, day: day))
-            .toList(),
+        children:
+            _days.map((day) => _DayView(userId: user.uid, day: day)).toList(),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addClass(context, user.uid),
@@ -209,9 +275,8 @@ class _DayView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DatabaseEvent>(
-      stream: FirebaseDatabase.instance
-          .ref('users/$userId/timetable/$day')
-          .onValue,
+      stream:
+          FirebaseDatabase.instance.ref('users/$userId/timetable/$day').onValue,
       builder: (context, snapshot) {
         if (!snapshot.hasData || !snapshot.data!.snapshot.exists) {
           // FIXED: Use exists instead of value check

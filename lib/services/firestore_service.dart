@@ -8,9 +8,8 @@ class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<List<ResourceModel>> getResources(int grade, {String? subject}) async {
-    Query query = _firestore
-        .collection('resources')
-        .where('grade', isEqualTo: grade);
+    Query query =
+        _firestore.collection('resources').where('grade', isEqualTo: grade);
 
     if (subject != null) {
       query = query.where('subject', isEqualTo: subject);
@@ -54,10 +53,8 @@ class FirestoreService {
 
   Future<UserModel?> getUser(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(uid)
-          .get();
+      DocumentSnapshot doc =
+          await _firestore.collection('users').doc(uid).get();
       if (doc.exists) {
         return UserModel.fromMap(doc.data() as Map<String, dynamic>, uid);
       }
@@ -127,14 +124,23 @@ class FirestoreService {
         .add({...messageData, 'timestamp': FieldValue.serverTimestamp()});
   }
 
-  Future<List<Map<String, dynamic>>> getChatHistory(String userId) async {
-    final snapshot = await _firestore
+  Future<List<Map<String, dynamic>>> getChatHistory(
+    String userId, {
+    int limit = 50,
+    DocumentSnapshot? startAfter,
+  }) async {
+    var query = _firestore
         .collection('users')
         .doc(userId)
         .collection('chat_history')
-        .orderBy('timestamp', descending: false)
-        .get();
+        .orderBy('timestamp', descending: true)
+        .limit(limit);
 
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+
+    final snapshot = await query.get();
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
@@ -149,13 +155,13 @@ class FirestoreService {
         .where('userId', isEqualTo: userId)
         .snapshots()
         .map((snapshot) {
-          final tickets = snapshot.docs
-              .map((doc) => SupportTicket.fromMap(doc.data(), doc.id))
-              .toList();
-          // Sort client-side to avoid composite index requirement
-          tickets.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          return tickets;
-        });
+      final tickets = snapshot.docs
+          .map((doc) => SupportTicket.fromMap(doc.data(), doc.id))
+          .toList();
+      // Sort client-side to avoid composite index requirement
+      tickets.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return tickets;
+    });
   }
 
   // Activity Tracking

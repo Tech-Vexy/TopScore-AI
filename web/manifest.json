@@ -1,11 +1,11 @@
 {
     "name": "TopScore AI - Kenya's #1 AI Tutor",
-    "short_name": "TopScore AI",
+    "short_name": "TopScore",
     "start_url": "./?source=pwa",
     "display": "standalone",
     "background_color": "#FFFFFF",
-    "theme_color": "#4285F4",
-    "description": "Kenya's leading AI-powered learning platform for CBC and 8-4-4 students. Get instant homework help, KCSE & KCPE exam prep, AI flashcards, and smart study tools.",
+    "theme_color": "#6C63FF",
+    "description": "24/7 AI Tutor for CBC & 8-4-4. Homework help, Exams, and Smart Tools.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "lang": "en-KE",
@@ -36,6 +36,29 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "assets/screenshots/mobile_home.png",
+            "sizes": "1080x1920",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "AI Tutor Dashboard"
+        },
+        {
+            "src": "assets/screenshots/mobile_chat.png",
+            "sizes": "1080x1920",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "Chat with Past Papers"
+        },
+        {
+            "src": "assets/screenshots/desktop_dashboard.png",
+            "sizes": "1920x1080",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "Desktop Learning Environment"
         }
     ]
 }

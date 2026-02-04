@@ -22,8 +22,43 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
   DocumentSnapshot? _lastDocument;
   static const int _pageSize = 15;
 
+  // Filter State
+  String _selectedSubject = 'All';
+  final List<String> _subjects = [
+    'All',
+    'Mathematics',
+    'English',
+    'Science',
+    'Kiswahili',
+    'Chemistry',
+    'Biology',
+    'Physics',
+    'History',
+    'Geography',
+  ];
+  bool _showFavoritesOnly = false;
+
   // Admin State
   bool _showMigrationButton = false;
+
+  // Filtered display list
+  List<FirebaseFile> get _displayedFiles {
+    return _files.where((file) {
+      // Subject Filter
+      final matchesSubject = _selectedSubject == 'All' ||
+          file.path.toLowerCase().contains(_selectedSubject.toLowerCase()) ||
+          file.name.toLowerCase().contains(_selectedSubject.toLowerCase()) ||
+          (file.subject
+                  ?.toLowerCase()
+                  .contains(_selectedSubject.toLowerCase()) ??
+              false);
+
+      // Favorites Filter (placeholder - would need SharedPreferences)
+      final matchesFav = !_showFavoritesOnly; // || _favorites.contains(file.id)
+
+      return matchesSubject && matchesFav;
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -212,7 +247,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         actions: [
           // Sync button - always visible for manual refresh
           IconButton(
-            icon: _isLoading 
+            icon: _isLoading
                 ? const SizedBox(
                     width: 20,
                     height: 20,
@@ -241,26 +276,81 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
           ),
         ],
       ),
-      body: _files.isEmpty && _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _files.isEmpty
-              ? _buildEmptyState(theme)
-              : ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  // Add +1 for the loading spinner at the bottom
-                  itemCount: _files.length + (_hasMore ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _files.length) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    final file = _files[index];
-                    return _buildFileCard(file, theme);
-                  },
+      body: Column(
+        children: [
+          // Filter Bar
+          _buildFilterBar(),
+          // File List
+          Expanded(
+            child: _displayedFiles.isEmpty && _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _displayedFiles.isEmpty
+                    ? _buildEmptyState(theme)
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _displayedFiles.length + (_hasMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == _displayedFiles.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          final file = _displayedFiles[index];
+                          return _buildFileCard(file, theme);
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    final theme = Theme.of(context);
+    return Container(
+      color: theme.scaffoldBackgroundColor,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            // Favorites Toggle
+            IconButton(
+              icon: Icon(
+                _showFavoritesOnly ? Icons.favorite : Icons.favorite_border,
+              ),
+              color: _showFavoritesOnly ? Colors.red : Colors.grey,
+              tooltip: "Favorites",
+              onPressed: () =>
+                  setState(() => _showFavoritesOnly = !_showFavoritesOnly),
+            ),
+            const SizedBox(width: 8),
+            // Subject Chips
+            ..._subjects.map((subject) {
+              final isSelected = _selectedSubject == subject;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(subject),
+                  selected: isSelected,
+                  onSelected: (_) => setState(() => _selectedSubject = subject),
+                  backgroundColor: theme.cardColor,
+                  selectedColor: const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                  checkmarkColor: const Color(0xFF6C63FF),
+                  labelStyle: GoogleFonts.nunito(
+                    color: isSelected ? const Color(0xFF6C63FF) : null,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 13,
+                  ),
                 ),
+              );
+            }),
+          ],
+        ),
+      ),
     );
   }
 

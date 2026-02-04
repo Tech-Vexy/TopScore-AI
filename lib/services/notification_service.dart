@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 
 class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
@@ -13,6 +14,11 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
+  // New: Stream for navigation events
+  final StreamController<String> _navigationStream =
+      StreamController<String>.broadcast();
+  Stream<String> get navigationStream => _navigationStream.stream;
+
   Future<void> initialize() async {
     // Initialize Timezones for scheduling
     tz.initializeTimeZones();
@@ -21,21 +27,29 @@ class NotificationService {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // Fix for iOS permissions - Defer request
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-          requestAlertPermission: false,
-          requestBadgePermission: false,
-          requestSoundPermission: false,
-        );
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
 
     const InitializationSettings initializationSettings =
         InitializationSettings(
-          android: initializationSettingsAndroid,
-          iOS: initializationSettingsDarwin,
-        );
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsDarwin,
+    );
 
-    await _localNotifications.initialize(initializationSettings);
+    // Initialize with Callback
+    await _localNotifications.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        if (response.payload != null) {
+          debugPrint("Notification Tapped: ${response.payload}");
+          _navigationStream.add(response.payload!);
+        }
+      },
+    );
   }
 
   Future<void> requestPermissions() async {
@@ -45,8 +59,7 @@ class NotificationService {
     // Request Permissions for Local Notifications (iOS)
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin
-        >()
+            IOSFlutterLocalNotificationsPlugin>()
         ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
@@ -114,6 +127,7 @@ class NotificationService {
         // ignore: missing_required_param
         matchDateTimeComponents:
             DateTimeComponents.dayOfWeekAndTime, // Repeats weekly
+        payload: '/timetable', // Route to open
       );
 
       debugPrint(

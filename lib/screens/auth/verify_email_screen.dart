@@ -12,7 +12,8 @@ class VerifyEmailScreen extends StatefulWidget {
   State<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
 }
 
-class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
+class _VerifyEmailScreenState extends State<VerifyEmailScreen>
+    with WidgetsBindingObserver {
   bool isEmailVerified = false;
   bool canResendEmail = false;
   Timer? timer;
@@ -20,6 +21,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Add lifecycle observer
 
     // User should be logged in to be here
     isEmailVerified = Provider.of<AuthProvider>(
@@ -46,8 +48,17 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Remove lifecycle observer
     timer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When user comes back to app (likely from email app), check immediately
+    if (state == AppLifecycleState.resumed) {
+      checkEmailVerified();
+    }
   }
 
   Future checkEmailVerified() async {

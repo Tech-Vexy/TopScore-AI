@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _rememberMe = true;
 
   @override
   void dispose() {
@@ -190,26 +191,43 @@ class _LoginScreenState extends State<LoginScreen> {
 
                             const SizedBox(height: 12),
 
-                            // Forgot Password
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () {},
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  minimumSize: Size.zero,
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
+                            // Remember Me & Forgot Password Row
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: _rememberMe,
+                                  activeColor: AppColors.primaryPurple,
+                                  onChanged: (val) =>
+                                      setState(() => _rememberMe = val!),
                                 ),
-                                child: Text(
-                                  "Forgot Password?",
+                                Text(
+                                  "Remember Me",
                                   style: GoogleFonts.roboto(
                                     fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.accentTeal,
+                                    color: isDark
+                                        ? AppColors.textDark
+                                        : AppColors.text,
                                   ),
                                 ),
-                              ),
+                                const Spacer(),
+                                TextButton(
+                                  onPressed: () {},
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: Text(
+                                    "Forgot Password?",
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.accentTeal,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
 
                             const SizedBox(height: 28),
@@ -231,6 +249,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
                             // Google Sign In Button
                             _buildGoogleButton(context, isDark, isLoading),
+
+                            const SizedBox(height: 16),
+
+                            // Biometric Quick Login Button
+                            _buildBiometricButton(context, isDark),
                           ],
                         ),
                       ),
@@ -530,6 +553,49 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBiometricButton(BuildContext context, bool isDark) {
+    return SizedBox(
+      height: 56,
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          // Mock logic for UI demo - in production, integrate local_auth package
+          // final LocalAuthentication auth = LocalAuthentication();
+          // bool authenticated = await auth.authenticate(
+          //   localizedReason: 'Authenticate to sign in',
+          // );
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Biometric login coming soon! 🔐"),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        },
+        icon: Icon(
+          Icons.fingerprint,
+          size: 24,
+          color: isDark ? Colors.white : Colors.black,
+        ),
+        label: Text(
+          "Quick Login",
+          style: GoogleFonts.roboto(
+            fontSize: 16,
+            color: isDark ? Colors.white : Colors.black,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          side: BorderSide(
+            color: isDark ? Colors.white24 : Colors.black12,
+          ),
         ),
       ),
     );

@@ -157,12 +157,68 @@ class HomeTab extends StatefulWidget {
   State<HomeTab> createState() => _HomeTabState();
 }
 
+// --- Search Result Model for Omni-Search ---
+class SearchResult {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  SearchResult({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+}
+
 class _HomeTabState extends State<HomeTab> {
   static List<FirebaseFile>? _cachedAllFiles;
   List<FirebaseFile> _allFiles = [];
-  List<FirebaseFile> _filteredFiles = [];
+  List<SearchResult> _searchResults = [];
   bool _isLoadingFiles = true;
   bool _isSearching = false;
+
+  // Tool definitions for omni-search
+  late final List<SearchResult> _allTools = [
+    SearchResult(
+      title: "Scientific Calc",
+      subtitle: "Tool",
+      icon: Icons.calculate_rounded,
+      color: Colors.blue,
+      onTap: () => context.go('/tools'),
+    ),
+    SearchResult(
+      title: "Periodic Table",
+      subtitle: "Tool",
+      icon: Icons.grid_4x4_rounded,
+      color: Colors.pink,
+      onTap: () => context.go('/tools'),
+    ),
+    SearchResult(
+      title: "Flashcards",
+      subtitle: "Tool",
+      icon: Icons.style_rounded,
+      color: Colors.orange,
+      onTap: () => context.go('/tools'),
+    ),
+    SearchResult(
+      title: "Smart Scanner",
+      subtitle: "Tool",
+      icon: Icons.camera_alt_rounded,
+      color: Colors.green,
+      onTap: () => context.go('/tools'),
+    ),
+    SearchResult(
+      title: "Timetable",
+      subtitle: "Tool",
+      icon: Icons.schedule_rounded,
+      color: Colors.purple,
+      onTap: () => context.go('/tools'),
+    ),
+  ];
 
   final List<FeatureItem> _features = [
     FeatureItem(
@@ -200,7 +256,6 @@ class _HomeTabState extends State<HomeTab> {
       if (mounted) {
         setState(() {
           _allFiles = _cachedAllFiles!;
-          _filteredFiles = List.from(_allFiles);
           _isLoadingFiles = false;
         });
       }
@@ -213,7 +268,6 @@ class _HomeTabState extends State<HomeTab> {
       if (mounted) {
         setState(() {
           _allFiles = files;
-          _filteredFiles = files;
           _isLoadingFiles = false;
         });
       }
@@ -224,32 +278,62 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  Future<void> _filterFiles(String query) async {
+  Future<void> _performSearch(String query) async {
     if (query.trim().isEmpty) {
       setState(() {
-        _filteredFiles = List.from(_allFiles);
         _isSearching = false;
+        _searchResults = [];
       });
       return;
     }
 
     setState(() => _isSearching = true);
 
+    final lowerQuery = query.toLowerCase();
+
+    // Filter Tools
+    final toolResults = _allTools
+        .where((tool) => tool.title.toLowerCase().contains(lowerQuery))
+        .toList();
+
+    // Filter Files
     try {
       final results = await StorageService.searchFiles(query);
       if (mounted) {
+        final fileResults = results
+            .map((file) => SearchResult(
+                  title: file.name,
+                  subtitle:
+                      "File${file.subject != null ? ' · ${file.subject}' : ''}",
+                  icon: Icons.description,
+                  color: Colors.grey,
+                  onTap: () => _openFile(context, file),
+                ))
+            .toList();
+
         setState(() {
-          _filteredFiles = results;
+          _searchResults = [...toolResults, ...fileResults];
         });
       }
     } catch (e) {
-      final lowerQuery = query.toLowerCase();
       if (mounted) {
+        final fileResults = _allFiles
+            .where((file) {
+              return file.name.toLowerCase().contains(lowerQuery) ||
+                  file.path.toLowerCase().contains(lowerQuery);
+            })
+            .map((file) => SearchResult(
+                  title: file.name,
+                  subtitle:
+                      "File${file.subject != null ? ' · ${file.subject}' : ''}",
+                  icon: Icons.description,
+                  color: Colors.grey,
+                  onTap: () => _openFile(context, file),
+                ))
+            .toList();
+
         setState(() {
-          _filteredFiles = _allFiles.where((file) {
-            return file.name.toLowerCase().contains(lowerQuery) ||
-                file.path.toLowerCase().contains(lowerQuery);
-          }).toList();
+          _searchResults = [...toolResults, ...fileResults];
         });
       }
     }
@@ -327,8 +411,8 @@ class _HomeTabState extends State<HomeTab> {
         child: Column(
           children: [
             _ReusableSearchBar(
-              onSearchChanged: _filterFiles,
-              hintText: 'Search files, notes, topics...',
+              onSearchChanged: _performSearch,
+              hintText: 'Search files, tools, topics...',
               margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             ),
             Expanded(
@@ -380,7 +464,7 @@ class _HomeTabState extends State<HomeTab> {
       );
     }
 
-    if (_filteredFiles.isEmpty) {
+    if (_searchResults.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Center(
@@ -389,11 +473,19 @@ class _HomeTabState extends State<HomeTab> {
               Icon(Icons.search_off, size: 60, color: theme.disabledColor),
               const SizedBox(height: 16),
               Text(
-                "No files found",
+                "No results found",
                 style: GoogleFonts.nunito(
                   fontSize: 18,
-                  color: theme.colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Try searching for tools or files",
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -406,7 +498,7 @@ class _HomeTabState extends State<HomeTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Search Results (${_filteredFiles.length})",
+          "Search Results",
           style: GoogleFonts.nunito(
             fontSize: 18,
             fontWeight: FontWeight.w800,
@@ -417,96 +509,54 @@ class _HomeTabState extends State<HomeTab> {
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: _filteredFiles.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemCount: _searchResults.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final file = _filteredFiles[index];
-            return _buildFileCard(context, file);
+            final result = _searchResults[index];
+            return Container(
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.dividerColor.withValues(alpha: 0.1),
+                ),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(12),
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: result.color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(result.icon, color: result.color, size: 22),
+                ),
+                title: Text(
+                  result.title,
+                  style: GoogleFonts.nunito(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                subtitle: Text(
+                  result.subtitle,
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                onTap: result.onTap,
+              ),
+            );
           },
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
       ],
-    );
-  }
-
-  Widget _buildFileCard(BuildContext context, FirebaseFile file) {
-    final theme = Theme.of(context);
-    final pathParts = file.path.split('/');
-    final folderContext =
-        pathParts.length > 1 ? pathParts[pathParts.length - 2] : "General";
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: _getFileIcon(file.name),
-        title: Text(
-          file.name,
-          style: GoogleFonts.nunito(
-            fontWeight: FontWeight.w700,
-            fontSize: 15,
-            color: theme.colorScheme.onSurface,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          folderContext,
-          style: GoogleFonts.nunito(color: theme.hintColor, fontSize: 12),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: theme.iconTheme.color?.withValues(alpha: 0.5),
-        ),
-        onTap: () => _openFile(context, file),
-      ),
-    );
-  }
-
-  Widget _getFileIcon(String fileName) {
-    final ext = fileName.split('.').last.toLowerCase();
-    late Color color;
-    late IconData icon;
-
-    switch (ext) {
-      case 'pdf':
-        color = const Color(0xFFFF6B6B);
-        icon = Icons.picture_as_pdf;
-        break;
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-        color = const Color(0xFF4ECDC4);
-        icon = Icons.image;
-        break;
-      case 'doc':
-      case 'docx':
-        color = const Color(0xFF4A90E2);
-        icon = Icons.description;
-        break;
-      default:
-        color = Colors.grey;
-        icon = Icons.insert_drive_file;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(icon, color: color, size: 28),
     );
   }
 

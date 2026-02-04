@@ -8,6 +8,7 @@ class StudyStreakWidget extends StatelessWidget {
   final int weeklyGoal;
   final List<Achievement> achievements;
   final VoidCallback? onTap;
+  final List<bool>? last7Days; // [true, false, true...] for M T W...
 
   const StudyStreakWidget({
     super.key,
@@ -17,6 +18,7 @@ class StudyStreakWidget extends StatelessWidget {
     this.weeklyGoal = 5,
     this.achievements = const [],
     this.onTap,
+    this.last7Days,
   });
 
   @override
@@ -100,8 +102,8 @@ class StudyStreakWidget extends StatelessWidget {
           currentStreak >= 30
               ? '🏆'
               : currentStreak >= 7
-              ? '🔥'
-              : '⚡',
+                  ? '🔥'
+                  : '⚡',
           style: const TextStyle(fontSize: 28),
         ),
       ),
@@ -109,40 +111,57 @@ class StudyStreakWidget extends StatelessWidget {
   }
 
   Widget _buildWeeklyProgress() {
-    final progress = (weeklyProgress / weeklyGoal).clamp(0.0, 1.0);
+    // Default to empty if null
+    final days = last7Days ?? List.filled(7, false);
+    final dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text(
+          'Last 7 Days',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.9),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'This Week',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              '$weeklyProgress / $weeklyGoal days',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: progress,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-            minHeight: 6,
-          ),
+          children: List.generate(7, (index) {
+            final isActive = days[index];
+            return Column(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                    border: isActive
+                        ? null
+                        : Border.all(
+                            color: Colors.white.withValues(alpha: 0.3)),
+                  ),
+                  child: isActive
+                      ? const Icon(Icons.check,
+                          size: 20, color: Color(0xFF667EEA))
+                      : null,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  dayLabels[index],
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            );
+          }),
         ),
       ],
     );
@@ -273,12 +292,12 @@ class Achievement {
   });
 
   factory Achievement.fromJson(Map<String, dynamic> json) => Achievement(
-    id: json['id'] ?? '',
-    name: json['name'] ?? '',
-    description: json['desc'] ?? json['description'] ?? '',
-    icon: json['icon'] ?? '🎯',
-    unlocked: json['unlocked'] ?? true,
-  );
+        id: json['id'] ?? '',
+        name: json['name'] ?? '',
+        description: json['desc'] ?? json['description'] ?? '',
+        icon: json['icon'] ?? '🎯',
+        unlocked: json['unlocked'] ?? true,
+      );
 }
 
 /// Achievement unlock animation

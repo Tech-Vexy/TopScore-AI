@@ -21,6 +21,13 @@ class _QuizWidgetState extends State<QuizWidget> {
   int? _selectedOptionIndex;
   bool _isAnswered = false;
   bool _isCompleted = false;
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   void _handleAnswer(int optionIndex) {
     if (_isAnswered) return;
@@ -45,6 +52,11 @@ class _QuizWidgetState extends State<QuizWidget> {
         _selectedOptionIndex = null;
         _isAnswered = false;
       });
+      // Smooth slide to next question
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
     } else {
       setState(() {
         _isCompleted = true;
@@ -57,8 +69,6 @@ class _QuizWidgetState extends State<QuizWidget> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final questions = widget.quizData['questions'] as List;
-    final currentQuestion = questions[_currentIndex];
-    // final title = widget.quizData['title'] ?? 'Quiz'; // Unused
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
@@ -84,50 +94,63 @@ class _QuizWidgetState extends State<QuizWidget> {
         padding: const EdgeInsets.all(20),
         child: _isCompleted
             ? _buildSummary(theme, questions.length)
-            : _buildQuestion(theme, currentQuestion, questions.length),
+            : Column(
+                children: [
+                  _buildHeader(theme, questions.length),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: questions.length,
+                      itemBuilder: (context, index) {
+                        return SingleChildScrollView(
+                          child: _buildQuestion(theme, questions[index]),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
 
-  Widget _buildQuestion(
-    ThemeData theme,
-    dynamic questionData,
-    int totalQuestions,
-  ) {
+  Widget _buildHeader(ThemeData theme, int totalQuestions) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Question ${_currentIndex + 1}/$totalQuestions",
+          style: GoogleFonts.outfit(
+            color: theme.primaryColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: theme.primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            "Score: $_score",
+            style: GoogleFonts.outfit(
+              color: theme.primaryColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuestion(ThemeData theme, dynamic questionData) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "Question ${_currentIndex + 1}/$totalQuestions",
-              style: GoogleFonts.outfit(
-                color: theme.primaryColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: theme.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                "Score: $_score",
-                style: GoogleFonts.outfit(
-                  color: theme.primaryColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-
         // Question Text
         Text(
           questionData['question'],
@@ -196,6 +219,38 @@ class _QuizWidgetState extends State<QuizWidget> {
           );
         }),
 
+        // Explanation Section
+        if (_isAnswered && questionData['explanation'] != null)
+          AnimatedOpacity(
+            opacity: _isAnswered ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 500),
+            child: Container(
+              margin: const EdgeInsets.only(top: 16, bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lightbulb, color: Colors.blue, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      questionData['explanation'],
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
         const SizedBox(height: 12),
 
         // Next Button
@@ -212,7 +267,8 @@ class _QuizWidgetState extends State<QuizWidget> {
                 ),
               ),
               child: Text(
-                _currentIndex == totalQuestions - 1
+                _currentIndex ==
+                        (widget.quizData['questions'] as List).length - 1
                     ? "Finish Quiz"
                     : "Next Question",
               ),

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/status.dart' as status;
 import '../models/quiz_model.dart';
 
 // Data models for structured responses
@@ -49,11 +51,16 @@ class VisualExample {
 }
 
 class AIService {
-  // Use 10.0.2.2 for Android emulator, localhost for iOS/Web
-  // static const String _wsUrl = 'ws://10.0.2.2:8080/ws';
   static const String _wsUrl = 'wss://agent.topscoreapp.ai/ws';
 
   WebSocketChannel? _channel;
+  StreamSubscription? _streamSubscription;
+
+  // Use a Completer to handle the Request-Response cycle safely
+  Completer<AIResponse>? _activeRequestCompleter;
+
+  // Keep-alive timer
+  Timer? _pingTimer;
 
   AIService() {
     _connect();
@@ -62,8 +69,67 @@ class AIService {
   void _connect() {
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
+
+      // Listen continuously to the stream
+      _streamSubscription = _channel!.stream.listen(
+        (data) => _handleIncomingMessage(data),
+        onError: (error) {
+          debugPrint('WS Error: $error');
+          _reconnect();
+        },
+        onDone: () {
+          debugPrint('WS Closed');
+          _reconnect();
+        },
+      );
+
+      _startHeartbeat();
     } catch (e) {
       debugPrint('Error connecting to WebSocket: $e');
+    }
+  }
+
+  void _reconnect() {
+    _pingTimer?.cancel();
+    _streamSubscription?.cancel();
+    Future.delayed(const Duration(seconds: 3), _connect);
+  }
+
+  void _startHeartbeat() {
+    _pingTimer?.cancel();
+    _pingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (_channel != null) {
+        try {
+          _channel!.sink.add(jsonEncode({'type': 'ping'}));
+        } catch (_) {}
+      }
+    });
+  }
+
+  /// Centralized Message Handler
+  void _handleIncomingMessage(dynamic payload) {
+    try {
+      final data = jsonDecode(payload);
+
+      // 1. Ignore Pongs/Keep-alives
+      if (data['type'] == 'pong') return;
+
+      // 2. If we are waiting for a response, complete it
+      if (_activeRequestCompleter != null &&
+          !_activeRequestCompleter!.isCompleted) {
+        final responseText = data['text'] ?? "Sorry, I missed that.";
+        final response = _parseResponseWithVisualization(responseText);
+        _activeRequestCompleter!.complete(response);
+        _activeRequestCompleter = null;
+      }
+    } catch (e) {
+      debugPrint("Parse error: $e");
+      if (_activeRequestCompleter != null &&
+          !_activeRequestCompleter!.isCompleted) {
+        _activeRequestCompleter!
+            .complete(AIResponse(text: "Error processing response."));
+        _activeRequestCompleter = null;
+      }
     }
   }
 
@@ -73,17 +139,22 @@ class AIService {
     Uint8List? attachmentBytes,
     String? mimeType,
   }) async {
+    // Prevent overlapping requests (Simple Lock)
+    if (_activeRequestCompleter != null) {
+      return AIResponse(text: "I'm still thinking about your last question...");
+    }
+
+    _activeRequestCompleter = Completer<AIResponse>();
+
     try {
-      if (_channel == null) _connect();
+      if (_channel == null || _channel!.closeCode != null) _connect();
 
       final Map<String, dynamic> payload = {
         'type': 'message',
         'content': message,
       };
 
-      if (context != null) {
-        payload['context'] = context;
-      }
+      if (context != null) payload['context'] = context;
 
       if (attachmentBytes != null) {
         payload['attachment'] = base64Encode(attachmentBytes);
@@ -92,23 +163,20 @@ class AIService {
 
       _channel!.sink.add(jsonEncode(payload));
 
-      // Wait for the response from the stream
-      // Note: This assumes a simple request-response pattern.
-      // For a robust app, you'd want a message ID to correlate responses.
-      final responsePayload = await _channel!.stream.first;
-      final data = jsonDecode(responsePayload);
-
-      final responseText = data['text'] ??
-          "I'm having trouble thinking right now. Can you ask again?";
-
-      return _parseResponseWithVisualization(responseText);
-    } catch (e) {
-      debugPrint('Error in sendMessage: $e');
-      // Reconnect on error
-      _connect();
-      return AIResponse(
-        text: "Oh no! My connection is a bit shaky. Please try again. ($e)",
+      // Wait for the listener to complete the completer
+      return await _activeRequestCompleter!.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          _activeRequestCompleter = null;
+          return AIResponse(
+              text: "Request timed out. Please check your connection.");
+        },
       );
+    } catch (e) {
+      _activeRequestCompleter = null;
+      debugPrint('Error in sendMessage: $e');
+      _reconnect();
+      return AIResponse(text: "Connection error. Retrying...");
     }
   }
 
@@ -390,5 +458,11 @@ Make it fun and easy to visualize!
   void resetChat() {
     _channel?.sink.close();
     _connect();
+  }
+
+  void dispose() {
+    _pingTimer?.cancel();
+    _streamSubscription?.cancel();
+    _channel?.sink.close(status.goingAway);
   }
 }

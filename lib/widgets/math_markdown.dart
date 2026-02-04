@@ -79,13 +79,24 @@ class LatexElementBuilder extends MarkdownElementBuilder {
 
     try {
       if (isBlock) {
-        return Center(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+        // Zoom & Pan Support for complex equations
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.grey.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: InteractiveViewer(
+            panEnabled: true,
+            boundaryMargin: const EdgeInsets.all(20),
+            minScale: 0.5,
+            maxScale: 3.0,
             child: Math.tex(
               content,
               textStyle: preferredStyle?.copyWith(
-                fontSize: (preferredStyle.fontSize ?? 14) + 2,
+                fontSize: (preferredStyle.fontSize ?? 14) + 4,
               ),
               mathStyle: MathStyle.display,
             ),

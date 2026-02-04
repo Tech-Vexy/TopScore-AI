@@ -17,11 +17,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   bool _obscurePassword = true;
+  double _passwordStrength = 0.0;
 
   @override
   void initState() {
     super.initState();
     RecaptchaService.loadRecaptchaScript();
+    _passwordController.addListener(_checkPasswordStrength);
+  }
+
+  void _checkPasswordStrength() {
+    final password = _passwordController.text;
+    double strength = 0;
+    if (password.length >= 8) strength += 0.25;
+    if (password.contains(RegExp(r'[A-Z]'))) strength += 0.25;
+    if (password.contains(RegExp(r'[0-9]'))) strength += 0.25;
+    if (password.contains(RegExp(r'[!@#\$&*~]'))) strength += 0.25;
+    setState(() => _passwordStrength = strength);
   }
 
   @override
@@ -177,7 +189,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       validator: AuthProvider.validatePassword,
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: _passwordStrength,
+                      backgroundColor: Colors.grey[300],
+                      color: _passwordStrength < 0.5
+                          ? Colors.red
+                          : (_passwordStrength < 1.0
+                              ? Colors.orange
+                              : Colors.green),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _passwordStrength == 1.0
+                          ? "✓ Strong Password"
+                          : "⚠ Weak Password (needs uppercase, number & special char)",
+                      style: TextStyle(
+                        color: _passwordStrength == 1.0
+                            ? Colors.green
+                            : Colors.red,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
                     // Register Button
                     SizedBox(

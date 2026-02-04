@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'connection_manager.dart';
 
-class WebSocketService {
+class WebSocketService with WidgetsBindingObserver {
   WebSocketChannel? _channel;
   WebSocketChannel? _voiceChannel; // Dedicated channel for voice
   final StreamController<Map<String, dynamic>> _messageController =
@@ -20,6 +21,15 @@ class WebSocketService {
   Timer? _pingTimer;
   Timer? _keepAliveTimer;
 
+  // Lifecycle state tracking
+  bool _wasDisconnectedDueToBackground = false;
+  final List<Map<String, dynamic>> _queuedMessages =
+      []; // Message queue for reconnection
+
+  // Latency tracking
+  DateTime? _lastPingSentAt;
+  final ConnectionStateManager _connectionManager = ConnectionStateManager();
+
   Stream<Map<String, dynamic>> get messageStream => _messageController.stream;
   Stream<bool> get isConnectedStream => _isConnectedController.stream;
   bool get isConnected => _isConnected;
@@ -32,27 +42,25 @@ class WebSocketService {
 
   WebSocketService({required this.userId});
 
-  // Configure these based on your deployment
-  // PRODUCTION: Using agent.topscoreapp.ai
-  String get _baseUrl {
-    return 'https://agent.topscoreapp.ai';
-  }
+  // --- PRODUCTION BACKEND ONLY ---
 
-  String get _wsUrl {
-    // NEW: Session ID is now required in the path
-    return 'wss://agent.topscoreapp.ai/ws/chat/$sessionId';
-  }
+  String get _host => 'agent.topscoreapp.ai';
+  String get _protocolHttp => 'https';
+  String get _protocolWs => 'wss';
 
-  String get _voiceWsUrl {
-    // Legacy voice endpoint for STT -> LLM -> TTS pipeline
-    return 'wss://agent.topscoreapp.ai/voice/ws/live/$sessionId';
-  }
+  // Base URL
+  String get _baseUrl => '$_protocolHttp://$_host';
 
-  /// NEW: Gemini Native Audio WebSocket endpoint
-  /// Uses gemini-2.5-flash-native-audio for end-to-end speech-to-speech
-  String get _geminiVoiceWsUrl {
-    return 'wss://agent.topscoreapp.ai/voice/ws/gemini/$sessionId';
-  }
+  // WebSocket URLs
+  String get _wsUrl => '$_protocolWs://$_host/ws/chat/$sessionId';
+
+  String get _voiceWsUrl => '$_protocolWs://$_host/voice/ws/live/$sessionId';
+
+  /// Gemini Native Audio WebSocket endpoint
+  String get _geminiVoiceWsUrl =>
+      '$_protocolWs://$_host/voice/ws/gemini/$sessionId';
+
+  // ---------------------------------
 
   void setThreadId(String newThreadId) {
     threadId = newThreadId;
@@ -65,6 +73,44 @@ class WebSocketService {
   void setStudentInfo({String? name, String? level}) {
     studentName = name;
     academicLevel = level;
+  }
+
+  /// Initialize lifecycle listener to handle app backgrounding
+  /// Call this once during app initialization
+  void initLifecycleListener() {
+    WidgetsBinding.instance.addObserver(this);
+    debugPrint('WebSocket: Lifecycle listener initialized');
+  }
+
+  /// Handle app lifecycle state changes
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint('WebSocket: App lifecycle changed to $state');
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // App came back to foreground
+        debugPrint('WebSocket: App resumed - verifying connection...');
+        if (!_isConnected) {
+          debugPrint(
+              'WebSocket: Connection lost while backgrounded, reconnecting silently...');
+          _wasDisconnectedDueToBackground = true;
+          _reconnectAttempts = 0; // Reset attempts for seamless reconnect
+          connect();
+        }
+        break;
+
+      case AppLifecycleState.paused:
+        // App went to background
+        debugPrint('WebSocket: App backgrounded - connection may drop');
+        break;
+
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // App is transitioning or being terminated
+        break;
+    }
   }
 
   /// DEPRECATED: Use Firebase Realtime Database directly
@@ -226,8 +272,9 @@ class WebSocketService {
     }
 
     try {
+      final isQuietReconnect = _wasDisconnectedDueToBackground;
       debugPrint(
-        'WebSocket: Connecting to $_wsUrl (attempt ${_reconnectAttempts + 1}/$_maxReconnectAttempts)',
+        'WebSocket: ${isQuietReconnect ? "Quietly reconnecting" : "Connecting"} to $_wsUrl (attempt ${_reconnectAttempts + 1}/$_maxReconnectAttempts)',
       );
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
 
@@ -236,6 +283,17 @@ class WebSocketService {
           try {
             final data = jsonDecode(message) as Map<String, dynamic>;
             _handleIncomingMessage(data);
+
+            // If this is the 'connected' response and we have queued messages, send them
+            if (data['type'] == 'connected' && _queuedMessages.isNotEmpty) {
+              debugPrint(
+                  'WebSocket: Sending ${_queuedMessages.length} queued messages...');
+              for (final queuedMsg in _queuedMessages) {
+                _channel?.sink.add(jsonEncode(queuedMsg));
+              }
+              _queuedMessages.clear();
+              _wasDisconnectedDueToBackground = false;
+            }
           } catch (e) {
             debugPrint('WebSocket: Error parsing message: $e');
           }
@@ -424,6 +482,13 @@ class WebSocketService {
 
       case 'pong':
         // Server responded to our keep-alive ping - connection is healthy
+        if (_lastPingSentAt != null) {
+          final latency =
+              DateTime.now().difference(_lastPingSentAt!).inMilliseconds;
+          _connectionManager.updateLatency(latency);
+          debugPrint(
+              'WebSocket: Latency ${latency}ms (${_connectionManager.getConnectionQuality()})');
+        }
         break;
 
       case 'chunk':
@@ -459,6 +524,7 @@ class WebSocketService {
 
   void _sendPong() {
     if (_channel != null && _isConnected) {
+      _lastPingSentAt = DateTime.now();
       _channel!.sink.add(jsonEncode({'type': 'pong'}));
     }
   }
@@ -479,6 +545,7 @@ class WebSocketService {
     _keepAliveTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (_isConnected && _channel != null) {
         try {
+          _lastPingSentAt = DateTime.now();
           _channel!.sink.add(jsonEncode({'type': 'ping'}));
           debugPrint('WebSocket: Keep-alive ping sent');
         } catch (e) {
@@ -534,11 +601,6 @@ class WebSocketService {
     String? audioData, // Kept to avoid breaking _stopRecording
     Map<String, dynamic>? extraData,
   }) {
-    if (_channel == null) {
-      debugPrint('WS Not connected');
-      return;
-    }
-
     // 1. Match the Python Script's Payload Structure exactly
     final Map<String, dynamic> data = {
       "type": "message", // Required by new protocol
@@ -569,6 +631,17 @@ class WebSocketService {
 
     if (extraData != null) {
       data.addAll(extraData);
+    }
+
+    // 4. Queue message if disconnected, otherwise send immediately
+    if (_channel == null || !_isConnected) {
+      debugPrint('WS Not connected - queueing message for retry');
+      _queuedMessages.add(data);
+      // Attempt to reconnect if not already trying
+      if (!_isConnected && _reconnectAttempts < _maxReconnectAttempts) {
+        connect();
+      }
+      return;
     }
 
     debugPrint('Sending Payload: ${jsonEncode(data)}');
@@ -658,5 +731,8 @@ class WebSocketService {
     _voiceChannel?.sink.close();
     _messageController.close();
     _isConnectedController.close();
+    WidgetsBinding.instance.removeObserver(this);
+    _queuedMessages.clear();
+    debugPrint('WebSocket: Service disposed and lifecycle observer removed');
   }
 }

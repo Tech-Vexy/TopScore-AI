@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter/services.dart';
 import 'package:pasteboard/pasteboard.dart'; // For image paste support
 import 'package:url_launcher/url_launcher.dart';
@@ -68,11 +69,8 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Smart Backend URL Detection
-  // PRODUCTION: Using agent.topscoreapp.ai
-  String get _backendUrl {
-    return 'https://agent.topscoreapp.ai';
-  }
+  // Production Backend URL
+  String get _backendUrl => 'https://agent.topscoreapp.ai';
 
   final TextEditingController _textController = TextEditingController();
   late final WebSocketService _wsService;
@@ -176,7 +174,6 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _pendingPreviewData; // Base64 Data URI (For local display ONLY)
   String? _pendingFileUrl; // Firebase Storage URL (For sending to AI)
   String? _pendingFileType; // Type of file (image/jpeg, application/pdf, etc.)
-
   String? _pendingFileName; // Display name
   bool _isUploading = false; // To show spinner
 
@@ -313,11 +310,13 @@ class _ChatScreenState extends State<ChatScreen> {
     final userId = authProvider.effectiveUserId;
     _wsService = WebSocketService(userId: userId);
 
+    // Initialize lifecycle listener for automatic reconnection
+    _wsService.initLifecycleListener();
+
     if (authProvider.userModel != null) {
       _wsService.setStudentInfo(
         name: authProvider.userModel!.displayName,
-        level:
-            authProvider.userModel!.educationLevel ??
+        level: authProvider.userModel!.educationLevel ??
             (authProvider.userModel!.grade != null
                 ? "Grade ${authProvider.userModel!.grade}"
                 : "Secondary School"),
@@ -425,7 +424,7 @@ class _ChatScreenState extends State<ChatScreen> {
             return KeyEventResult.handled;
           }
         }
-        
+
         // 2. Paste Image on Ctrl+V / Cmd+V
         if (event.logicalKey == LogicalKeyboardKey.keyV &&
             (HardwareKeyboard.instance.isControlPressed ||
@@ -543,34 +542,55 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// Compress image for fast WebSocket transmission
+  /// Reduces 5MB photos to ~150KB while maintaining visual quality
+  Future<Uint8List> _compressImage(Uint8List rawBytes) async {
+    try {
+      // Resize to max 1024x1024 and compress to 70% quality
+      // This turns a 5MB photo into ~100KB-200KB, perfect for WebSockets
+      final result = await FlutterImageCompress.compressWithList(
+        rawBytes,
+        minHeight: 1024,
+        minWidth: 1024,
+        quality: 70,
+        format: CompressFormat.jpeg, // Models understand JPEG best
+      );
+      return result;
+    } catch (e) {
+      developer.log('Compression error: $e');
+      return rawBytes; // Fallback to original if compression fails
+    }
+  }
+
   Future<void> _processProviderImage(XFile image) async {
     try {
-      final bytes = await image.readAsBytes();
+      final originalBytes = await image.readAsBytes();
 
-      // 1. Immediately show preview (Paste)
-      final base64Image = base64Encode(bytes);
-      if (mounted) {
-        setState(() {
-          _pendingPreviewData = 'data:image/png;base64,$base64Image';
-          _pendingFileName = "Screenshot.png";
-          _isUploading = true;
-        });
-      }
-
-      // 2. Upload in background
-      final url = await _uploadToFirebase(
-        bytes,
-        'pasted_image_${DateTime.now().millisecondsSinceEpoch}.png',
-        'image/png',
-      );
+      // 1. Compress for Agent (Speed - WebSocket transmission)
+      final compressedBytes = await _compressImage(originalBytes);
+      final base64Image = base64Encode(compressedBytes);
 
       if (mounted) {
         setState(() {
-          _pendingFileUrl = url;
-          _isUploading = false;
+          _pendingPreviewData = 'data:image/jpeg;base64,$base64Image';
+          _pendingFileName = "Screenshot.jpg";
+          _pendingFileType = "image/jpeg";
+          _isUploading = false; // Ready to send immediately
         });
-        // Removed _sendMessage() to allow user to edit/confirm before sending
       }
+
+      // 3. Upload original in background for history
+      _uploadToFirebase(
+        originalBytes,
+        'pasted_image_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        'image/jpeg',
+      ).then((url) {
+        if (mounted && url != null) {
+          setState(() {
+            _pendingFileUrl = url;
+          });
+        }
+      });
     } catch (e) {
       developer.log("Error processing provider image: $e");
       if (mounted) setState(() => _isUploading = false);
@@ -611,37 +631,48 @@ class _ChatScreenState extends State<ChatScreen> {
         _pendingFileName = "Captured Image.jpg";
       });
 
-      Uint8List bytes;
+      Uint8List originalBytes;
       final initialImage = widget.initialImage;
       final initialImageFile = widget.initialImageFile;
 
       if (initialImage != null) {
         // XFile path for web/mobile
-        bytes = await initialImage.readAsBytes();
+        originalBytes = await initialImage.readAsBytes();
       } else if (initialImageFile != null) {
         // Fallback legacy File
-        bytes = await initialImageFile.readAsBytes();
+        originalBytes = await initialImageFile.readAsBytes();
       } else {
         return;
       }
 
-      final url = await _uploadToFirebase(
-        bytes,
-        'camera_capture_${DateTime.now().millisecondsSinceEpoch}.jpg',
-        'image/jpeg',
-      );
+      // 1. Compress for Agent (Speed)
+      final compressedBytes = await _compressImage(originalBytes);
+      final base64Image = base64Encode(compressedBytes);
 
       if (mounted) {
         setState(() {
-          _pendingFileUrl = url;
-          _isUploading = false;
+          _pendingPreviewData = 'data:image/jpeg;base64,$base64Image';
+          _pendingFileType = "image/jpeg";
+          _isUploading = false; // Ready to send
         });
-
-        // Auto-send if we have a prompt
-        if (widget.initialMessage != null && url != null) {
-          _sendMessage();
-        }
       }
+
+      // 2. Upload original in background for history
+      _uploadToFirebase(
+        originalBytes,
+        'camera_capture_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        'image/jpeg',
+      ).then((url) {
+        if (mounted && url != null) {
+          setState(() {
+            _pendingFileUrl = url;
+          });
+          // Auto-send if we have a prompt
+          if (widget.initialMessage != null) {
+            _sendMessage();
+          }
+        }
+      });
     } catch (e) {
       developer.log("Error processing initial image: $e", name: "ChatScreen");
       if (mounted) {
@@ -756,8 +787,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final userId =
-          authProvider.userModel?.uid ??
+      final userId = authProvider.userModel?.uid ??
           FirebaseAuth.instance.currentUser?.uid ??
           'guest';
 
@@ -1463,9 +1493,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final sourcesData = data['sources'];
     if (sourcesData == null || sourcesData is! List) return;
 
-    final sourcesList = sourcesData
-        .map((s) => SourceMetadata.fromJson(s))
-        .toList();
+    final sourcesList =
+        sourcesData.map((s) => SourceMetadata.fromJson(s)).toList();
 
     setState(() {
       if (_currentStreamingMessageId != null) {
@@ -1524,7 +1553,6 @@ class _ChatScreenState extends State<ChatScreen> {
       _pendingPreviewData = null;
       _pendingFileUrl = null;
       _pendingFileType = null;
-
       _pendingFileName = null;
       _isUploading = false;
     });
@@ -1538,16 +1566,15 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       setState(() => _isUploading = true);
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final userId =
-          authProvider.userModel?.uid ??
+      final userId = authProvider.userModel?.uid ??
           FirebaseAuth.instance.currentUser?.uid ??
           'guest';
       final uuid = const Uuid().v4();
 
       // Create a reference: uploads/{userId}/{uuid}_{filename}
       final ref = FirebaseStorage.instance.ref().child(
-        'uploads/$userId/${uuid}_$fileName',
-      );
+            'uploads/$userId/${uuid}_$fileName',
+          );
 
       final metadata = SettableMetadata(contentType: mimeType);
 
@@ -1812,8 +1839,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (result != null) {
         final file = result.files.single;
         final path = file.path;
-        final bytes =
-            file.bytes ??
+        final bytes = file.bytes ??
             (path != null ? await File(path).readAsBytes() : null);
         if (bytes == null) {
           if (mounted) {
@@ -1955,8 +1981,8 @@ class _ChatScreenState extends State<ChatScreen> {
         final extension = photo.path.split('.').last.toLowerCase();
         final validExtension =
             ['jpg', 'jpeg', 'png', 'webp'].contains(extension)
-            ? extension
-            : 'jpg';
+                ? extension
+                : 'jpg';
         final base64Image = base64Encode(bytes);
         final previewData = 'data:image/$validExtension;base64,$base64Image';
 
@@ -2018,8 +2044,8 @@ class _ChatScreenState extends State<ChatScreen> {
         final extension = image.path.split('.').last.toLowerCase();
         final validExtension =
             ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(extension)
-            ? extension
-            : 'jpg';
+                ? extension
+                : 'jpg';
         final base64Image = base64Encode(bytes);
         final previewData = 'data:image/$validExtension;base64,$base64Image';
 
@@ -2143,8 +2169,7 @@ class _ChatScreenState extends State<ChatScreen> {
               context,
               listen: false,
             );
-            final userId =
-                authProvider.userModel?.uid ??
+            final userId = authProvider.userModel?.uid ??
                 FirebaseAuth.instance.currentUser?.uid ??
                 'guest';
 
@@ -2183,44 +2208,38 @@ class _ChatScreenState extends State<ChatScreen> {
       RegExp(r'\*\*(.*?)\*\*'),
       (m) => m[1] ?? '',
     );
-    cleaned = cleaned.replaceAllMapped(
-      RegExp(r'__(.*?)__'),
-      (m) => m[1] ?? '',
-    );
+    cleaned = cleaned.replaceAllMapped(RegExp(r'__(.*?)__'), (m) => m[1] ?? '');
 
     // 6. Remove Italic: *text* or _text_ -> text
-    cleaned = cleaned.replaceAllMapped(
-      RegExp(r'\*(.*?)\*'),
-      (m) => m[1] ?? '',
-    );
-    cleaned = cleaned.replaceAllMapped(
-      RegExp(r'_(.*?)_'),
-      (m) => m[1] ?? '',
-    );
+    cleaned = cleaned.replaceAllMapped(RegExp(r'\*(.*?)\*'), (m) => m[1] ?? '');
+    cleaned = cleaned.replaceAllMapped(RegExp(r'_(.*?)_'), (m) => m[1] ?? '');
 
     // 7. Remove Strikethrough: ~~text~~ -> text
-    cleaned = cleaned.replaceAllMapped(
-      RegExp(r'~~(.*?)~~'),
-      (m) => m[1] ?? '',
-    );
+    cleaned = cleaned.replaceAllMapped(RegExp(r'~~(.*?)~~'), (m) => m[1] ?? '');
 
     // 8. Remove inline code backticks: `text` -> text
-    cleaned = cleaned.replaceAllMapped(
-      RegExp(r'`([^`]+)`'),
-      (m) => m[1] ?? '',
-    );
+    cleaned = cleaned.replaceAllMapped(RegExp(r'`([^`]+)`'), (m) => m[1] ?? '');
 
     // 9. Remove Blockquotes: > text -> text
     cleaned = cleaned.replaceAll(RegExp(r'^>\s*', multiLine: true), '');
 
     // 10. Remove horizontal rules: ---, ***, ___
-    cleaned = cleaned.replaceAll(RegExp(r'^[\-\*_]{3,}\s*$', multiLine: true), '');
+    cleaned = cleaned.replaceAll(
+      RegExp(r'^[\-\*_]{3,}\s*$', multiLine: true),
+      '',
+    );
 
     // 11. Remove unordered list markers: - item, * item, + item
-    cleaned = cleaned.replaceAll(RegExp(r'^\s*[\-\*\+]\s+', multiLine: true), '');
+    cleaned = cleaned.replaceAll(
+      RegExp(r'^\s*[\-\*\+]\s+', multiLine: true),
+      '',
+    );
 
     // 12. Remove ordered list markers: 1. item, 2) item
-    cleaned = cleaned.replaceAll(RegExp(r'^\s*\d+[\.\)]\s+', multiLine: true), '');
+    cleaned = cleaned.replaceAll(
+      RegExp(r'^\s*\d+[\.\)]\s+', multiLine: true),
+      '',
+    );
 
     // 13. Remove LaTeX block delimiters: $$ equation $$
     cleaned = cleaned.replaceAll(RegExp(r'\$\$[\s\S]*?\$\$'), '');
@@ -2234,49 +2253,49 @@ class _ChatScreenState extends State<ChatScreen> {
     // 16. Remove emojis and other unicode symbols
     cleaned = cleaned.replaceAll(
       RegExp(
-        r'[\u{1F600}-\u{1F64F}]|'  // Emoticons
-        r'[\u{1F300}-\u{1F5FF}]|'  // Misc Symbols and Pictographs
-        r'[\u{1F680}-\u{1F6FF}]|'  // Transport and Map
-        r'[\u{1F1E0}-\u{1F1FF}]|'  // Flags
-        r'[\u{2600}-\u{26FF}]|'    // Misc symbols
-        r'[\u{2700}-\u{27BF}]|'    // Dingbats
-        r'[\u{FE00}-\u{FE0F}]|'    // Variation Selectors
-        r'[\u{1F900}-\u{1F9FF}]|'  // Supplemental Symbols and Pictographs
-        r'[\u{1FA00}-\u{1FA6F}]|'  // Chess Symbols
-        r'[\u{1FA70}-\u{1FAFF}]|'  // Symbols and Pictographs Extended-A
-        r'[\u{231A}-\u{231B}]|'    // Watch, Hourglass
-        r'[\u{23E9}-\u{23F3}]|'    // Media control symbols
-        r'[\u{23F8}-\u{23FA}]|'    // More media controls
-        r'[\u{25AA}-\u{25AB}]|'    // Squares
-        r'[\u{25B6}]|[\u{25C0}]|'  // Play buttons
-        r'[\u{25FB}-\u{25FE}]|'    // More squares
-        r'[\u{2614}-\u{2615}]|'    // Umbrella, Hot beverage
-        r'[\u{2648}-\u{2653}]|'    // Zodiac
-        r'[\u{267F}]|[\u{2693}]|'  // Wheelchair, Anchor
-        r'[\u{26A1}]|[\u{26AA}-\u{26AB}]|'  // High voltage, circles
-        r'[\u{26BD}-\u{26BE}]|'    // Soccer, Baseball
-        r'[\u{26C4}-\u{26C5}]|'    // Snowman, Sun
-        r'[\u{26CE}]|[\u{26D4}]|'  // Ophiuchus, No entry
-        r'[\u{26EA}]|[\u{26F2}-\u{26F3}]|'  // Church, Fountain, Golf
-        r'[\u{26F5}]|[\u{26FA}]|'  // Sailboat, Tent
-        r'[\u{26FD}]|[\u{2702}]|'  // Fuel pump, Scissors
-        r'[\u{2705}]|[\u{2708}-\u{270D}]|'  // Check mark, Airplane, etc
-        r'[\u{270F}]|[\u{2712}]|'  // Pencil, Black nib
-        r'[\u{2714}]|[\u{2716}]|'  // Check marks
-        r'[\u{271D}]|[\u{2721}]|'  // Cross, Star of David
-        r'[\u{2728}]|[\u{2733}-\u{2734}]|'  // Sparkles, Eight spoked asterisk
-        r'[\u{2744}]|[\u{2747}]|'  // Snowflake, Sparkle
-        r'[\u{274C}]|[\u{274E}]|'  // Cross marks
-        r'[\u{2753}-\u{2755}]|'    // Question marks
-        r'[\u{2757}]|[\u{2763}-\u{2764}]|'  // Exclamation, Hearts
-        r'[\u{2795}-\u{2797}]|'    // Plus, Minus, Divide
-        r'[\u{27A1}]|[\u{27B0}]|'  // Arrows
-        r'[\u{27BF}]|[\u{2934}-\u{2935}]|'  // Loop, arrows
-        r'[\u{2B05}-\u{2B07}]|'    // Arrows
-        r'[\u{2B1B}-\u{2B1C}]|'    // Squares
-        r'[\u{2B50}]|[\u{2B55}]|'  // Star, Circle
-        r'[\u{3030}]|[\u{303D}]|'  // Wavy dash, Part alternation mark
-        r'[\u{3297}]|[\u{3299}]',  // Circled Ideograph
+        r'[\u{1F600}-\u{1F64F}]|' // Emoticons
+        r'[\u{1F300}-\u{1F5FF}]|' // Misc Symbols and Pictographs
+        r'[\u{1F680}-\u{1F6FF}]|' // Transport and Map
+        r'[\u{1F1E0}-\u{1F1FF}]|' // Flags
+        r'[\u{2600}-\u{26FF}]|' // Misc symbols
+        r'[\u{2700}-\u{27BF}]|' // Dingbats
+        r'[\u{FE00}-\u{FE0F}]|' // Variation Selectors
+        r'[\u{1F900}-\u{1F9FF}]|' // Supplemental Symbols and Pictographs
+        r'[\u{1FA00}-\u{1FA6F}]|' // Chess Symbols
+        r'[\u{1FA70}-\u{1FAFF}]|' // Symbols and Pictographs Extended-A
+        r'[\u{231A}-\u{231B}]|' // Watch, Hourglass
+        r'[\u{23E9}-\u{23F3}]|' // Media control symbols
+        r'[\u{23F8}-\u{23FA}]|' // More media controls
+        r'[\u{25AA}-\u{25AB}]|' // Squares
+        r'[\u{25B6}]|[\u{25C0}]|' // Play buttons
+        r'[\u{25FB}-\u{25FE}]|' // More squares
+        r'[\u{2614}-\u{2615}]|' // Umbrella, Hot beverage
+        r'[\u{2648}-\u{2653}]|' // Zodiac
+        r'[\u{267F}]|[\u{2693}]|' // Wheelchair, Anchor
+        r'[\u{26A1}]|[\u{26AA}-\u{26AB}]|' // High voltage, circles
+        r'[\u{26BD}-\u{26BE}]|' // Soccer, Baseball
+        r'[\u{26C4}-\u{26C5}]|' // Snowman, Sun
+        r'[\u{26CE}]|[\u{26D4}]|' // Ophiuchus, No entry
+        r'[\u{26EA}]|[\u{26F2}-\u{26F3}]|' // Church, Fountain, Golf
+        r'[\u{26F5}]|[\u{26FA}]|' // Sailboat, Tent
+        r'[\u{26FD}]|[\u{2702}]|' // Fuel pump, Scissors
+        r'[\u{2705}]|[\u{2708}-\u{270D}]|' // Check mark, Airplane, etc
+        r'[\u{270F}]|[\u{2712}]|' // Pencil, Black nib
+        r'[\u{2714}]|[\u{2716}]|' // Check marks
+        r'[\u{271D}]|[\u{2721}]|' // Cross, Star of David
+        r'[\u{2728}]|[\u{2733}-\u{2734}]|' // Sparkles, Eight spoked asterisk
+        r'[\u{2744}]|[\u{2747}]|' // Snowflake, Sparkle
+        r'[\u{274C}]|[\u{274E}]|' // Cross marks
+        r'[\u{2753}-\u{2755}]|' // Question marks
+        r'[\u{2757}]|[\u{2763}-\u{2764}]|' // Exclamation, Hearts
+        r'[\u{2795}-\u{2797}]|' // Plus, Minus, Divide
+        r'[\u{27A1}]|[\u{27B0}]|' // Arrows
+        r'[\u{27BF}]|[\u{2934}-\u{2935}]|' // Loop, arrows
+        r'[\u{2B05}-\u{2B07}]|' // Arrows
+        r'[\u{2B1B}-\u{2B1C}]|' // Squares
+        r'[\u{2B50}]|[\u{2B55}]|' // Star, Circle
+        r'[\u{3030}]|[\u{303D}]|' // Wavy dash, Part alternation mark
+        r'[\u{3297}]|[\u{3299}]', // Circled Ideograph
         unicode: true,
       ),
       '',
@@ -2427,7 +2446,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final imageBytes = await Pasteboard.image;
       if (imageBytes != null) {
         final base64Image = base64Encode(imageBytes);
-        
+
         setState(() {
           _isUploading = true;
           _pendingPreviewData = 'data:image/png;base64,$base64Image';
@@ -2638,8 +2657,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (mounted) {
           _wsService.sendMessage(
             message: previousMessage.text,
-            userId:
-                Provider.of<AuthProvider>(
+            userId: Provider.of<AuthProvider>(
                   context,
                   listen: false,
                 ).userModel?.uid ??
@@ -2728,8 +2746,7 @@ class _ChatScreenState extends State<ChatScreen> {
             return _VoiceSessionOverlay(
               isAiSpeaking: _isAiSpeaking,
               isRecording: _isRecording,
-              statusText:
-                  _statusMessage ??
+              statusText: _statusMessage ??
                   (_isAiSpeaking ? "Speaking..." : "Listening..."),
               transcription: _liveTranscription,
               amplitude: _currentAmplitude,
@@ -3048,10 +3065,10 @@ class _ChatScreenState extends State<ChatScreen> {
         final extension = mimeType.contains('wav')
             ? 'wav'
             : mimeType.contains('mp3')
-            ? 'mp3'
-            : mimeType.contains('aac')
-            ? 'm4a'
-            : 'wav';
+                ? 'mp3'
+                : mimeType.contains('aac')
+                    ? 'm4a'
+                    : 'wav';
         tempPath =
             '${tempDir.path}/gemini_response_${DateTime.now().millisecondsSinceEpoch}.$extension';
         final file = File(tempPath);
@@ -3617,11 +3634,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                           : Colors.orange,
                                       boxShadow: [
                                         BoxShadow(
-                                          color:
-                                              (_isWebSocketConnected
-                                                      ? Colors.green
-                                                      : Colors.orange)
-                                                  .withValues(alpha: 0.5),
+                                          color: (_isWebSocketConnected
+                                                  ? Colors.green
+                                                  : Colors.orange)
+                                              .withValues(alpha: 0.5),
                                           blurRadius: 4,
                                           spreadRadius: 1,
                                         ),
@@ -3711,46 +3727,47 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: _isLoadingMessages
                           ? _buildLoadingSkeleton(theme, isDark)
                           : _isSearching && _searchQuery.isNotEmpty
-                          ? _buildSearchResults(theme)
-                          : _messages.isEmpty
-                          ? _buildEmptyState(isDark)
-                          : RefreshIndicator(
-                              onRefresh: () async {
-                                // Reload current thread
-                                if (_wsService.threadId.isNotEmpty) {
-                                  await Future.delayed(
-                                    const Duration(milliseconds: 300),
-                                  );
-                                  _loadThread(_wsService.threadId);
-                                }
-                              },
-                              color: theme.primaryColor,
-                              child: ListView.builder(
-                                controller: _scrollController,
-                                padding: const EdgeInsets.all(16),
-                                itemCount: _messages.length,
-                                // Performance: pre-render items beyond viewport for smoother scrolling
-                                cacheExtent: 500,
-                                // Add findChildIndexCallback to help Flutter track items better
-                                findChildIndexCallback: (Key key) {
-                                  if (key is ValueKey<String>) {
-                                    return _messages.indexWhere(
-                                      (m) => m.id == key.value,
-                                    );
-                                  }
-                                  return null;
-                                },
-                                itemBuilder: (context, index) {
-                                  final message = _messages[index];
-                                  return RepaintBoundary(
-                                    key: ValueKey(
-                                      message.id,
-                                    ), // Add Key for stable identity
-                                    child: _buildMessageBubble(message, theme),
-                                  );
-                                },
-                              ),
-                            ),
+                              ? _buildSearchResults(theme)
+                              : _messages.isEmpty
+                                  ? _buildEmptyState(isDark)
+                                  : RefreshIndicator(
+                                      onRefresh: () async {
+                                        // Reload current thread
+                                        if (_wsService.threadId.isNotEmpty) {
+                                          await Future.delayed(
+                                            const Duration(milliseconds: 300),
+                                          );
+                                          _loadThread(_wsService.threadId);
+                                        }
+                                      },
+                                      color: theme.primaryColor,
+                                      child: ListView.builder(
+                                        controller: _scrollController,
+                                        padding: const EdgeInsets.all(16),
+                                        itemCount: _messages.length,
+                                        // Performance: pre-render items beyond viewport for smoother scrolling
+                                        cacheExtent: 500,
+                                        // Add findChildIndexCallback to help Flutter track items better
+                                        findChildIndexCallback: (Key key) {
+                                          if (key is ValueKey<String>) {
+                                            return _messages.indexWhere(
+                                              (m) => m.id == key.value,
+                                            );
+                                          }
+                                          return null;
+                                        },
+                                        itemBuilder: (context, index) {
+                                          final message = _messages[index];
+                                          return RepaintBoundary(
+                                            key: ValueKey(
+                                              message.id,
+                                            ), // Add Key for stable identity
+                                            child: _buildMessageBubble(
+                                                message, theme),
+                                          );
+                                        },
+                                      ),
+                                    ),
                     ),
                     if (_isTyping)
                       Align(
@@ -3847,9 +3864,8 @@ class _ChatScreenState extends State<ChatScreen> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+            mainAxisAlignment:
+                isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!isUser) ...[
@@ -4375,16 +4391,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                         ),
                                         child: FractionallySizedBox(
                                           alignment: Alignment.centerLeft,
-                                          widthFactor:
-                                              _playingAudioMessageId ==
+                                          widthFactor: _playingAudioMessageId ==
                                                   message.id
                                               ? (_audioDuration.inMilliseconds >
-                                                        0
-                                                    ? _audioPosition
-                                                              .inMilliseconds /
-                                                          _audioDuration
-                                                              .inMilliseconds
-                                                    : 0.0)
+                                                      0
+                                                  ? _audioPosition
+                                                          .inMilliseconds /
+                                                      _audioDuration
+                                                          .inMilliseconds
+                                                  : 0.0)
                                               : 0.0,
                                           child: Container(
                                             decoration: BoxDecoration(
@@ -4681,13 +4696,13 @@ class _ChatScreenState extends State<ChatScreen> {
                                       fit: BoxFit.contain,
                                       errorBuilder:
                                           (context, error, stackTrace) {
-                                            return const Padding(
-                                              padding: EdgeInsets.all(8.0),
-                                              child: Text(
-                                                "⚠️ Image Decode Error",
-                                              ),
-                                            );
-                                          },
+                                        return const Padding(
+                                          padding: EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "⚠️ Image Decode Error",
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                 ),
@@ -4805,9 +4820,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: _TypingIndicator(
-                        messageType: isStreaming
-                            ? _loadingMessageType
-                            : 'thinking',
+                        messageType:
+                            isStreaming ? _loadingMessageType : 'thinking',
                       ),
                     ),
 
@@ -4848,9 +4862,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF252525)
-                            : Colors.grey[100],
+                        color:
+                            isDark ? const Color(0xFF252525) : Colors.grey[100],
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: theme.dividerColor.withValues(alpha: 0.1),
@@ -4895,72 +4908,40 @@ class _ChatScreenState extends State<ChatScreen> {
                     Wrap(
                       spacing: 0,
                       runSpacing: 4,
-                      alignment: WrapAlignment.spaceBetween,
+                      alignment: WrapAlignment.start,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        // Main Actions Group
-                        Wrap(
-                          children: [
-                            // TTS controls - show different icons based on state
-                            if (_speakingMessageId == message.id &&
-                                _isTtsSpeaking)
-                              ..._buildTtsControls(message)
-                            else
-                              _buildActionIcon(
-                                Icons.volume_up_outlined,
-                                () =>
-                                    _speak(message.text, messageId: message.id),
-                                tooltip: 'Listen',
-                              ),
-                            _buildActionIcon(
-                              Icons.fact_check_outlined,
-                              () => _verifyResponse(message),
-                              tooltip: 'Double Check',
-                            ),
-                            _buildActionIcon(
-                              Icons.copy_all_outlined,
-                              () => _copyToClipboard(message.text),
-                              tooltip: 'Copy',
-                            ),
-                            // BOOKMARK ICON
-                            _buildActionIcon(
-                              message.isBookmarked
-                                  ? Icons.bookmark
-                                  : Icons.bookmark_border,
-                              () => _toggleBookmark(message),
-                              tooltip: message.isBookmarked
-                                  ? 'Remove from Library'
-                                  : 'Save to Library',
-                              color: message.isBookmarked ? Colors.amber : null,
-                            ),
-                            _buildActionIcon(
-                              Icons.share_outlined,
-                              () => _shareMessage(message.text),
-                              tooltip: 'Share',
-                            ),
-                            _buildActionIcon(
-                              Icons.refresh_outlined,
-                              () => _regenerateResponse(message),
-                              tooltip: 'Regenerate',
-                            ),
-                          ],
+                        // Primary Actions (3 buttons)
+                        // TTS controls - show different icons based on state
+                        if (_speakingMessageId == message.id && _isTtsSpeaking)
+                          ..._buildTtsControls(message)
+                        else
+                          _buildActionIcon(
+                            Icons.volume_up_outlined,
+                            () => _speak(message.text, messageId: message.id),
+                            tooltip: 'Listen',
+                          ),
+                        _buildActionIcon(
+                          Icons.copy_all_outlined,
+                          () => _copyToClipboard(message.text),
+                          tooltip: 'Copy',
                         ),
-                        // Feedback Group
-                        Wrap(
-                          children: [
-                            _buildActionIcon(
-                              Icons.thumb_up_alt_outlined,
-                              () => _provideFeedback(message, 1),
-                              tooltip: 'Good',
-                              isActive: message.feedback == 1,
-                            ),
-                            _buildActionIcon(
-                              Icons.thumb_down_alt_outlined,
-                              () => _provideFeedback(message, -1),
-                              tooltip: 'Bad',
-                              isActive: message.feedback == -1,
-                            ),
-                          ],
+                        // BOOKMARK ICON
+                        _buildActionIcon(
+                          message.isBookmarked
+                              ? Icons.bookmark
+                              : Icons.bookmark_border,
+                          () => _toggleBookmark(message),
+                          tooltip: message.isBookmarked
+                              ? 'Remove from Library'
+                              : 'Save to Library',
+                          color: message.isBookmarked ? Colors.amber : null,
+                        ),
+                        // More actions button
+                        _buildActionIcon(
+                          Icons.more_horiz,
+                          () => _showMoreActionsMenu(context, message),
+                          tooltip: 'More actions',
                         ),
                       ],
                     ),
@@ -5010,8 +4991,7 @@ class _ChatScreenState extends State<ChatScreen> {
     Color? color,
   }) {
     final theme = Theme.of(context);
-    final finalColor =
-        color ??
+    final finalColor = color ??
         (isActive
             ? AppColors.googleBlue
             : theme.colorScheme.onSurface.withValues(alpha: 0.6));
@@ -5033,6 +5013,126 @@ class _ChatScreenState extends State<ChatScreen> {
         padding: EdgeInsets.all(btnPadding),
       ),
     );
+  }
+
+  // Show popup menu with additional actions
+  void _showMoreActionsMenu(BuildContext context, ChatMessage message) {
+    final theme = Theme.of(context);
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      items: [
+        PopupMenuItem<String>(
+          value: 'verify',
+          child: Row(
+            children: [
+              Icon(
+                Icons.fact_check_outlined,
+                size: 20,
+                color: theme.colorScheme.onSurface,
+              ),
+              const SizedBox(width: 12),
+              const Text('Double Check'),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'share',
+          child: Row(
+            children: [
+              Icon(
+                Icons.share_outlined,
+                size: 20,
+                color: theme.colorScheme.onSurface,
+              ),
+              const SizedBox(width: 12),
+              const Text('Share'),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'regenerate',
+          child: Row(
+            children: [
+              Icon(
+                Icons.refresh_outlined,
+                size: 20,
+                color: theme.colorScheme.onSurface,
+              ),
+              const SizedBox(width: 12),
+              const Text('Regenerate'),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'thumbs_up',
+          child: Row(
+            children: [
+              Icon(
+                Icons.thumb_up_alt_outlined,
+                size: 20,
+                color: message.feedback == 1
+                    ? AppColors.googleBlue
+                    : theme.colorScheme.onSurface,
+              ),
+              const SizedBox(width: 12),
+              const Text('Good'),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'thumbs_down',
+          child: Row(
+            children: [
+              Icon(
+                Icons.thumb_down_alt_outlined,
+                size: 20,
+                color: message.feedback == -1
+                    ? AppColors.googleBlue
+                    : theme.colorScheme.onSurface,
+              ),
+              const SizedBox(width: 12),
+              const Text('Bad'),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value != null) {
+        switch (value) {
+          case 'verify':
+            _verifyResponse(message);
+            break;
+          case 'share':
+            _shareMessage(message.text);
+            break;
+          case 'regenerate':
+            _regenerateResponse(message);
+            break;
+          case 'thumbs_up':
+            _provideFeedback(message, 1);
+            break;
+          case 'thumbs_down':
+            _provideFeedback(message, -1);
+            break;
+        }
+      }
+    });
   }
 
   Widget _buildSideBar(ThemeData theme, bool isDark) {
@@ -5181,113 +5281,116 @@ class _ChatScreenState extends State<ChatScreen> {
                 _isLoadingHistory
                     ? _buildHistorySkeleton(theme, isDark)
                     : filteredThreads.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Text(
-                          _threads.isEmpty
-                              ? "No chats yet"
-                              : "No matches found",
-                          style: TextStyle(color: theme.disabledColor),
-                        ),
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filteredThreads.length,
-                        itemBuilder: (context, index) {
-                          final thread = filteredThreads[index];
-                          final isSelected =
-                              thread['thread_id'] == _wsService.threadId;
-                          return InkWell(
-                            onTap: () => _loadThread(thread['thread_id']),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? theme.primaryColor.withValues(alpha: 0.1)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              child: Row(
-                                children: [
-                                  // Chat Title
-                                  Expanded(
-                                    child: Text(
-                                      thread['title'] ?? 'New Chat',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: isSelected
-                                            ? theme.primaryColor
-                                            : theme.colorScheme.onSurface,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Rename Button
-                                  if (isSelected)
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.edit_outlined,
-                                        size: 16,
-                                        color: theme.disabledColor.withValues(
-                                          alpha: 0.5,
-                                        ),
-                                      ),
-                                      splashRadius: 20,
-                                      constraints: const BoxConstraints(),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                      ),
-                                      tooltip: 'Rename',
-                                      onPressed: () {
-                                        _showRenameDialog(
-                                          thread['thread_id'],
-                                          thread['title'] ?? '',
-                                        );
-                                      },
-                                    ),
-
-                                  const SizedBox(width: 4),
-
-                                  // Delete Button (Only filter/delete on confirm)
-                                  if (isSelected)
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.delete_outline,
-                                        size: 18,
-                                        color: theme.disabledColor.withValues(
-                                          alpha: 0.5,
-                                        ),
-                                      ),
-                                      splashRadius: 20,
-                                      constraints: const BoxConstraints(),
-                                      padding: EdgeInsets.zero,
-                                      tooltip: 'Delete Chat',
-                                      onPressed: () {
-                                        _confirmDeleteThread(
-                                          thread['thread_id'],
-                                        );
-                                      },
-                                    ),
-                                ],
-                              ),
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(
+                              _threads.isEmpty
+                                  ? "No chats yet"
+                                  : "No matches found",
+                              style: TextStyle(color: theme.disabledColor),
                             ),
-                          );
-                        },
-                      ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filteredThreads.length,
+                            itemBuilder: (context, index) {
+                              final thread = filteredThreads[index];
+                              final isSelected =
+                                  thread['thread_id'] == _wsService.threadId;
+                              return InkWell(
+                                onTap: () => _loadThread(thread['thread_id']),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? theme.primaryColor
+                                            .withValues(alpha: 0.1)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      // Chat Title
+                                      Expanded(
+                                        child: Text(
+                                          thread['title'] ?? 'New Chat',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: isSelected
+                                                ? theme.primaryColor
+                                                : theme.colorScheme.onSurface,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w600
+                                                : FontWeight.normal,
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Rename Button
+                                      if (isSelected)
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.edit_outlined,
+                                            size: 16,
+                                            color:
+                                                theme.disabledColor.withValues(
+                                              alpha: 0.5,
+                                            ),
+                                          ),
+                                          splashRadius: 20,
+                                          constraints: const BoxConstraints(),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                          ),
+                                          tooltip: 'Rename',
+                                          onPressed: () {
+                                            _showRenameDialog(
+                                              thread['thread_id'],
+                                              thread['title'] ?? '',
+                                            );
+                                          },
+                                        ),
+
+                                      const SizedBox(width: 4),
+
+                                      // Delete Button (Only filter/delete on confirm)
+                                      if (isSelected)
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.delete_outline,
+                                            size: 18,
+                                            color:
+                                                theme.disabledColor.withValues(
+                                              alpha: 0.5,
+                                            ),
+                                          ),
+                                          splashRadius: 20,
+                                          constraints: const BoxConstraints(),
+                                          padding: EdgeInsets.zero,
+                                          tooltip: 'Delete Chat',
+                                          onPressed: () {
+                                            _confirmDeleteThread(
+                                              thread['thread_id'],
+                                            );
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
               ],
             ),
           ),
@@ -5472,33 +5575,32 @@ class _ChatScreenState extends State<ChatScreen> {
                             child: TextField(
                               focusNode: _messageFocusNode,
                               controller: _textController,
-                              contextMenuBuilder:
-                                  (
-                                    BuildContext context,
-                                    EditableTextState editableTextState,
-                                  ) {
-                                    // Get default text selection buttons (Copy, Paste, etc.)
-                                    final List<ContextMenuButtonItem> buttonItems = 
-                                        editableTextState.contextMenuButtonItems;
-                                    
-                                    // Insert "Paste Image" button at the beginning
-                                    buttonItems.insert(
-                                      0,
-                                      ContextMenuButtonItem(
-                                        label: 'Paste Image',
-                                        onPressed: () {
-                                          // Close menu and handle image paste
-                                          ContextMenuController.removeAny();
-                                          _handleImagePaste();
-                                        },
-                                      ),
-                                    );
+                              contextMenuBuilder: (
+                                BuildContext context,
+                                EditableTextState editableTextState,
+                              ) {
+                                // Get default text selection buttons (Copy, Paste, etc.)
+                                final List<ContextMenuButtonItem> buttonItems =
+                                    editableTextState.contextMenuButtonItems;
 
-                                    return AdaptiveTextSelectionToolbar.buttonItems(
-                                      anchors: editableTextState.contextMenuAnchors,
-                                      buttonItems: buttonItems,
-                                    );
-                                  },
+                                // Insert "Paste Image" button at the beginning
+                                buttonItems.insert(
+                                  0,
+                                  ContextMenuButtonItem(
+                                    label: 'Paste Image',
+                                    onPressed: () {
+                                      // Close menu and handle image paste
+                                      ContextMenuController.removeAny();
+                                      _handleImagePaste();
+                                    },
+                                  ),
+                                );
+
+                                return AdaptiveTextSelectionToolbar.buttonItems(
+                                  anchors: editableTextState.contextMenuAnchors,
+                                  buttonItems: buttonItems,
+                                );
+                              },
                               style: GoogleFonts.inter(
                                 color: theme.colorScheme.onSurface,
                                 fontSize: 16,
@@ -5508,8 +5610,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               maxLines: null,
                               textCapitalization: TextCapitalization.sentences,
                               decoration: InputDecoration(
-                                hintText:
-                                    Provider.of<AuthProvider>(
+                                hintText: Provider.of<AuthProvider>(
                                           context,
                                         ).userModel?.preferredLanguage ==
                                         'sw'
@@ -5689,8 +5790,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   color: _isUploading
                       ? Colors.transparent
                       : (isDark
-                            ? Colors.white.withValues(alpha: 0.1)
-                            : Colors.black.withValues(alpha: 0.05)),
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.05)),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -6265,8 +6366,8 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
                       builder: (context, child) {
                         final scale = widget.isRecording || widget.isAiSpeaking
                             ? 1.0 +
-                                  (_pulseController.value * 0.2) +
-                                  (normalizedAmplitude * 0.3)
+                                (_pulseController.value * 0.2) +
+                                (normalizedAmplitude * 0.3)
                             : 1.0;
                         return Transform.scale(
                           scale: scale,
@@ -6298,8 +6399,8 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
                                   widget.isAiSpeaking
                                       ? Icons.graphic_eq
                                       : (widget.isRecording
-                                            ? Icons.mic
-                                            : Icons.more_horiz),
+                                          ? Icons.mic
+                                          : Icons.more_horiz),
                                   size: 60,
                                   color: Colors.white,
                                 ),
@@ -6315,8 +6416,7 @@ class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(5, (index) {
-                          final barHeight =
-                              20.0 +
+                          final barHeight = 20.0 +
                               (normalizedAmplitude *
                                   40.0 *
                                   (index % 2 == 0 ? 1.0 : 0.7));

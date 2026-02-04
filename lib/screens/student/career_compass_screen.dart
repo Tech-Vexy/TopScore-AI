@@ -193,8 +193,98 @@ class _CareerCompassScreenState extends State<CareerCompassScreen> {
             ),
             const SizedBox(height: 12),
             _buildCareerSuggestions(interests),
+            const SizedBox(height: 30),
+
+            // --- 3. SKILL BUILDER ---
+            _buildSkillBuilder(context, interests),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSkillBuilder(BuildContext context, List<String> interests) {
+    final needsMath = interests.any((i) =>
+        i.contains("Engineering") ||
+        i.contains("Tech") ||
+        i.contains("Finance"));
+    final needsScience = interests.any((i) =>
+        i.contains("Health") || i.contains("Medicine") || i.contains("Agri"));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Recommended Tools",
+          style: GoogleFonts.nunito(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.text,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (needsMath)
+          _buildToolLink(
+            context,
+            "Master Calculus",
+            Icons.calculate,
+            Colors.blue,
+            "Scientific Calculator",
+          ),
+        if (needsScience)
+          _buildToolLink(
+            context,
+            "Virtual Lab",
+            Icons.science,
+            Colors.purple,
+            "Science Lab",
+          ),
+        // Always show
+        _buildToolLink(
+          context,
+          "Plan Your Success",
+          Icons.calendar_today,
+          Colors.orange,
+          "Smart Timetable",
+        ),
+      ],
+    );
+  }
+
+  Widget _buildToolLink(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+    String toolName,
+  ) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.nunito(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text("Use $toolName"),
+        trailing: const Icon(Icons.arrow_forward),
+        onTap: () {
+          // Navigate to Tools tab using provider
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Opening $toolName..."),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+          // Would use: context.go('/tools');
+        },
       ),
     );
   }
@@ -251,38 +341,53 @@ class _CareerCompassScreenState extends State<CareerCompassScreen> {
       itemCount: careers.length,
       itemBuilder: (context, index) {
         final career = careers[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            leading: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: (career['color'] as Color).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+        return InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChatScreen(
+                  initialMessage:
+                      "I want to be a ${career['title']}. What subjects should I focus on in school, and what is the day-to-day life like?",
+                ),
               ),
-              child: FaIcon(career['icon'], color: career['color']),
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
             ),
-            title: Text(
-              career['title'],
-              style: GoogleFonts.nunito(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+            child: ListTile(
+              contentPadding: const EdgeInsets.all(16),
+              leading: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: (career['color'] as Color).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: FaIcon(career['icon'], color: career['color']),
               ),
-            ),
-            subtitle: Text(
-              career['desc'],
-              style: GoogleFonts.nunito(color: Colors.grey[600], fontSize: 12),
-            ),
-            trailing: const Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: Colors.grey,
+              title: Text(
+                career['title'],
+                style: GoogleFonts.nunito(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              subtitle: Text(
+                career['desc'],
+                style:
+                    GoogleFonts.nunito(color: Colors.grey[600], fontSize: 12),
+              ),
+              trailing: const Icon(
+                Icons.chat_bubble_outline,
+                size: 20,
+                color: AppColors.primaryPurple,
+              ),
             ),
           ),
         );

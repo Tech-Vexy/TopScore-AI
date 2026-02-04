@@ -11,6 +11,14 @@ enum ConnectionState {
   offline, // No internet
 }
 
+/// Connection type for data usage optimization
+enum ConnectionType {
+  wifi,
+  mobile,
+  ethernet,
+  unknown,
+}
+
 /// Manages connection state and provides retry logic
 class ConnectionStateManager {
   static final ConnectionStateManager _instance =
@@ -25,10 +33,23 @@ class ConnectionStateManager {
   bool _hasInternet = true;
   StreamSubscription? _connectivitySubscription;
 
+  // Data saver mode
+  bool _dataSaverMode = false;
+  ConnectionType _connectionType = ConnectionType.unknown;
+
+  // Latency tracking
+  int _latencyMs = 0;
+
   Stream<ConnectionState> get stateStream => _stateController.stream;
   ConnectionState get currentState => _currentState;
   bool get hasInternet => _hasInternet;
   bool get isConnected => _currentState == ConnectionState.connected;
+  bool get dataSaverMode => _dataSaverMode;
+  ConnectionType get connectionType => _connectionType;
+  int get latencyMs => _latencyMs;
+
+  /// Check if connection is metered (mobile data)
+  bool get isMetered => _connectionType == ConnectionType.mobile;
 
   /// Initialize the connection state manager
   void initialize() {
@@ -37,6 +58,20 @@ class ConnectionStateManager {
     ) {
       final hasConnection = results.any((r) => r != ConnectivityResult.none);
       _hasInternet = hasConnection;
+
+      // Determine connection type
+      if (results.contains(ConnectivityResult.wifi)) {
+        _connectionType = ConnectionType.wifi;
+      } else if (results.contains(ConnectivityResult.mobile)) {
+        _connectionType = ConnectionType.mobile;
+        // Auto-enable data saver on mobile
+        _dataSaverMode = true;
+        debugPrint('Mobile connection detected - Data Saver Mode enabled');
+      } else if (results.contains(ConnectivityResult.ethernet)) {
+        _connectionType = ConnectionType.ethernet;
+      } else {
+        _connectionType = ConnectionType.unknown;
+      }
 
       if (!hasConnection) {
         _updateState(ConnectionState.offline);
@@ -59,10 +94,42 @@ class ConnectionStateManager {
   void setDisconnected() => _updateState(ConnectionState.disconnected);
   void setReconnecting() => _updateState(ConnectionState.reconnecting);
 
+  /// Toggle data saver mode manually
+  void setDataSaverMode(bool enabled) {
+    _dataSaverMode = enabled;
+    debugPrint('Data Saver Mode: ${enabled ? "enabled" : "disabled"}');
+  }
+
+  /// Update latency measurement (called by WebSocket ping/pong)
+  void updateLatency(int milliseconds) {
+    _latencyMs = milliseconds;
+  }
+
+  /// Get connection quality based on latency
+  ConnectionQuality getConnectionQuality() {
+    if (_latencyMs < 100) return ConnectionQuality.excellent;
+    if (_latencyMs < 300) return ConnectionQuality.good;
+    if (_latencyMs < 500) return ConnectionQuality.fair;
+    return ConnectionQuality.poor;
+  }
+
+  /// Check if large downloads should be allowed
+  bool shouldAllowLargeDownloads() {
+    return !_dataSaverMode || _connectionType == ConnectionType.wifi;
+  }
+
   void dispose() {
     _connectivitySubscription?.cancel();
     _stateController.close();
   }
+}
+
+/// Connection quality indicator
+enum ConnectionQuality {
+  excellent, // < 100ms
+  good, // < 300ms
+  fair, // < 500ms
+  poor, // >= 500ms
 }
 
 /// Retry configuration
@@ -200,11 +267,11 @@ class QueuedMessage {
   }) : queuedAt = queuedAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'content': content,
-    'user_id': userId,
-    'thread_id': threadId,
-    'queued_at': queuedAt.toIso8601String(),
-    'extra_data': extraData,
-  };
+        'id': id,
+        'content': content,
+        'user_id': userId,
+        'thread_id': threadId,
+        'queued_at': queuedAt.toIso8601String(),
+        'extra_data': extraData,
+      };
 }

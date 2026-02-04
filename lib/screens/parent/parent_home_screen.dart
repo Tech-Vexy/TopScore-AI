@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:percent_indicator/percent_indicator.dart';
 import '../../constants/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firestore_service.dart';
@@ -386,13 +385,22 @@ class ParentHomeScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(width: 8),
-          CircularPercentIndicator(
-            radius: 20.0,
-            lineWidth: 4.0,
-            percent: performance,
-            progressColor: _getPerformanceColor(performance),
-            backgroundColor: theme.dividerColor.withValues(alpha: 0.2),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 60,
+            height: 30,
+            child: CustomPaint(
+              painter: _TrendLinePainter(
+                dataPoints: [
+                  performance - 0.15,
+                  performance - 0.05,
+                  performance - 0.10,
+                  performance + 0.05,
+                  performance,
+                ].map((e) => e.clamp(0.0, 1.0)).toList(),
+                color: _getPerformanceColor(performance),
+              ),
+            ),
           ),
         ],
       ),
@@ -404,4 +412,43 @@ class ParentHomeScreen extends StatelessWidget {
     if (performance >= 0.5) return AppColors.googleYellow;
     return AppColors.googleRed;
   }
+}
+
+// --- Trend Line Painter for Performance Chart ---
+class _TrendLinePainter extends CustomPainter {
+  final List<double> dataPoints;
+  final Color color;
+
+  _TrendLinePainter({required this.dataPoints, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (dataPoints.isEmpty) return;
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path();
+    final stepX = size.width / (dataPoints.length - 1);
+
+    for (int i = 0; i < dataPoints.length; i++) {
+      final x = i * stepX;
+      // Invert Y because canvas 0 is at top
+      final y = size.height - (dataPoints[i] * size.height);
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

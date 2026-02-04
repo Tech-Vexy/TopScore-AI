@@ -13,6 +13,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   String _expression = '';
   String _result = '0';
   bool _isDegree = true;
+  final List<String> _history = []; // Calculation history
 
   String _convertDegreesToRadians(String input) {
     if (!_isDegree) return input;
@@ -78,6 +79,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           } else {
             _result = eval.toString();
           }
+
+          // Save to history
+          _history.insert(0, "$_expression = $_result");
+          if (_history.length > 20) _history.removeLast();
         } catch (e) {
           _result = 'Error';
         }
@@ -153,6 +158,15 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         elevation: 1,
         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
         actions: [
+          // History button
+          if (_history.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: 'History',
+              onPressed: () {
+                Scaffold.of(context).openEndDrawer();
+              },
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: TextButton(
@@ -423,6 +437,78 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
               ],
             );
           },
+        ),
+      ),
+      endDrawer: Drawer(
+        child: Column(
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.history,
+                    color: theme.colorScheme.onPrimaryContainer,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'History',
+                    style: TextStyle(
+                      color: theme.colorScheme.onPrimaryContainer,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_history.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Text(
+                    'No calculations yet',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _history.length,
+                  itemBuilder: (ctx, i) => ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: theme.colorScheme.secondaryContainer,
+                      child: Text(
+                        '${i + 1}',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSecondaryContainer,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      _history[i],
+                      style: const TextStyle(fontFamily: 'monospace'),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      tooltip: 'Load result',
+                      onPressed: () {
+                        // Load result back into calculator
+                        final result = _history[i].split('=').last.trim();
+                        setState(() => _expression = result);
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

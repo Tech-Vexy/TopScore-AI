@@ -333,6 +333,16 @@
   </script>
   
   <script src="flutter_bootstrap.js" async></script>
+  
+  <script>
+    window.addEventListener('flutter-first-frame', function() {
+      var loading = document.getElementById('loading_indicator');
+      if (loading) {
+        loading.style.opacity = '0';
+        setTimeout(function() { loading.remove(); }, 500);
+      }
+    });
+  </script>
 </body>
 
 </html>

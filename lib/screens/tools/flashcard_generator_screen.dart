@@ -3,6 +3,8 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flip_card/flip_card.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FlashcardGeneratorScreen extends StatefulWidget {
   const FlashcardGeneratorScreen({super.key});
@@ -56,6 +58,79 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
     }
   }
 
+  Future<void> _saveDeck() async {
+    if (_flashcards.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No flashcards to save.")),
+      );
+      return;
+    }
+
+    // Show dialog to get deck name
+    final deckNameController = TextEditingController();
+    final deckName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Save Flashcard Deck"),
+        content: TextField(
+          controller: deckNameController,
+          decoration: const InputDecoration(
+            labelText: "Deck Name",
+            hintText: "e.g., Biology Chapter 5",
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.pop(context, deckNameController.text.trim()),
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+
+    if (deckName == null || deckName.isEmpty) return;
+
+    // Save to Firebase
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        throw Exception("User not authenticated");
+      }
+
+      final deckKey =
+          FirebaseDatabase.instance.ref('users/$userId/flashcards').push().key;
+
+      if (deckKey != null) {
+        await FirebaseDatabase.instance
+            .ref('users/$userId/flashcards/$deckKey')
+            .set({
+          'name': deckName,
+          'created_at': DateTime.now().millisecondsSinceEpoch,
+          'card_count': _flashcards.length,
+          'cards': _flashcards,
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Deck '$deckName' saved successfully! 💾")),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error saving deck: $e")),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -72,6 +147,14 @@ class _FlashcardGeneratorScreenState extends State<FlashcardGeneratorScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
+        actions: [
+          if (_flashcards.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: _saveDeck,
+              tooltip: "Save Deck",
+            ),
+        ],
       ),
       body: Column(
         children: [

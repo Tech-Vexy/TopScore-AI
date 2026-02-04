@@ -92,59 +92,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // --- 2. MAIN CONTENT GRID ---
           SliverPadding(
             padding: const EdgeInsets.all(16.0),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: screenWidth > 600 ? 3 : 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.1,
-              ),
+            sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _buildFeatureCard(
-                  context,
-                  title: "AI Tutor",
-                  icon: FontAwesomeIcons.robot,
-                  color: const Color(0xFF6C63FF),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ChatScreen()),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context,
-                  title: "Resources",
-                  icon: FontAwesomeIcons.bookOpen,
-                  color: const Color(0xFFFF6B6B),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ResourcesScreen(),
+                // Daily Insight Widget
+                _buildDailyInsight(theme),
+                // Features Grid
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: screenWidth > 600 ? 3 : 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.1,
+                  children: [
+                    _buildFeatureCard(
+                      context,
+                      title: "AI Tutor",
+                      icon: FontAwesomeIcons.robot,
+                      color: const Color(0xFF6C63FF),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const ChatScreen()),
+                      ),
                     ),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context,
-                  title: "Smart Tools",
-                  icon: FontAwesomeIcons.toolbox,
-                  color: const Color(0xFF4ECDC4),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ToolsScreen(),
+                    _buildFeatureCard(
+                      context,
+                      title: "Resources",
+                      icon: FontAwesomeIcons.bookOpen,
+                      color: const Color(0xFFFF6B6B),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ResourcesScreen(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context,
-                  title: "Support",
-                  icon: FontAwesomeIcons.headset,
-                  color: const Color(0xFFFFA502),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SupportScreen(),
+                    _buildFeatureCard(
+                      context,
+                      title: "Smart Tools",
+                      icon: FontAwesomeIcons.toolbox,
+                      color: const Color(0xFF4ECDC4),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ToolsScreen(),
+                        ),
+                      ),
                     ),
-                  ),
+                    _buildFeatureCard(
+                      context,
+                      title: "Support",
+                      icon: FontAwesomeIcons.headset,
+                      color: const Color(0xFFFFA502),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SupportScreen(),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ]),
             ),
@@ -288,6 +296,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDailyInsight(ThemeData theme) {
+    final insights = [
+      "Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old!",
+      "Octopuses have three hearts and blue blood!",
+      "Bananas are berries, but strawberries aren't!",
+      "The shortest war in history was between Britain and Zanzibar on August 27, 1896. Zanzibar surrendered after 38 minutes!",
+      "A day on Venus is longer than a year on Venus!",
+    ];
+    final randomInsight = insights[DateTime.now().day % insights.length];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.primary.withValues(alpha: 0.1),
+            theme.colorScheme.secondary.withValues(alpha: 0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.dividerColor.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Text("💡", style: TextStyle(fontSize: 30)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Did you know?",
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  randomInsight,
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

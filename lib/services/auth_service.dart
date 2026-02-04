@@ -53,10 +53,8 @@ class AuthService {
 
   Future<UserModel?> getUserProfile(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(uid)
-          .get();
+      DocumentSnapshot doc =
+          await _firestore.collection('users').doc(uid).get();
       if (doc.exists) {
         return UserModel.fromMap(doc.data() as Map<String, dynamic>, uid);
       }
@@ -81,8 +79,7 @@ class AuthService {
         password: password,
       );
     } catch (e) {
-      debugPrint('$e');
-      rethrow;
+      throw _mapFirebaseError(e);
     }
   }
 
@@ -93,8 +90,33 @@ class AuthService {
         password: password,
       );
     } catch (e) {
-      debugPrint('$e');
-      rethrow;
+      throw _mapFirebaseError(e);
     }
+  }
+
+  String _mapFirebaseError(Object e) {
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case 'user-not-found':
+          return 'No user found with this email.';
+        case 'wrong-password':
+          return 'Incorrect password. Please try again.';
+        case 'email-already-in-use':
+          return 'This email is already registered.';
+        case 'invalid-email':
+          return 'Please enter a valid email address.';
+        case 'weak-password':
+          return 'Password is too weak.';
+        case 'network-request-failed':
+          return 'Network error. Check your connection.';
+        case 'too-many-requests':
+          return 'Too many attempts. Please try again later.';
+        case 'invalid-credential':
+          return 'Invalid email or password.';
+        default:
+          return e.message ?? 'An unknown error occurred.';
+      }
+    }
+    return e.toString();
   }
 }

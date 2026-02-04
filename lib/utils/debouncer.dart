@@ -17,12 +17,27 @@ import 'dart:async';
 class Debouncer {
   final int milliseconds;
   Timer? _timer;
+  bool _isReady = true;
 
   Debouncer({this.milliseconds = 300});
 
   /// Runs the action after the debounce delay.
-  /// Cancels any pending action if called again before delay completes.
-  void run(void Function() action) {
+  /// [leading]: If true, runs immediately on first call, then blocks subsequent calls
+  /// until delay passes. Good for "Save" buttons.
+  /// [trailing]: Standard debounce behavior (wait until silence).
+  void run(void Function() action, {bool leading = false}) {
+    if (leading) {
+      if (_isReady) {
+        action();
+        _isReady = false;
+        _timer?.cancel();
+        _timer = Timer(Duration(milliseconds: milliseconds), () {
+          _isReady = true;
+        });
+      }
+      return;
+    }
+
     _timer?.cancel();
     _timer = Timer(Duration(milliseconds: milliseconds), action);
   }
@@ -49,6 +64,7 @@ class Debouncer {
 class Throttler {
   final int milliseconds;
   DateTime? _lastRun;
+  Timer? _resetTimer;
 
   Throttler({this.milliseconds = 300});
 
@@ -59,11 +75,21 @@ class Throttler {
         now.difference(_lastRun!).inMilliseconds >= milliseconds) {
       _lastRun = now;
       action();
+
+      // Auto-reset logic to prevent stale state bugs
+      _resetTimer?.cancel();
+      _resetTimer = Timer(Duration(milliseconds: milliseconds), () {
+        _lastRun = null;
+      });
     }
   }
 
   /// Resets the throttler, allowing the next call to execute immediately.
   void reset() {
     _lastRun = null;
+  }
+
+  void dispose() {
+    _resetTimer?.cancel();
   }
 }

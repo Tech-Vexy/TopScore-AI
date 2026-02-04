@@ -87,6 +87,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
   // --- Logic ---
   Future<void> _saveAndContinue() async {
+    // Get provider FIRST before any async operations
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
     // Validation
     if (_nameController.text.trim().isEmpty) {
       _showError("Please enter your name");
@@ -107,8 +110,30 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     }
     if ((selectedRole == 'Student' || selectedRole == 'Teacher') &&
         selectedGrade == null) {
-      _showError("Please select your grade/form");
-      return;
+      // Offer skip option with default
+      final proceed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text("Skip Grade Selection?"),
+              content: const Text(
+                "We'll set your default to 'Grade 1'. You can change this in your profile later.",
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text("Go Back"),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text("Skip & Continue"),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+
+      if (!proceed) return;
+      selectedGrade = 'Grade 1'; // Default
     }
 
     // Custom Validations
@@ -124,8 +149,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
       await authProvider.updateUserRole(
         role: selectedRole.toLowerCase(),
         grade: selectedGrade ?? '', // Pass the specific grade (e.g. "Form 1")
