@@ -66,9 +66,8 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         fileType: '.pdf', // Ensure Service filters by PDF
       );
 
-      if (!mounted) return;
-
       if (newFiles.isEmpty) {
+        if (!mounted) return;
         setState(() {
           _hasMore = false;
           _isLoading = false;
@@ -78,6 +77,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         return;
       }
 
+      if (!mounted) return;
       setState(() {
         _files.addAll(newFiles);
         // Assuming your model stores the raw snapshot, or your service returns it.
