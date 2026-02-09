@@ -66,6 +66,8 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         fileType: '.pdf', // Ensure Service filters by PDF
       );
 
+      if (!mounted) return;
+
       if (newFiles.isEmpty) {
         setState(() {
           _hasMore = false;
@@ -88,6 +90,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       });
     } catch (e) {
       debugPrint("Error fetching resources: $e");
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
