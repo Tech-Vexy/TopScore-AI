@@ -67,6 +67,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       );
 
       if (newFiles.isEmpty) {
+        if (!mounted) return;
         setState(() {
           _hasMore = false;
           _isLoading = false;
@@ -76,6 +77,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         return;
       }
 
+      if (!mounted) return;
       setState(() {
         _files.addAll(newFiles);
         // Assuming your model stores the raw snapshot, or your service returns it.
@@ -88,6 +90,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       });
     } catch (e) {
       debugPrint("Error fetching resources: $e");
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
