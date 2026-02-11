@@ -86,9 +86,9 @@ class LatexElementBuilder extends MarkdownElementBuilder {
 String cleanContent(String input) {
   // Replace <u>text</u> with **text** (Bold) or similar.
   // Underlines are often bad in chat apps (look like links).
+  // Also handle literal encoded newlines
   return input
-          .replaceAll('<u>', '') // Option A: Just remove the tag (cleanest)
-          .replaceAll('</u>', '')
-      // Option B: Map to bold -> .replaceAll('<u>', '**').replaceAll('</u>', '**')
-      ;
+      .replaceAll('<u>', '')
+      .replaceAll('</u>', '')
+      .replaceAll(r'\n', '\n');
 }

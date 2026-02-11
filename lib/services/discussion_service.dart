@@ -138,8 +138,7 @@ class DiscussionService {
 
     // 2. Check if AI should respond
     // Trigger if explicitly tagged OR (optional) randomly interject
-    bool isTagged =
-        text.toLowerCase().contains('@ai') ||
+    bool isTagged = text.toLowerCase().contains('@ai') ||
         text.toLowerCase().contains('tutor');
 
     if (isTagged) {
@@ -219,17 +218,17 @@ class DiscussionService {
         .limitToLast(50)
         .onValue
         .map((event) {
-          if (!event.snapshot.exists || event.snapshot.value == null) return [];
-          final Map<dynamic, dynamic> rawData =
-              event.snapshot.value as Map<dynamic, dynamic>;
-          final List<Map<String, dynamic>> messages = [];
-          rawData.forEach((key, value) {
-            messages.add(Map<String, dynamic>.from(value));
-          });
-          messages.sort(
-            (a, b) => (a['timestamp'] as int).compareTo(b['timestamp'] as int),
-          );
-          return messages;
-        });
+      if (!event.snapshot.exists || event.snapshot.value == null) return [];
+      final Map<dynamic, dynamic> rawData =
+          event.snapshot.value as Map<dynamic, dynamic>;
+      final List<Map<String, dynamic>> messages = [];
+      rawData.forEach((key, value) {
+        messages.add(Map<String, dynamic>.from(value));
+      });
+      messages.sort(
+        (a, b) => (a['timestamp'] as int).compareTo(b['timestamp'] as int),
+      );
+      return messages;
+    });
   }
 }

@@ -18,10 +18,12 @@ import 'router.dart' as app_router;
 import 'screens/home_screen.dart';
 import 'screens/landing_page.dart';
 import 'screens/subscription/subscription_screen.dart';
+import 'screens/auth/email_verification_screen.dart';
 
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
 import 'services/offline_service.dart';
+import 'services/update_service.dart';
 import 'config/app_theme.dart'; // <--- Import the new theme file
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -146,6 +148,10 @@ class _MyAppState extends State<MyApp> {
     _settingsProvider = SettingsProvider();
     _navigationProvider = NavigationProvider();
 
+    if (kIsWeb) {
+      UpdateService().checkForUpdate();
+    }
+
     // Initialize deep link handling for app shortcuts
     if (!kIsWeb) {
       _appLinks = AppLinks();
@@ -254,6 +260,10 @@ class AuthWrapper extends StatelessWidget {
 
     if (authProvider.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (authProvider.requiresEmailVerification) {
+      return const EmailVerificationScreen();
     }
 
     if (authProvider.userModel == null) {

@@ -28,8 +28,8 @@ class StudyStreakWidget extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              _getStreakColor().withOpacity(0.8),
-              _getStreakColor().withOpacity(0.6),
+              _getStreakColor().withValues(alpha: 0.8),
+              _getStreakColor().withValues(alpha: 0.6),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -37,7 +37,7 @@ class StudyStreakWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: _getStreakColor().withOpacity(0.3),
+              color: _getStreakColor().withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -66,7 +66,7 @@ class StudyStreakWidget extends StatelessWidget {
                       Text(
                         _getStreakMessage(),
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 14,
                         ),
                       ),
@@ -92,7 +92,7 @@ class StudyStreakWidget extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Center(
@@ -120,7 +120,7 @@ class StudyStreakWidget extends StatelessWidget {
             Text(
               'This Week',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -128,7 +128,7 @@ class StudyStreakWidget extends StatelessWidget {
             Text(
               '$weeklyProgress / $weeklyGoal days',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 12,
               ),
             ),
@@ -139,7 +139,7 @@ class StudyStreakWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor: Colors.white.withOpacity(0.2),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             minHeight: 6,
           ),
@@ -162,7 +162,7 @@ class StudyStreakWidget extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -219,9 +219,9 @@ class StreakIndicator extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: _getColor().withOpacity(0.15),
+          color: _getColor().withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _getColor().withOpacity(0.3)),
+          border: Border.all(color: _getColor().withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -363,7 +363,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 widget.achievement.description,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 14,
                 ),
               ),

@@ -1,13 +1,4 @@
-/// TopScore AI Tutor Client Library
-///
-/// This library provides all client-side functionality for the TopScore AI Tutor,
-/// including WebSocket communication, offline support, voice activity detection,
-/// and audio playback.
-
-library tutor_client;
-
 // Core WebSocket Services
-export 'websocket_service.dart';
 export 'enhanced_websocket_service.dart';
 
 // Connection Management

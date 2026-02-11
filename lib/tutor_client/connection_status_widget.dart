@@ -29,7 +29,7 @@ class ConnectionStatusBanner extends StatelessWidget {
         color: _getBackgroundColor(),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -58,7 +58,7 @@ class ConnectionStatusBanner extends StatelessWidget {
                     Text(
                       _getSubtitle()!,
                       style: TextStyle(
-                        color: _getTextColor().withOpacity(0.8),
+                        color: _getTextColor().withValues(alpha: 0.8),
                         fontSize: 12,
                       ),
                     ),
@@ -218,10 +218,10 @@ class _ConnectionIndicatorState extends State<ConnectionIndicator>
           height: widget.size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _getColor().withOpacity(_animation.value),
+            color: _getColor().withValues(alpha: _animation.value),
             boxShadow: [
               BoxShadow(
-                color: _getColor().withOpacity(0.4),
+                color: _getColor().withValues(alpha: 0.4),
                 blurRadius: widget.size / 2,
                 spreadRadius: widget.size / 4,
               ),

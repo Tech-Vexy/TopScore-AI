@@ -1,4 +1,7 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,13 +13,48 @@ class AuthProvider with ChangeNotifier {
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   bool _googleSignInInitialized = false;
 
+  static const Set<String> _defaultBlockedEmailDomains = {
+    'mailinator.com',
+    '10minutemail.com',
+    'tempmail.com',
+    'guerrillamail.com',
+    'yopmail.com',
+    'dispostable.com',
+    'sharklasers.com',
+    'trashmail.com',
+    'getnada.com',
+    'mohmal.com',
+    'maildrop.cc',
+    'fakeinbox.com',
+    'temp-mail.org',
+    'temp-mail.io',
+    'burnermail.io',
+    'mailnesia.com',
+    'minutemail.com',
+    'mailtemp.net',
+    'spambog.com',
+    'spambox.us',
+    'spamgourmet.com',
+    'mailcatch.com',
+    'emailondeck.com',
+    'inboxbear.com',
+    'tempr.email',
+    'dropmail.me',
+  };
+
+  Set<String> _blockedEmailDomains = {};
+  bool _blockedEmailDomainsLoaded = false;
+  bool _requiresEmailVerification = false;
+
   UserModel? _userModel;
   UserModel? get userModel => _userModel;
+
+  bool get requiresEmailVerification => _requiresEmailVerification;
 
   bool _isLoading = true; // Start as true until init() completes
   bool get isLoading => _isLoading;
 
-  // Guest Mode logic
+  // Guest Mode logic (disabled)
   bool _isGuest = false;
   bool get isGuest => _isGuest;
 
@@ -32,23 +70,10 @@ class AuthProvider with ChangeNotifier {
   /// Sign in anonymously for guest access - this gives a real Firebase uid
   /// so Firestore rules work while user explores without creating an account
   Future<void> continueAsGuest() async {
-    try {
-      _setLoading(true);
-      final user = _auth.currentUser;
-      if (user == null) {
-        await _auth.signInAnonymously();
-        debugPrint('Signed in anonymously as guest');
-      }
-      _isGuest = true;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Anonymous sign-in error: $e');
-      // Fall back to local guest mode if anonymous auth fails
-      _isGuest = true;
-      notifyListeners();
-    } finally {
-      _setLoading(false);
-    }
+    _setLoading(true);
+    _isGuest = false;
+    _setLoading(false);
+    throw Exception('Guest access is disabled. Please sign in.');
   }
 
   bool get canSendMessage {
@@ -80,8 +105,16 @@ class AuthProvider with ChangeNotifier {
   Future<void> init() async {
     _setLoading(true);
     try {
+      await _ensureBlockedEmailDomainsLoaded();
       User? user = _auth.currentUser;
       if (user != null) {
+        await user.reload();
+        user = _auth.currentUser;
+        if (user == null || !user.emailVerified) {
+          _requiresEmailVerification = user != null;
+          _userModel = null;
+          return;
+        }
         DocumentSnapshot doc =
             await _firestore.collection('users').doc(user.uid).get();
         if (doc.exists) {
@@ -98,6 +131,57 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<void> _ensureBlockedEmailDomainsLoaded() async {
+    if (_blockedEmailDomainsLoaded) return;
+    try {
+      final data = await rootBundle
+          .loadString('assets/config/blocked_email_domains.json');
+      final decoded = jsonDecode(data);
+      if (decoded is List) {
+        _blockedEmailDomains = decoded
+            .whereType<String>()
+            .map((e) => e.trim().toLowerCase())
+            .where((e) => e.isNotEmpty)
+            .toSet();
+      } else {
+        _blockedEmailDomains = _defaultBlockedEmailDomains;
+      }
+    } catch (e) {
+      debugPrint('Failed to load blocked email domains: $e');
+      _blockedEmailDomains = _defaultBlockedEmailDomains;
+    } finally {
+      _blockedEmailDomainsLoaded = true;
+    }
+  }
+
+  bool _isEmailDomainBlocked(String email) {
+    final domain = email.split('@').last.toLowerCase().trim();
+    if (domain.isEmpty) return true;
+    return _blockedEmailDomains.contains(domain);
+  }
+
+  Future<void> _ensureUserProfile(User user) async {
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    if (doc.exists) {
+      _userModel = UserModel.fromMap(
+        doc.data() as Map<String, dynamic>,
+        user.uid,
+      );
+    } else {
+      final newUser = UserModel(
+        uid: user.uid,
+        email: user.email ?? '',
+        displayName: user.displayName ?? 'New User',
+        photoURL: user.photoURL,
+        role: '',
+        grade: null,
+        schoolName: '',
+      );
+      await _firestore.collection('users').doc(user.uid).set(newUser.toMap());
+      _userModel = newUser;
+    }
+  }
+
   // --- GOOGLE SIGN IN ---
   Future<void> _ensureGoogleSignInInitialized() async {
     if (!_googleSignInInitialized) {
@@ -110,92 +194,177 @@ class AuthProvider with ChangeNotifier {
     try {
       _setLoading(true);
 
-      await _ensureGoogleSignInInitialized();
-
-      final account = await _googleSignIn.authenticate();
-
-      // Get the ID token from authentication
-      final idToken = account.authentication.idToken;
-
-      // For Firebase Auth, we need to get an access token via authorization
-      // Request authorization for basic scopes to get access token
-      final authorization = await account.authorizationClient
-          .authorizeScopes(['email', 'profile']);
-
-      final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: authorization.accessToken,
-        idToken: idToken,
-      );
-
-      // Check current user state for anonymous upgrade
-      final currentUser = _auth.currentUser;
-      UserCredential userCredential;
-
-      if (currentUser != null && currentUser.isAnonymous) {
-        try {
-          // Link the anonymous user to the new Google credential
-          userCredential = await currentUser.linkWithCredential(credential);
-          debugPrint(
-              "Successfully linked anonymous account to Google credential");
-        } on FirebaseAuthException catch (e) {
-          if (e.code == 'credential-already-in-use') {
-            // Account already exists, so we sign in to it (merging/overwriting guest session)
-            // Ideally prompt user, but for now we switch to the existing account
-            debugPrint("Credential in use, switching to existing account");
-            userCredential = await _auth.signInWithCredential(credential);
-          } else {
-            rethrow;
-          }
+      final OAuthCredential credential;
+      
+      if (kIsWeb) {
+        // On web, use Firebase Auth directly (google_sign_in 7.x doesn't support programmatic sign-in on web)
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        final UserCredential userCredential = await _auth.signInWithPopup(googleProvider);
+        
+        if (userCredential.user == null) {
+          _setLoading(false);
+          return false;
         }
+        
+        // For web, we've already signed in, so handle the user directly
+        final user = userCredential.user!;
+        await _ensureUserProfile(user);
+        notifyListeners();
+        return true;
       } else {
-        // Standard sign in
-        userCredential = await _auth.signInWithCredential(credential);
-      }
+        // On mobile, use google_sign_in package
+        await _ensureGoogleSignInInitialized();
+        
+        final GoogleSignInAccount account = await _googleSignIn.authenticate(
+          scopeHint: <String>['email'],
+        );
+        
+        // Get authentication details
+        final GoogleSignInAuthentication googleAuth = account.authentication;
+        
+        credential = GoogleAuthProvider.credential(
+          accessToken: null,
+          idToken: googleAuth.idToken,
+        );
+        
+        // Check current user state for anonymous upgrade
+        final currentUser = _auth.currentUser;
+        UserCredential userCredential;
 
-      User? user = userCredential.user;
-
-      if (user != null) {
-        DocumentSnapshot doc =
-            await _firestore.collection('users').doc(user.uid).get();
-
-        if (doc.exists) {
-          _userModel = UserModel.fromMap(
-            doc.data() as Map<String, dynamic>,
-            user.uid,
-          );
-          notifyListeners();
-          _setLoading(false);
-          return true;
+        if (currentUser != null && currentUser.isAnonymous) {
+          try {
+            // Link the anonymous user to the new Google credential
+            userCredential = await currentUser.linkWithCredential(credential);
+            debugPrint(
+                "Successfully linked anonymous account to Google credential");
+          } on FirebaseAuthException catch (e) {
+            if (e.code == 'credential-already-in-use') {
+              // Account already exists, so we sign in to it (merging/overwriting guest session)
+              // Ideally prompt user, but for now we switch to the existing account
+              debugPrint("Credential in use, switching to existing account");
+              userCredential = await _auth.signInWithCredential(credential);
+            } else {
+              rethrow;
+            }
+          }
         } else {
-          // New User Setup
-          UserModel newUser = UserModel(
-            uid: user.uid,
-            email: user.email ?? '',
-            displayName: user.displayName ?? 'New User',
-            photoURL: user.photoURL,
-            role: '',
-            grade: null,
-            schoolName: '', // Default empty
-          );
+          // Standard sign in
+          userCredential = await _auth.signInWithCredential(credential);
+        }
 
-          await _firestore
-              .collection('users')
-              .doc(user.uid)
-              .set(newUser.toMap());
-          _userModel = newUser;
+        User? user = userCredential.user;
 
+        if (user != null) {
+          // Google accounts are already verified, no need to check emailVerified
+          _requiresEmailVerification = false;
+          await _ensureUserProfile(user);
           notifyListeners();
-          _setLoading(false);
           return true;
         }
       }
+    } on GoogleSignInException catch (e) {
+      debugPrint("Google Sign In Exception: $e");
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        // User cancelled, not an error
+        return false;
+      }
+      rethrow;
     } catch (e) {
       debugPrint("Google Sign In Error: $e");
-      _setLoading(false);
       rethrow;
+    } finally {
+      _setLoading(false);
     }
-    _setLoading(false);
     return false;
+  }
+
+  Future<bool> signInWithEmail(String email, String password) async {
+    try {
+      _setLoading(true);
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final user = credential.user;
+      if (user == null) return false;
+
+      await user.reload();
+      final refreshedUser = _auth.currentUser;
+      if (refreshedUser == null || !refreshedUser.emailVerified) {
+        _requiresEmailVerification = true;
+        await refreshedUser?.sendEmailVerification();
+        _userModel = null;
+        notifyListeners();
+        return false;
+      }
+
+      _requiresEmailVerification = false;
+      await _ensureUserProfile(refreshedUser);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint("Email Sign In Error: $e");
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> signUpWithEmail(String email, String password) async {
+    try {
+      _setLoading(true);
+      await _ensureBlockedEmailDomainsLoaded();
+      if (_isEmailDomainBlocked(email)) {
+        throw Exception(
+            'Disposable or fraudulent email providers are not allowed.');
+      }
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final user = credential.user;
+      if (user != null) {
+        await user.sendEmailVerification();
+        _requiresEmailVerification = true;
+        _userModel = null;
+        notifyListeners();
+        return false;
+      }
+      return false;
+    } catch (e) {
+      debugPrint("Email Sign Up Error: $e");
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> sendPasswordReset(String email) async {
+    await _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  Future<void> resendEmailVerification() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    if (!user.emailVerified) {
+      await user.sendEmailVerification();
+    }
+  }
+
+  Future<bool> reloadAndCheckEmailVerified() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    await user.reload();
+    final refreshedUser = _auth.currentUser;
+    if (refreshedUser == null || !refreshedUser.emailVerified) {
+      _requiresEmailVerification = true;
+      notifyListeners();
+      return false;
+    }
+    _requiresEmailVerification = false;
+    await _ensureUserProfile(refreshedUser);
+    notifyListeners();
+    return true;
   }
 
   /// Clears the current anonymous session effectively "resetting" the guest user.
@@ -207,11 +376,9 @@ class AuthProvider with ChangeNotifier {
         await user.delete(); // Removes the anonymous UID from Firebase Auth
       }
       await signOut(); // Clears local state
-      await continueAsGuest(); // Starts a fresh anonymous session
     } catch (e) {
       debugPrint("Error clearing guest session: $e");
       await signOut();
-      await continueAsGuest();
     }
   }
 
@@ -276,6 +443,7 @@ class AuthProvider with ChangeNotifier {
     await _auth.signOut();
     _userModel = null;
     _isGuest = false;
+    _requiresEmailVerification = false;
     _guestMessageCount = 0;
     _guestDocumentCount = 0;
     notifyListeners();
@@ -357,15 +525,16 @@ class AuthProvider with ChangeNotifier {
     User? user = _auth.currentUser;
     if (user != null) {
       await user.reload();
-      DocumentSnapshot doc =
-          await _firestore.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        _userModel = UserModel.fromMap(
-          doc.data() as Map<String, dynamic>,
-          user.uid,
-        );
+      user = _auth.currentUser;
+      if (user == null || !user.emailVerified) {
+        _requiresEmailVerification = user != null;
+        _userModel = null;
         notifyListeners();
+        return;
       }
+      _requiresEmailVerification = false;
+      await _ensureUserProfile(user);
+      notifyListeners();
     }
   }
 

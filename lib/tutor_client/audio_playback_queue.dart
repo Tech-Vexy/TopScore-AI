@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -56,18 +56,33 @@ class AudioPlaybackQueue {
 
   /// Add audio from base64 string
   void enqueueBase64(String base64Audio, {String? mimeType, String? id}) {
-    final bytes = base64Decode(base64Audio);
-    enqueue(
-      AudioQueueItem(
-        id: id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        audioData: bytes,
-        mimeType: mimeType ?? 'audio/wav',
-      ),
-    );
+    if (base64Audio.isEmpty) {
+      debugPrint('Audio Queue: Skipping empty audio data');
+      return;
+    }
+    
+    try {
+      final bytes = base64Decode(base64Audio);
+      enqueue(
+        AudioQueueItem(
+          id: id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+          audioData: bytes,
+          mimeType: mimeType ?? 'audio/wav',
+        ),
+      );
+    } catch (e) {
+      debugPrint('Audio Queue Error: Invalid Base64 data - $e');
+    }
   }
 
   /// Play the next item in queue
   Future<void> _playNext() async {
+    // Race Condition Guard: Prevent multiple _playNext calls
+    if (_isPlaying && _currentItem != null) {
+      debugPrint('Audio Queue: Already playing, skipping duplicate _playNext call');
+      return;
+    }
+    
     if (_queue.isEmpty) {
       _isPlaying = false;
       _currentItem = null;

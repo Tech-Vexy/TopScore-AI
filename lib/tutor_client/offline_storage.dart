@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 
 /// Offline storage for messages and sync when online
 class OfflineStorage {
-  static const String _messagesKey = 'offline_messages';
   static const String _pendingKey = 'pending_messages';
   static const String _cacheKey = 'message_cache';
   static const int _maxCachedMessages = 100;

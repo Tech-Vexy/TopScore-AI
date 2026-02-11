@@ -101,8 +101,7 @@ class AIService {
       final responsePayload = await _channel!.stream.first;
       final data = jsonDecode(responsePayload);
 
-      final responseText =
-          data['text'] ??
+      final responseText = data['text'] ??
           "I'm having trouble thinking right now. Can you ask again?";
 
       return _parseResponseWithVisualization(responseText);
@@ -123,8 +122,7 @@ class AIService {
     required int grade,
   }) async {
     try {
-      final prompt =
-          """
+      final prompt = """
 Create a visual example for: $concept
 Subject: $subject, Grade: $grade
 
@@ -157,8 +155,7 @@ DATA: [Any numbers, values, or key facts in simple format]
     required String subject,
   }) async {
     try {
-      final prompt =
-          """
+      final prompt = """
 Give me $count visual examples for: $topic (Subject: $subject)
 
 For each example, provide:
@@ -278,10 +275,8 @@ Make it fun and easy to visualize!
     for (var section in sections) {
       if (section.trim().isEmpty) continue;
 
-      final lines = section
-          .split('\n')
-          .where((l) => l.trim().isNotEmpty)
-          .toList();
+      final lines =
+          section.split('\n').where((l) => l.trim().isNotEmpty).toList();
       if (lines.isEmpty) continue;
 
       final title = lines.first.replaceAll(RegExp(r'^\*+\s*'), '').trim();
@@ -306,7 +301,7 @@ Make it fun and easy to visualize!
   }
 
   /// Generate AI-powered flashcards from a topic or source text
-  /// 
+  ///
   /// [userId] - The ID of the student (for personalization/logging)
   /// [topic] - The main subject or topic (e.g., "Photosynthesis")
   /// [amount] - Number of cards to generate (default: 5, max: 20)
@@ -326,7 +321,8 @@ Make it fun and easy to visualize!
       'topic': topic,
       'amount': amount,
       'level': level,
-      if (sourceText != null && sourceText.isNotEmpty) 'source_text': sourceText,
+      if (sourceText != null && sourceText.isNotEmpty)
+        'source_text': sourceText,
     };
 
     try {
@@ -340,7 +336,8 @@ Make it fun and easy to visualize!
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return FlashcardSet.fromJson(data);
       } else {
-        debugPrint('Flashcard API error: ${response.statusCode} - ${response.body}');
+        debugPrint(
+            'Flashcard API error: ${response.statusCode} - ${response.body}');
         throw Exception('Failed to generate flashcards: ${response.body}');
       }
     } catch (e) {
@@ -350,7 +347,7 @@ Make it fun and easy to visualize!
   }
 
   /// Generate an AI-powered quiz from a topic or source text
-  /// 
+  ///
   /// [userId] - The ID of the student (for personalization/logging)
   /// [topic] - The main subject or topic (e.g., "World War I")
   /// [questionCount] - Number of questions to generate (default: 5, max: 10)
@@ -373,7 +370,8 @@ Make it fun and easy to visualize!
       'question_count': questionCount,
       'difficulty': difficulty,
       'level': level,
-      if (sourceText != null && sourceText.isNotEmpty) 'source_text': sourceText,
+      if (sourceText != null && sourceText.isNotEmpty)
+        'source_text': sourceText,
     };
 
     try {

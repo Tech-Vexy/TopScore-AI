@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 
 /// Voice Activity Detection (VAD) for automatic speech detection
@@ -14,7 +14,6 @@ class VoiceActivityDetector {
   bool _isListening = false;
   bool _isSpeaking = false;
   DateTime? _speechStartTime;
-  DateTime? _lastSoundTime;
   Timer? _silenceTimer;
   double _currentVolume = 0.0;
   final List<double> _volumeHistory = [];
@@ -78,7 +77,6 @@ class VoiceActivityDetector {
     final hasVoice = volume > threshold;
 
     if (hasVoice) {
-      _lastSoundTime = DateTime.now();
       _silenceTimer?.cancel();
 
       if (!_isSpeaking) {

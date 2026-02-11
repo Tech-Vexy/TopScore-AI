@@ -15,11 +15,26 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _isRegister = false;
+  bool _obscurePassword = true;
+
   @override
   void initState() {
     super.initState();
     // Load reCAPTCHA script only on auth pages
     RecaptchaService.loadRecaptchaScript();
+  }
+  
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
   
   @override
@@ -116,8 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           
                           const SizedBox(height: 16),
                           
-                          // Continue as Guest Button
-                          _buildGuestButton(context, theme, isLoading),
+                          _buildEmailPasswordForm(context, theme, isLoading),
                         ],
                       ),
                     ),
@@ -234,66 +248,208 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildGuestButton(
+  Widget _buildEmailPasswordForm(
     BuildContext context,
     ThemeData theme,
     bool isLoading,
   ) {
-    return SizedBox(
-      height: 56,
-      child: TextButton(
-        onPressed: isLoading
-            ? null
-            : () async {
-                try {
-                  await Provider.of<AuthProvider>(
-                    context,
-                    listen: false,
-                  ).continueAsGuest();
-                  if (mounted) {
-                    Navigator.of(
-                      this.context,
-                    ).popUntil((route) => route.isFirst);
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      SnackBar(
-                        content: Text("Guest sign in failed: ${e.toString()}"),
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
-                  }
-                }
-              },
-        style: TextButton.styleFrom(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(
-              color: theme.dividerColor.withValues(alpha: 0.2),
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            _isRegister ? 'Create account with email' : 'Sign in with email',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
+            textAlign: TextAlign.center,
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.person_outline_rounded,
-              size: 24,
-              color: theme.hintColor,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              "Continue as Guest",
-              style: GoogleFonts.roboto(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: theme.hintColor,
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            decoration: InputDecoration(
+              labelText: 'Email',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
+            validator: (value) {
+              final email = value?.trim() ?? '';
+              if (email.isEmpty) return 'Email is required';
+              final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+              if (!emailRegex.hasMatch(email)) return 'Enter a valid email';
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            autofillHints: const [AutofillHints.password],
+            decoration: InputDecoration(
+              labelText: 'Password',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+                onPressed: () {
+                  setState(() => _obscurePassword = !_obscurePassword);
+                },
+              ),
+            ),
+            validator: (value) {
+              if ((value ?? '').length < 6) {
+                return 'Password must be at least 6 characters';
+              }
+              return null;
+            },
+          ),
+          if (_isRegister) ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _confirmPasswordController,
+              obscureText: _obscurePassword,
+              autofillHints: const [AutofillHints.password],
+              decoration: InputDecoration(
+                labelText: 'Confirm password',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              validator: (value) {
+                if ((_confirmPasswordController.text) !=
+                    (_passwordController.text)) {
+                  return 'Passwords do not match';
+                }
+                return null;
+              },
+            ),
           ],
-        ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (!(_formKey.currentState?.validate() ?? false)) {
+                        return;
+                      }
+                      final authProvider =
+                          Provider.of<AuthProvider>(context, listen: false);
+                      try {
+                        final email = _emailController.text.trim();
+                        final password = _passwordController.text;
+                        final success = _isRegister
+                            ? await authProvider.signUpWithEmail(
+                                email,
+                                password,
+                              )
+                            : await authProvider.signInWithEmail(
+                                email,
+                                password,
+                              );
+
+                        if (!mounted) return;
+                        if (!success) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Check your email to verify your account before signing in.',
+                              ),
+                            ),
+                          );
+                        } else {
+                          Navigator.of(this.context)
+                              .popUntil((route) => route.isFirst);
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.toString()),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryPurple,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                _isRegister ? 'Create Account' : 'Sign In',
+                style: GoogleFonts.roboto(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (!_isRegister)
+            TextButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final email = _emailController.text.trim();
+                      if (email.isEmpty) {
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Enter your email to reset password'),
+                          ),
+                        );
+                        return;
+                      }
+                      try {
+                        await Provider.of<AuthProvider>(
+                          context,
+                          listen: false,
+                        ).sendPasswordReset(email);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Password reset email sent'),
+                          ),
+                        );
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.toString()),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: const Text('Forgot password?'),
+            ),
+          TextButton(
+            onPressed: isLoading
+                ? null
+                : () {
+                    setState(() => _isRegister = !_isRegister);
+                  },
+            child: Text(
+              _isRegister
+                  ? 'Already have an account? Sign in'
+                  : 'New here? Create an account',
+            ),
+          ),
+        ],
       ),
     );
   }
