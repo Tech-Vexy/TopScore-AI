@@ -5,7 +5,7 @@ class UserModel {
   final String email;
   final String displayName;
   final String?
-      photoURL; // Changed from photoUrl to photoURL to match Firebase Auth
+  photoURL; // Changed from photoUrl to photoURL to match Firebase Auth
   final String role; // 'student', 'teacher', 'parent'
   final int? grade; // Changed to int? to match usage in AuthProvider
   final String schoolName; // <--- NEW FIELD
@@ -105,8 +105,9 @@ class UserModel {
             ), // Handle String/Int mismatch
       schoolName: map['schoolName'] ?? '', // <--- NEW FIELD
       educationLevel: map['educationLevel'],
-      subjects:
-          map['subjects'] != null ? List<String>.from(map['subjects']) : null,
+      subjects: map['subjects'] != null
+          ? List<String>.from(map['subjects'])
+          : null,
       isSubscribed: map['isSubscribed'] ?? false,
       subscriptionExpiry: getDateTime(map['subscriptionExpiry']),
       preferredLanguage: map['preferred_language'],
@@ -120,8 +121,9 @@ class UserModel {
       xp: map['xp'] ?? 0,
       level: map['level'] ?? 1,
       badges: map['badges'] != null ? List<String>.from(map['badges']) : [],
-      interests:
-          map['interests'] != null ? List<String>.from(map['interests']) : null,
+      interests: map['interests'] != null
+          ? List<String>.from(map['interests'])
+          : null,
       careerMode: map['careerMode'],
       phoneNumber: map['phoneNumber'],
       curriculum: map['curriculum'],
@@ -176,5 +178,11 @@ class UserModel {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       curriculum: curriculum ?? this.curriculum,
     );
+  }
+
+  String get gradeLabel {
+    if (grade == null) return 'General';
+    if (curriculum == 'KCSE') return 'Form $grade';
+    return 'Grade $grade';
   }
 }

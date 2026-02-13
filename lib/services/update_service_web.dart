@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -11,6 +12,18 @@ class UpdateService {
   UpdateService._internal();
 
   bool _isChecking = false;
+  Timer? _timer;
+
+  void startAutoCheck() {
+    // Initial check
+    checkForUpdate();
+    // Periodic check every 60 seconds
+    _timer?.cancel();
+    _timer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => checkForUpdate(),
+    );
+  }
 
   Future<void> checkForUpdate() async {
     if (_isChecking) return;
@@ -81,9 +94,7 @@ class UpdateService {
   }
 
   String _cleanVersion(String version) {
-    final trimmed = version.trim();
-    // Remove only trailing '+' artifacts (e.g., 1.0.0+2+ -> 1.0.0+2)
-    return trimmed.replaceAll(RegExp(r'\++$'), '');
+    return version.trim();
   }
 
   void _reloadApp() {

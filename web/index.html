@@ -2,30 +2,19 @@
 <html>
 
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="google" content="notranslate">
-  
-  <!-- SEO Meta Tags -->
-  <meta name="title" content="TopScore AI - Your Personal Academic Coach">
-  <meta name="description" content="Master your studies with TopScore AI. Get instant homework help, personalized tutoring, and exam preparation tools designed to boost your grades.">
-  <meta name="keywords" content="AI tutor, study app, homework help, exam prep, TopScore, education AI, academic coach, revision tool, CBC, 8-4-4, Kenya education">
+
+  <title>TopScore AI - Ace Your Exams</title>
+  <meta name="title" content="TopScore AI - Ace Your Exams | #1 AI Tutor for KCSE & CBC">
+  <meta name="description"
+    content="Your 24/7 AI Tutor. Snap a photo of a problem, chat with your textbooks, and get instant, accurate explanations for KCSE, CBC, and 8-4-4 revision.">
+  <meta name="keywords"
+    content="TopScore AI, AI Tutor Kenya, KCSE Revision, KCPE Revision, CBC Grade 6, CBC Grade 7, CBC Grade 8, Form 4 Revision, Homework helper, 8-4-4, KNEC Past Papers, Study App, EdTech Kenya, Personal Tutor">
   <meta name="author" content="TopScore AI">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <meta name="language" content="English">
@@ -33,37 +22,34 @@
   <meta name="rating" content="General">
   <meta name="distribution" content="Global">
   <meta name="geo.region" content="KE">
-  <meta name="geo.placename" content="Kenya"
-  
-  <!-- Open Graph Meta Tags (Facebook, LinkedIn) -->
+  <meta name="geo.placename" content="Kenya">
+
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://topscoreapp.ai/">
   <meta property="og:title" content="TopScore AI - Ace Your Exams">
-  <meta property="og:description" content="Your 24/7 AI Tutor. Snap a photo of a problem, chat with your textbooks, and get instant, accurate explanations.">
+  <meta property="og:description"
+    content="Your 24/7 AI Tutor. Snap a photo of a problem, chat with your textbooks, and get instant, accurate explanations.">
   <meta property="og:image" content="https://topscoreapp.ai/assets/social-preview.png">
   <meta property="og:site_name" content="TopScore AI">
-  
-  <!-- Twitter Card Meta Tags -->
+
   <meta property="twitter:card" content="summary_large_image">
   <meta property="twitter:url" content="https://topscoreapp.ai/">
   <meta property="twitter:title" content="TopScore AI - Ace Your Exams">
-  <meta property="twitter:description" content="Your 24/7 AI Tutor. Snap a photo of a problem, chat with your textbooks, and get instant, accurate explanations.">
+  <meta property="twitter:description"
+    content="Your 24/7 AI Tutor. Snap a photo of a problem, chat with your textbooks, and get instant, accurate explanations.">
   <meta property="twitter:image" content="https://topscoreapp.ai/assets/social-preview.png">
-  
-  <!-- Canonical URL -->
+
   <link rel="canonical" href="https://topscoreapp.ai/">
-  
-  <!-- Additional Meta Tags -->
+
   <meta name="theme-color" content="#4285F4">
   <meta name="application-name" content="TopScore AI">
   <meta name="msapplication-TileColor" content="#6366F1">
   <meta name="msapplication-TileImage" content="icons/Icon-512.png">
   <meta name="format-detection" content="telephone=no">
-  
+
   <meta name="google-signin-client_id"
     content="974459699084-3upotvccrivu1qcvneft7fi0op2ljnte.apps.googleusercontent.com">
 
-  <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -72,151 +58,170 @@
   <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
   <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
 
-  <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png">
 
-  <title>TopScore AI - Your Personal Academic Coach</title>
-  
-  <!-- Custom Splash Screen Styles -->
   <style>
+    :root {
+      --splash-bg: #FFFFFF;
+      --splash-text: #1F2937;
+      --splash-sub: #6B7280;
+      --splash-logo-bg: #F3F4F6;
+      --spinner-border: rgba(66, 133, 244, 0.2);
+      --spinner-top: #4285F4;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --splash-bg: #121212;
+        --splash-text: #F9FAFB;
+        --splash-sub: #9CA3AF;
+        --splash-logo-bg: #1F2937;
+        --spinner-border: rgba(255, 255, 255, 0.1);
+        --spinner-top: #FFFFFF;
+      }
+    }
+
     #loading-splash {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--splash-bg);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 9999;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      transition: opacity 0.5s ease-out;
+      transition: opacity 0.5s ease-out, background-color 0.3s ease;
     }
-    
+
     #loading-splash.fade-out {
       opacity: 0;
       pointer-events: none;
     }
-    
+
     .splash-logo {
       width: 120px;
       height: 120px;
-      background: white;
+      background: var(--splash-logo-bg);
       border-radius: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 24px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
       animation: float 3s ease-in-out infinite;
     }
-    
+
     .splash-logo img {
-      width: 80px;
-      height: 80px;
+      width: auto;
+      height: auto;
     }
-    
+
     .splash-title {
-      color: white;
+      color: var(--splash-text);
       font-size: 28px;
       font-weight: 700;
       margin-bottom: 8px;
       text-align: center;
     }
-    
+
     .splash-subtitle {
-      color: rgba(255,255,255,0.9);
+      color: var(--splash-sub);
       font-size: 16px;
       font-weight: 400;
       margin-bottom: 40px;
       text-align: center;
     }
-    
+
     .loading-spinner {
       width: 50px;
       height: 50px;
-      border: 4px solid rgba(255,255,255,0.3);
-      border-top-color: white;
+      border: 4px solid var(--spinner-border);
+      border-top-color: var(--spinner-top);
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-    
+
     .loading-text {
-      color: white;
+      color: var(--splash-sub);
       font-size: 14px;
       margin-top: 16px;
       opacity: 0.8;
     }
-    
+
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
-    
+
     @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-10px); }
+
+      0%,
+      100% {
+        transform: translateY(0px);
+      }
+
+      50% {
+        transform: translateY(-10px);
+      }
     }
-    
+
     @media (max-width: 600px) {
       .splash-logo {
         width: 100px;
         height: 100px;
       }
+
       .splash-logo img {
         width: 60px;
         height: 60px;
       }
+
       .splash-title {
         font-size: 24px;
       }
+
       .splash-subtitle {
         font-size: 14px;
       }
     }
   </style>
   <link rel="manifest" href="manifest.json">
-  
-  <!-- Preload Critical Resources -->
+
   <link rel="preload" href="icons/Icon-192.png" as="image" type="image/png">
-  
-  <!-- Google Fonts - Inter, Nunito, Roboto with display=swap for better performance -->
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=Nunito:wght@300;400;500;700&family=Roboto:wght@300;400;500;700&display=swap"
-    rel="stylesheet"
-    media="print" onload="this.media='all'">
+    rel="stylesheet" media="print" onload="this.media='all'">
 
-  <!-- Font Awesome - Deferred loading for better performance -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
     integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"
-    media="print" onload="this.media='all'" />
+    crossorigin="anonymous" referrerpolicy="no-referrer" media="print" onload="this.media='all'" />
 
-  <!-- SweetAlert2 - Async loading -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"
-    media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" media="print"
+    onload="this.media='all'">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
-  <!-- PDF.js - Deferred loading -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" defer></script>
   <script type="text/javascript">
-    window.addEventListener('DOMContentLoaded', function() {
+    window.addEventListener('DOMContentLoaded', function () {
       if (typeof pdfjsLib !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
       }
     });
   </script>
 
-  <!-- Firebase SDK: Removed manual scripts - Flutter Fire plugins inject these automatically -->
 </head>
 
 <body translate="no">
-  <!-- Custom Splash Screen -->
   <div id="loading-splash">
     <div class="splash-logo">
       <img src="icons/Icon-192.png" alt="TopScore AI" onerror="this.style.display='none'">
@@ -226,19 +231,19 @@
     <div class="loading-spinner"></div>
     <div class="loading-text">Loading your study tools...</div>
   </div>
-  
+
   <script>
     // Hide splash screen when Flutter is ready
-    window.addEventListener('flutter-first-frame', function() {
+    window.addEventListener('flutter-first-frame', function () {
       const splash = document.getElementById('loading-splash');
       if (splash) {
         splash.classList.add('fade-out');
         setTimeout(() => splash.remove(), 500);
       }
     });
-    
+
     // Fallback: Remove splash after 10 seconds
-    setTimeout(function() {
+    setTimeout(function () {
       const splash = document.getElementById('loading-splash');
       if (splash && splash.parentNode) {
         splash.classList.add('fade-out');
@@ -246,15 +251,14 @@
       }
     }, 10000);
   </script>
-  <!-- Structured Data (JSON-LD) for SEO -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
     "name": "TopScore AI",
     "description": "AI-powered education platform for Kenyan CBC and 8-4-4 students offering personalized tutoring, study tools, and interactive learning.",
-    "url": "https://topscore-ai.web.app",
-    "logo": "https://topscore-ai.web.app/icons/Icon-512.png",
+    "url": "https://topscoreapp.ai",
+    "logo": "https://topscoreapp.ai/assets/Icon.png",
     "sameAs": [
       "https://twitter.com/TopScoreAI",
       "https://facebook.com/TopScoreAI"
@@ -276,7 +280,7 @@
     }
   }
   </script>
-  
+
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -292,17 +296,17 @@
       "description": "Free trial available"
     },
     "featureList": [
-      "AI Tutor with Document Chat",
+      "Advanced AI Tutor with Document Chat",
       "Smart Flashcard Generation",
       "Intelligent Timetable Planning",
       "Document Scanner",
       "Gamified Learning with Leagues & XP",
       "CBC and 8-4-4 Curriculum Support"
     ],
-    "screenshot": "https://topscore-ai.web.app/icons/Icon-512.png"
+    "screenshot": "https://topscoreapp.ai/assets/social-preview.png"
   }
   </script>
-  
+
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -335,17 +339,35 @@
     ]
   }
   </script>
-  
+
   <noscript>
     <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
       <h1>TopScore AI - AI-Powered Learning Platform</h1>
       <p>JavaScript is required to run this application.</p>
-      <p>TopScore AI is Kenya's premier AI-powered education platform for CBC and 8-4-4 students.</p>
-      <p>Please enable JavaScript in your browser to access personalized tutoring, AI flashcards, and smart study tools.</p>
+      <p>TopScore AI is Kenya's premier AI-powered education platform for CBC and 8-4-4 students. Get help with
+        Mathematics, English, Kiswahili, Science, and more.</p>
+      <p>We offer tailored revision materials, KNEC past papers, and interactive AI tutoring to help you ace your exams.
+      </p>
+      <p>Please enable JavaScript in your browser to access personalized tutoring, AI flashcards, and smart study tools.
+      </p>
     </div>
   </noscript>
-  
-  <script src="flutter_bootstrap.js" async></script>
+
+  <script>
+    // Force unregister service workers to fix cache/timeout issues
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        for (let registration of registrations) {
+          // Unregister only if it's the flutter service worker (usually scope is root)
+          if (registration.scope.includes('/')) {
+            console.log('Unregistering Service Worker:', registration);
+            registration.unregister();
+          }
+        }
+      });
+    }
+  </script>
+  <script src="flutter_bootstrap.js?v=2" async></script>
 </body>
 
 </html>

@@ -136,3 +136,12 @@ flutter:
     - assets/images/
     - assets/config/
     - .env
+
+  fonts:
+    - family: UniversalSans
+      fonts:
+        - asset: assets/fonts/UniversalSans-Regular.woff2
+          weight: 500
+        - asset: assets/fonts/UniversalSans-Italic.woff2
+          weight: 500
+          style: italic

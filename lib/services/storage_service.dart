@@ -45,15 +45,33 @@ class StorageService {
     int limit = 15,
     DocumentSnapshot? lastDocument,
     String? fileType,
+    String? folder,
+    String? level,
+    String? curriculum,
   }) async {
     try {
       Query query = _firestore.collection(_filesCollection);
 
-      // Apply Filter
+      // Apply Folder Filter (Subject)
+      if (folder != null && folder.isNotEmpty) {
+        query = query.where('subject', isEqualTo: folder);
+      }
+
+      // Apply Level Filter (Grade)
+      if (level != null && level.isNotEmpty) {
+        query = query.where('level', isEqualTo: level);
+      }
+
+      // Apply Curriculum Filter
+      if (curriculum != null && curriculum.isNotEmpty) {
+        query = query.where('curriculum', isEqualTo: curriculum);
+      }
+
+      // Apply File Type Filter
       if (fileType != null) {
-        // Remove leading dot if present (e.g. ".pdf" -> "pdf")
-        final type =
-            fileType.startsWith('.') ? fileType.substring(1) : fileType;
+        final type = fileType.startsWith('.')
+            ? fileType.substring(1)
+            : fileType;
         query = query.where('type', isEqualTo: type.toLowerCase());
       }
 
@@ -69,7 +87,7 @@ class StorageService {
           .map((doc) => FirebaseFile.fromFirestore(doc))
           .toList();
     } catch (e) {
-      debugPrint("Error fetching paginated files: $e");
+      debugPrint('Error fetching paginated files: $e');
       return [];
     }
   }
@@ -244,12 +262,15 @@ class StorageService {
             'path': file.path,
             'subject': metadata['subject'],
             'level': metadata['level'],
+            'curriculum': metadata['curriculum'],
             'type': file.name.split('.').last.toLowerCase(),
             'uploadedAt': FieldValue.serverTimestamp(),
             'tags': _extractTags(
               file.name,
               metadata['subject'],
               metadata['level'],
+              metadata['curriculum'],
+              (metadata['tags'] as List<dynamic>?)?.cast<String>(),
             ),
           });
 
@@ -293,12 +314,18 @@ class StorageService {
     String name,
     String? subject,
     String? level,
-  ) {
+    String? curriculum, [
+    List<String>? extraTags,
+  ]) {
     final tags = <String>[];
 
-    // Add subject and level as tags
+    // Add subject, level, and curriculum as tags
     if (subject != null) tags.add(subject.toLowerCase());
     if (level != null) tags.add(level.toLowerCase());
+    if (curriculum != null) tags.add(curriculum.toLowerCase());
+    if (extraTags != null) {
+      tags.addAll(extraTags.map((t) => t.toLowerCase()));
+    }
 
     // Extract words from filename (excluding extension)
     final nameWithoutExt = name.replaceAll(RegExp(r'\.[^.]+$'), '');

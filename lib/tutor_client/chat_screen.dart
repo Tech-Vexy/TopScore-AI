@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui' show ImageFilter;
 import 'dart:developer' as developer;
 import 'dart:io' show File, Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -11,14 +10,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import 'package:record/record.dart';
-// import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // Removed (Unused)
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:markdown/markdown.dart' as md;
 import 'package:file_picker/file_picker.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,16 +26,17 @@ import '../screens/auth/auth_screen.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/navigation_provider.dart';
-import '../constants/colors.dart';
+import 'widgets/chat_message_bubble.dart';
+import 'widgets/chat_input_area.dart';
+import 'widgets/chat_history_sidebar.dart';
+import 'widgets/collapsed_sidebar.dart';
+import 'widgets/empty_state_widget.dart';
+import 'widgets/voice_session_overlay.dart';
+import 'widgets/session_rating_dialog.dart';
+import '../config/app_theme.dart';
+
 import '../models/video_result.dart';
-import '../widgets/network_aware_image.dart';
-import '../widgets/quiz_widget.dart';
-import '../widgets/math_stepper_widget.dart';
-import '../widgets/math_markdown.dart';
-import '../widgets/virtual_lab/video_carousel.dart';
-import '../widgets/youtube_embed_widget.dart';
-import '../widgets/gemini_reasoning_view.dart';
-import '../utils/markdown/mermaid_builder.dart';
+
 import '../utils/paste_handler/paste_handler.dart';
 import 'message_model.dart';
 import 'enhanced_websocket_service.dart';
@@ -100,15 +96,8 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _userStoppedGeneration = false;
   String? _currentStreamingMessageId;
 
-  // Loading message type for dynamic status
-  String _loadingMessageType =
-      'thinking'; // 'thinking', 'analyzing', 'generating'
-
   // Settings
   final String _selectedModelKey = 'gemini-2.5-flash';
-
-  // Dictation State
-  bool _isDictating = false;
 
   // TTS state tracking
   bool _isTtsSpeaking = false;
@@ -153,7 +142,22 @@ class _ChatScreenState extends State<ChatScreen> {
   // Removed _availableModels, _selectedModelKey, _tools
 
   final FocusNode _messageFocusNode = FocusNode();
-  bool _isSidebarOpen = false;
+  // Sidebar tri-state: 'expanded' (280px), 'collapsed' (60px icon-only), 'hidden' (0px)
+  String _sidebarMode = 'collapsed';
+  bool _isSidebarInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isSidebarInitialized) {
+      final isDesktop = MediaQuery.of(context).size.width > 700;
+      // On mobile, start hidden. On desktop, start expanded.
+      _sidebarMode = isDesktop ? 'expanded' : 'hidden';
+      _isSidebarInitialized = true;
+    }
+  }
+
+  bool _showScrollDownButton = false;
 
   // Live Voice Mode Variables (UPDATED)
   // Removed: stt.SpeechToText _speechToText = stt.SpeechToText();
@@ -185,21 +189,24 @@ class _ChatScreenState extends State<ChatScreen> {
   // Image Picker instance
   final ImagePicker _imagePicker = ImagePicker();
 
-  // NEW: Track ELI5 mode
-  bool _isEli5Mode = false;
+  // Search functionality (Removed unused)
 
-  // Search functionality
-  // bool _isSearching = false;
-  // String _searchQuery = '';
-  // final TextEditingController _searchController = TextEditingController();
-  // List<ChatMessage> _filteredMessages = [];
+  List<Map<String, String>> _dynamicSuggestions = [];
 
-  // Flashcard generation
-  // List<Map<String, String>> _flashcards = [];
+  // Flashcards (Removed unused)
 
-  // Suggested question chips
-  List<String> _suggestedQuestions = [];
-  List<String> _displayedQuestions = [];
+  // Dynamic placeholder messages
+
+  // Dynamic placeholder messages
+  final List<String> _placeholderMessages = [
+    'Ask me anything...',
+    'What would you like to learn today?',
+    'Need help with homework?',
+    'Ask a question...',
+    'How can I help you?',
+  ];
+  int _currentPlaceholderIndex = 0;
+  Timer? _placeholderTimer;
 
   // Chat folders/tags (TODO: implement folder filtering UI)
   // String? _currentFolder;
@@ -242,6 +249,9 @@ class _ChatScreenState extends State<ChatScreen> {
       _checkGuestAccess();
     });
 
+    // Start dynamic placeholder rotation
+    _startPlaceholderRotation();
+
     // 2. Load suggestions (not shuffling anymore as strict list is gone from UI, but kept for logic)
     // _currentSuggestions = _allSuggestions.take(4).toList(); // REMOVED unused
 
@@ -273,7 +283,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     // Load suggested questions
-    _loadSuggestedQuestions();
+    // _loadSuggestedQuestions();
 
     // 3. Setup Initial UI State (Text/Images from other screens)
     if (widget.chatThread != null) {
@@ -319,6 +329,9 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     });
 
+    // Add scroll listener for smart scroll-to-bottom button
+    _scrollController.addListener(_scrollListener);
+
     // Handle Enter key to send message and Paste shortcut
     _messageFocusNode.onKeyEvent = (node, event) {
       // 1. Enter to Send
@@ -339,10 +352,11 @@ class _ChatScreenState extends State<ChatScreen> {
               HardwareKeyboard.instance.isMetaPressed);
 
       if (isPaste) {
-        // Trigger image check asynchronously
-        // Return 'ignored' so default text paste still happens if no image
-        _handleImagePaste();
-        return KeyEventResult.ignored;
+        if (kIsWeb) return KeyEventResult.ignored; // Let browser handle it
+
+        // Trigger image check (Mobile/Desktop)
+        _handlePaste();
+        return KeyEventResult.ignored; // Allow default text paste bubble
       }
 
       return KeyEventResult.ignored;
@@ -373,30 +387,31 @@ class _ChatScreenState extends State<ChatScreen> {
     _initLiveVoice();
   }
 
-  // --- Helper Methods (Data Loading) ---
+  // --- Scroll Listener for Smart Scroll Button ---
+  void _scrollListener() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    final showBtn =
+        (maxScroll - currentScroll) > 400; // Show if scrolled up > 400px
 
-  Future<void> _loadSuggestedQuestions() async {
-    try {
-      final jsonString = await rootBundle.loadString(
-        'assets/config/suggested_responses.json',
-      );
-      final data = json.decode(jsonString);
-      setState(() {
-        _suggestedQuestions = List<String>.from(data['suggestions'] ?? []);
-        _shuffleQuestions();
-      });
-    } catch (e) {
-      developer.log(
-        'Error loading suggested questions: $e',
-        name: 'ChatScreen',
-      );
+    if (showBtn != _showScrollDownButton) {
+      setState(() => _showScrollDownButton = showBtn);
     }
   }
 
-  void _shuffleQuestions() {
-    final shuffled = List<String>.from(_suggestedQuestions)..shuffle();
-    _displayedQuestions = shuffled.take(3).toList();
+  void _scrollToBottomForce() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+    setState(() => _showScrollDownButton = false);
   }
+
+  // --- Helper Methods (Data Loading) ---
+  // Suggested questions removed - replaced by dynamic backend suggestions in Empty State
 
   void _checkProviderData() {
     final navProvider = Provider.of<NavigationProvider>(context, listen: false);
@@ -410,7 +425,11 @@ class _ChatScreenState extends State<ChatScreen> {
           _isUploading = true;
           _pendingFileName = "Screenshot.png";
         });
-        _processProviderImage(navProvider.pendingImage!);
+        // Auto-send if we also have a message (e.g. from PDF Viewer "Ask AI Tutor")
+        _processProviderImage(
+          navProvider.pendingImage!,
+          autoSend: navProvider.pendingMessage != null,
+        );
       } else if (navProvider.pendingMessage != null) {
         _sendMessage();
       }
@@ -418,7 +437,11 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> _processProviderImage(XFile image) async {
+  // REMOVED _loadSuggestedQuestions logic as we use dynamic backend suggestions now
+  Future<void> _processProviderImage(
+    XFile image, {
+    bool autoSend = false,
+  }) async {
     try {
       final bytes = await image.readAsBytes();
 
@@ -444,7 +467,11 @@ class _ChatScreenState extends State<ChatScreen> {
           _pendingFileUrl = url;
           _isUploading = false;
         });
-        // Removed _sendMessage() to allow user to edit/confirm before sending
+
+        // 3. Auto-Send if requested (e.g., from PDF Viewer) and we have a message
+        if (autoSend && _textController.text.isNotEmpty) {
+          _sendMessage();
+        }
       }
     } catch (e) {
       developer.log("Error processing provider image: $e");
@@ -954,7 +981,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() {
       _messages.clear();
-      // Starting new chat
+      // Auto-close sidebar on mobile for better UX
+      final isMobile = MediaQuery.of(context).size.width <= 700;
+      if (isMobile) {
+        _sidebarMode = 'hidden';
+      }
     });
 
     if (closeDrawer && (_scaffoldKey.currentState?.isDrawerOpen ?? false)) {
@@ -1235,7 +1266,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
         // VOICE MODE: Speak the AI response aloud using TTS (fallback)
         // Only use client-side TTS if server didn't send pre-generated audio
-        // This creates the full voice loop: user speaks -> AI responds -> speak response
+        // This creates the full voice loop: user speaks -> AI responds -> speak response -> listen again
         if (_isVoiceMode &&
             !_receivedServerAudio &&
             completedMessageText != null &&
@@ -1286,12 +1317,27 @@ class _ChatScreenState extends State<ChatScreen> {
 
       case 'suggestions':
         if (data['suggestions'] != null && data['suggestions'] is List) {
-          final suggestions = List<String>.from(data['suggestions']);
-          if (suggestions.isNotEmpty) {
+          final rawList = data['suggestions'] as List;
+          try {
+            final parsedSuggestions = rawList.map((item) {
+              final map = Map<String, dynamic>.from(item);
+              return {
+                'emoji': map['emoji']?.toString() ?? '✨',
+                'title': map['title']?.toString() ?? '',
+                'subtitle': map['subtitle']?.toString() ?? '',
+              };
+            }).toList();
+
             setState(() {
-              _displayedQuestions = suggestions;
+              _dynamicSuggestions = parsedSuggestions;
+              // Clear chips below input area as requested
+              // _displayedQuestions = []; // REMOVED
             });
-            debugPrint("💡 Received dynamic suggestions: $suggestions");
+            developer.log(
+              "💡 Received dynamic suggestions: $parsedSuggestions",
+            );
+          } catch (e) {
+            developer.log("Error parsing suggestions: $e");
           }
         }
         break;
@@ -1335,7 +1381,6 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _currentStreamingMessageId = null;
         _isTyping = false; // STOP LOADING
-        _loadingMessageType = 'thinking'; // Reset to default
         // _statusMessage = null;
       });
     }
@@ -1525,38 +1570,6 @@ class _ChatScreenState extends State<ChatScreen> {
     // Reset user-stopped flag for new turn
     _userStoppedGeneration = false;
 
-    // Determine loading message type based on content
-    String loadingType = 'thinking';
-    final lowerCaseMessage = messageText.toLowerCase();
-
-    // Check if this is a vision/analysis task
-    if (fileUrlToSend != null ||
-        lowerCaseMessage.contains('analyze') ||
-        lowerCaseMessage.contains('analyse') ||
-        lowerCaseMessage.contains('look at') ||
-        lowerCaseMessage.contains('what\'s in') ||
-        lowerCaseMessage.contains('describe') ||
-        lowerCaseMessage.contains('identify') ||
-        lowerCaseMessage.contains('recognize') ||
-        lowerCaseMessage.contains('scan')) {
-      loadingType = 'analyzing';
-    }
-    // Check if this is a generation task
-    else if (lowerCaseMessage.contains('generate') ||
-        lowerCaseMessage.contains('create') ||
-        lowerCaseMessage.contains('draw') ||
-        lowerCaseMessage.contains('make a') ||
-        lowerCaseMessage.contains('design') ||
-        lowerCaseMessage.contains('build') ||
-        lowerCaseMessage.contains('produce') ||
-        lowerCaseMessage.contains('graph') ||
-        lowerCaseMessage.contains('chart') ||
-        lowerCaseMessage.contains('diagram') ||
-        lowerCaseMessage.contains('image') ||
-        lowerCaseMessage.contains('picture')) {
-      loadingType = 'generating';
-    }
-
     // Generate pending ID for optimistic add (RTDB will replace with real ID)
     final pendingId = 'pending-${const Uuid().v4()}';
 
@@ -1571,7 +1584,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
       _isTyping = true;
-      _loadingMessageType = loadingType;
       // _statusMessage = _isVoiceMode ? "Thinking..." : "Connecting...";
       if (_isVoiceMode) _voiceDialogSetState?.call(() {});
 
@@ -1607,22 +1619,13 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _verifyResponse(ChatMessage message) {
+  void _handleDictation() {
+    // Placeholder for simple dictation
+    // In valid implementation, this would start speech-to-text for the input field
+    debugPrint('Dictation triggered');
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Verifying facts...'),
-        duration: Duration(seconds: 1),
-      ),
+      const SnackBar(content: Text('Dictation feature coming soon!')),
     );
-
-    String preview = message.text;
-    if (preview.length > 50) {
-      preview = "${preview.substring(0, 50)}...";
-    }
-
-    final prompt =
-        "Double-check your previous answer regarding \"$preview\". Verify all facts and calculations.";
-    _sendMessage(text: prompt);
   }
 
   Future<void> _pickFile(
@@ -1891,105 +1894,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> _startRecording() async {
-    try {
-      if (await _audioRecorder.hasPermission()) {
-        // On Web, path is ignored or handled differently by record package
-        // On Mobile, we need a valid path
-        String path = '';
-        if (!kIsWeb) {
-          final tempDir = await getTemporaryDirectory();
-          path =
-              '${tempDir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
-        } else {
-          // For web, we can provide a dummy name or it might be ignored depending on implementation
-          path = 'audio_recording.m4a';
-        }
-
-        await _audioRecorder.start(const RecordConfig(), path: path);
-
-        setState(() {
-          _isRecording = true;
-        });
-      }
-    } catch (e) {
-      developer.log('Error starting record: $e', name: 'ChatScreen');
-    }
-  }
-
-  Future<void> _stopRecording() async {
-    try {
-      final path = await _audioRecorder.stop();
-
-      if (mounted) {
-        setState(() {
-          _isRecording = false;
-        });
-      }
-
-      if (path != null) {
-        String? base64Audio;
-
-        if (kIsWeb) {
-          // On Web, path is a blob URL. Fetch it.
-          try {
-            final response = await http.get(Uri.parse(path));
-            if (response.statusCode == 200) {
-              base64Audio = base64Encode(response.bodyBytes);
-            }
-          } catch (e) {
-            developer.log('Error fetching blob: $e', name: 'ChatScreen');
-          }
-        } else {
-          // On Mobile, path is a file path
-          final file = File(path);
-          if (await file.exists()) {
-            final audioBytes = await file.readAsBytes();
-            base64Audio = base64Encode(audioBytes);
-          }
-        }
-
-        if (base64Audio != null) {
-          // Add a message bubble for the audio
-          setState(() {
-            _messages.add(
-              ChatMessage(
-                id: const Uuid().v4(),
-                text: '🎤 Audio Message',
-                isUser: true,
-                timestamp: DateTime.now(),
-                audioUrl: path, // Store local path/blob for playback
-              ),
-            );
-            _isTyping = true;
-          });
-
-          final audioData = 'data:audio/m4a;base64,$base64Audio';
-
-          if (mounted) {
-            final authProvider = Provider.of<AuthProvider>(
-              context,
-              listen: false,
-            );
-            final userId =
-                authProvider.userModel?.uid ??
-                FirebaseAuth.instance.currentUser?.uid ??
-                'guest';
-
-            _wsService.sendMessage(
-              message: '',
-              userId: userId,
-              audioData: audioData,
-            );
-          }
-          _scrollToBottom();
-        }
-      }
-    } catch (e) {
-      developer.log('Error stopping record: $e', name: 'ChatScreen');
-    }
-  }
-
   String _cleanMarkdown(String text) {
     // 1. Remove Images completely: ![Alt](url)
     var cleaned = text.replaceAll(RegExp(r'!\[.*?\]\(.*?\)'), '');
@@ -2050,8 +1954,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _isAiSpeaking = true;
       _isTtsSpeaking = true;
-      // _statusMessage = "Speaking...";
-      // _liveTranscription = ''; // Clear previous transcription
+      // _statusMessage = ''; // Clear previous transcription
     });
     _voiceDialogSetState?.call(() {});
 
@@ -2134,11 +2037,15 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
+  Future<void> _pauseVoiceMessage() async {
+    try {
+      await _audioPlayer.pause();
+      setState(() {
+        _isPlayingAudio = false;
+      });
+    } catch (e) {
+      developer.log('Error pausing voice message: $e', name: 'ChatScreen');
+    }
   }
 
   void _copyToClipboard(String text) {
@@ -2148,39 +2055,66 @@ class _ChatScreenState extends State<ChatScreen> {
     ).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
   }
 
-  Future<void> _handleImagePaste() async {
+  Future<void> _handlePaste() async {
     try {
-      final imageBytes = await Pasteboard.image;
-      if (imageBytes != null && imageBytes.isNotEmpty) {
-        // Validate Header (Prevent HTML pastes)
-        if (imageBytes[0] == 0x3c) return;
+      // 1. Try Image Paste (Mobile/Desktop ONLY)
+      if (!kIsWeb) {
+        final imageBytes = await Pasteboard.image;
+        if (imageBytes != null && imageBytes.isNotEmpty) {
+          // Validate Header (Prevent HTML pastes pretending to be images)
+          if (imageBytes.length > 4 && imageBytes[0] == 0x3c) return;
 
-        // 1. Show Preview Immediately
-        final base64Image = base64Encode(imageBytes);
+          // Show Preview Immediately
+          final base64Image = base64Encode(imageBytes);
 
-        setState(() {
-          _pendingPreviewData = 'data:image/png;base64,$base64Image';
-          _pendingFileName = "Pasted Image.png";
-          _isUploading = true;
-        });
+          setState(() {
+            _pendingPreviewData = 'data:image/png;base64,$base64Image';
+            _pendingFileName = "Pasted Image.png";
+            _isUploading = true;
+          });
 
-        // 2. Upload in Background
-        final url = await _uploadToFirebase(
-          imageBytes,
-          'pasted_image.png',
-          'image/png',
+          // Upload in Background
+          final url = await _uploadToFirebase(
+            imageBytes,
+            'pasted_image.png',
+            'image/png',
+          );
+
+          if (mounted) {
+            if (url != null) {
+              setState(() => _pendingFileUrl = url);
+            } else {
+              _clearPendingAttachment();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Failed to upload image")),
+              );
+            }
+          }
+          return;
+        }
+      }
+
+      // 2. Try Text Paste
+      final ClipboardData? cbd = await Clipboard.getData(Clipboard.kTextPlain);
+      if (cbd != null && cbd.text != null && cbd.text!.isNotEmpty) {
+        final text = cbd.text!;
+        final selection = _textController.selection;
+
+        // Insert text at cursor position
+        final newText = _textController.text.replaceRange(
+          selection.start < 0 ? 0 : selection.start,
+          selection.end < 0 ? 0 : selection.end,
+          text,
         );
 
-        if (mounted) {
-          if (url != null) {
-            setState(() => _pendingFileUrl = url);
-          } else {
-            _clearPendingAttachment(); // Upload failed
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Failed to upload image")),
-            );
-          }
-        }
+        // Update selection to end of pasted text
+        final newSelectionIndex =
+            (selection.start < 0 ? 0 : selection.start) + text.length;
+
+        _textController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newSelectionIndex),
+        );
       }
     } catch (e) {
       developer.log('Paste Error: $e', name: 'ChatScreen');
@@ -2283,19 +2217,6 @@ class _ChatScreenState extends State<ChatScreen> {
           context,
         ).showSnackBar(const SnackBar(content: Text('Failed to edit message')));
       }
-    }
-  }
-
-  // Dictation
-  Future<void> _toggleDictation() async {
-    if (_isDictating) {
-      // await _speechToText.stop(); // If using speech_to_text package
-      setState(() => _isDictating = false);
-    } else {
-      // Logic for starting dictation...
-      // For now just toggle state
-      setState(() => _isDictating = true);
-      // Implement actual speech-to-text here
     }
   }
 
@@ -2415,13 +2336,20 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollToBottom() {
+    // Smart auto-scroll: Only scroll if user is already near bottom or it's a new user message
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        final max = _scrollController.position.maxScrollExtent;
+        final current = _scrollController.position.pixels;
+        // Auto-scroll if within 200px of bottom OR the last message is from user
+        if ((max - current) < 200 ||
+            (_messages.isNotEmpty && _messages.last.isUser)) {
+          _scrollController.animateTo(
+            max,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
       }
     });
   }
@@ -2443,11 +2371,23 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollController.dispose();
     _messageFocusNode.dispose();
     _typingTimer?.cancel();
+    _placeholderTimer?.cancel();
     _audioRecorder.dispose();
     _audioPlayer.dispose();
     _flutterTts.stop();
     removePasteHandler();
     super.dispose();
+  }
+
+  void _startPlaceholderRotation() {
+    _placeholderTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted && _textController.text.isEmpty) {
+        setState(() {
+          _currentPlaceholderIndex =
+              (_currentPlaceholderIndex + 1) % _placeholderMessages.length;
+        });
+      }
+    });
   }
 
   /// Checks if guest user has exceeded their message limit
@@ -2829,28 +2769,24 @@ class _ChatScreenState extends State<ChatScreen> {
   // 1. Logic to delete from Firebase and update UI
   Future<void> _deleteThread(String threadId) async {
     try {
-      // Remove from Firebase Realtime Database
-      // Note: Assuming 'chats/$threadId' is the correct path structure based on previous context.
-      // If the path needs user ID, it might be 'users/$userId/chats/$threadId' or similar.
-      // Using the user provided path 'chats/$threadId'.
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final userId = authProvider.userModel?.uid;
-      if (userId == null) return;
+      // API CALL to delete thread
+      final response = await http.delete(
+        Uri.parse('$_backendUrl/threads/$threadId'),
+      );
 
-      // Remove from Firebase Realtime Database
-      await FirebaseDatabase.instance
-          .ref('users/$userId/chats/$threadId')
-          .remove();
+      if (response.statusCode == 200) {
+        setState(() {
+          // Remove from local list
+          _threads.removeWhere((t) => t['thread_id'] == threadId);
 
-      setState(() {
-        // Remove from local list
-        _threads.removeWhere((t) => t['thread_id'] == threadId);
-
-        // If we deleted the active chat, start a new one
-        if (_wsService.threadId == threadId) {
-          _startNewChat(closeDrawer: false);
-        }
-      });
+          // If we deleted the active chat, start a new one
+          if (_wsService.threadId == threadId) {
+            _startNewChat(closeDrawer: false);
+          }
+        });
+      } else {
+        throw Exception('Server error: ${response.statusCode}');
+      }
     } catch (e) {
       developer.log('Error deleting thread: $e', name: 'ChatScreen');
       if (mounted) {
@@ -2889,24 +2825,26 @@ class _ChatScreenState extends State<ChatScreen> {
   // 1. Update Firebase and Local State
   Future<void> _renameThread(String threadId, String newTitle) async {
     try {
-      // Update Firebase Realtime Database
-      // Note: We access 'metadata/title' directly
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final userId = authProvider.userModel?.uid;
-      if (userId == null) return;
+      // API CALL to rename thread
+      final response = await http.patch(
+        Uri.parse('$_backendUrl/threads/$threadId/title'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'title': newTitle}),
+      );
 
-      // Update Firebase Realtime Database
-      await FirebaseDatabase.instance
-          .ref('users/$userId/chats/$threadId/metadata/title')
-          .set(newTitle);
-
-      // Update Local UI immediately
-      setState(() {
-        final index = _threads.indexWhere((t) => t['thread_id'] == threadId);
-        if (index != -1) {
-          _threads[index]['title'] = newTitle;
-        }
-      });
+      if (response.statusCode == 200) {
+        // Update Local UI immediately
+        setState(() {
+          final index = _threads.indexWhere((t) => t['thread_id'] == threadId);
+          if (index != -1) {
+            _threads[index]['title'] = newTitle;
+          }
+          // Sync cache
+          _titleCache[threadId] = newTitle;
+        });
+      } else {
+        throw Exception('Server error: ${response.statusCode}');
+      }
     } catch (e) {
       developer.log('Error renaming thread: $e', name: 'ChatScreen');
       if (mounted) {
@@ -2961,90 +2899,15 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildUserAvatar(ThemeData theme) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.userModel;
-
-    Widget avatarContent;
-
-    if (user != null) {
-      final photoURL = user.photoURL;
-      if (photoURL != null && photoURL.isNotEmpty) {
-        avatarContent = SizedBox(
-          width: 36,
-          height: 36,
-          child: ClipOval(
-            child: NetworkAwareImage(
-              imageUrl: photoURL,
-              width: 36,
-              height: 36,
-              isProfilePicture: true,
-              fit: BoxFit.cover,
-            ),
-          ),
-        );
-      } else {
-        String initials = 'G';
-        final displayName = user.displayName;
-        final email = user.email;
-
-        if (displayName.isNotEmpty) {
-          final names = displayName.trim().split(' ');
-          if (names.length >= 2) {
-            initials = '${names[0][0]}${names[1][0]}'.toUpperCase();
-          } else if (names.isNotEmpty) {
-            initials = names[0][0].toUpperCase();
-          }
-        } else if (email.isNotEmpty) {
-          initials = email[0].toUpperCase();
-        }
-
-        avatarContent = CircleAvatar(
-          radius: 18,
-          backgroundColor: AppColors.primary,
-          child: Text(
-            initials,
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-        );
-      }
-    } else {
-      avatarContent = CircleAvatar(
-        radius: 18,
-        backgroundColor: AppColors.primary,
-        child: Text(
-          'G',
-          style: GoogleFonts.outfit(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-      );
-    }
-
-    return PopupMenuButton<String>(
-      offset: const Offset(0, 50),
-      icon: avatarContent,
-      tooltip: 'Account',
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          enabled: false,
-          child: Text(
-            user?.displayName ?? user?.email ?? 'Guest',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-        ),
-      ],
-      onSelected: (value) async {},
+  void _showRatingDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => SessionRatingDialog(
+        onSubmit: () {
+          // Logic to handle rating submission (e.g., analytics)
+          developer.log("Session Rated", name: "ChatScreen");
+        },
+      ),
     );
   }
 
@@ -3052,1898 +2915,156 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: Colors.transparent, // Transparent to show gradient
-      extendBodyBehindAppBar: true,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [
-                    theme.scaffoldBackgroundColor,
-                    theme.scaffoldBackgroundColor,
-                    theme.scaffoldBackgroundColor,
-                  ]
-                : [
-                    theme.scaffoldBackgroundColor,
-                    theme.scaffoldBackgroundColor,
-                    theme.scaffoldBackgroundColor,
-                  ],
-          ),
-        ),
-        child: SafeArea(
-          child: Row(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: _isSidebarOpen
-                    ? 280
-                    : 0, // Slightly wider for glass elegance
-                curve: Curves.easeInOut,
-                child: _isSidebarOpen
-                    ? _GlassContainer(
-                        borderRadius: 0,
-                        opacity: isDark ? 0.3 : 0.5,
-                        blur: 20,
-                        border: Border(
-                          right: BorderSide(
-                            color: theme.dividerColor.withValues(alpha: 0.1),
-                          ),
-                        ),
-                        child: _buildSideBar(theme, isDark),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    // TOP BAR
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                      child: _GlassContainer(
-                        borderRadius: 20,
-                        opacity: isDark ? 0.15 : 0.65,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          children: [
-                            if (!_isSidebarOpen)
-                              IconButton(
-                                icon: Icon(
-                                  Icons.menu,
-                                  color: theme.colorScheme.onSurface.withValues(
-                                    alpha: 0.7,
-                                  ),
-                                ),
-                                onPressed: () =>
-                                    setState(() => _isSidebarOpen = true),
-                                tooltip: 'Show menu',
-                              ),
-                            // Clean Header: Just the name on the left
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text(
-                                  '🎓',
-                                  style: TextStyle(fontSize: 20),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'TopScore AI',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Spacer(),
-                            _buildUserAvatar(theme),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: _isLoadingMessages
-                          ? Center(
-                              child: CircularProgressIndicator(
-                                color: theme.primaryColor,
-                              ),
-                            )
-                          : _messages.isEmpty
-                          ? _buildEmptyState(isDark, theme)
-                          : ListView.builder(
-                              controller: _scrollController,
-                              padding: const EdgeInsets.only(
-                                left: 16,
-                                right: 16,
-                                top: 16,
-                                bottom: 120, // Space for fixed input area
-                              ),
-                              itemCount: _messages.length,
-                              cacheExtent: 500,
-                              findChildIndexCallback: (Key key) {
-                                if (key is ValueKey<String>) {
-                                  return _messages.indexWhere(
-                                    (m) => m.id == key.value,
-                                  );
-                                }
-                                return null;
-                              },
-                              itemBuilder: (context, index) {
-                                final message = _messages[index];
-                                return RepaintBoundary(
-                                  key: ValueKey(message.id),
-                                  child: _buildMessageBubble(message, theme),
-                                );
-                              },
-                            ),
-                    ),
 
-                    // Bottom Area (Typing Indicator + Input)
-                    if (_messages.isNotEmpty) ...[
-                      if (_isTyping)
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 44,
-                                      height: 44,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              AppColors.accentTeal,
-                                            ),
-                                      ),
-                                    ),
-                                    CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor: Colors.white,
-                                      child: ClipOval(
-                                        child: Image.asset(
-                                          'assets/images/logo.png',
-                                          width: 36,
-                                          height: 36,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(width: 12),
-                                _TypingIndicator(
-                                  messageType: _loadingMessageType,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Use local constraints to decide layout mode
+        final isDesktop = constraints.maxWidth > 700;
 
-                      _buildInputArea(theme),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+        return Scaffold(
+          key: _scaffoldKey,
+          backgroundColor: Colors.transparent, // Transparent to show gradient
+          extendBodyBehindAppBar: true,
+          drawer: isDesktop ? null : _buildMobileDrawer(theme, isDark),
+          appBar: isDesktop ? null : _buildMobileAppBar(theme, isDark),
+          body: Container(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF000000)
+                  : theme.scaffoldBackgroundColor,
+              gradient: isDark
+                  ? const RadialGradient(
+                      center: Alignment.topCenter,
+                      radius: 2.5,
+                      colors: [
+                        Color(0xFF181835), // Deep Blue/Purple glow
+                        Color(0xFF0A0A14), // Very Dark Blue (almost black)
+                      ],
+                      stops: [0.0, 1.0],
+                    )
+                  : null,
+            ),
+            child: SafeArea(
+              child: isDesktop
+                  ? Row(
+                      children: [
+                        _buildSidebar(theme, isDark),
+                        Expanded(child: _buildMainChatArea(theme)),
+                      ],
+                    )
+                  : _buildMainChatArea(theme),
+            ),
           ),
+        );
+      },
+    );
+  }
+
+  PreferredSizeWidget _buildMobileAppBar(ThemeData theme, bool isDark) {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: true,
+      leading: IconButton(
+        icon: Icon(Icons.menu, color: isDark ? Colors.white : Colors.black87),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      title: Text(
+        'TopScore AI',
+        style: GoogleFonts.outfit(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : Colors.black87,
         ),
       ),
     );
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    String timeGreeting;
-    if (hour < 12) {
-      timeGreeting = 'Good morning';
-    } else if (hour < 17) {
-      timeGreeting = 'Good afternoon';
-    } else {
-      timeGreeting = 'Good evening';
-    }
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final user = authProvider.userModel;
-    String name = 'Student';
-    if (user != null && user.displayName.isNotEmpty) {
-      name = user.displayName.split(' ').first;
-    }
-    return '$timeGreeting, $name. Welcome back!';
+  Widget _buildMobileDrawer(ThemeData theme, bool isDark) {
+    return Drawer(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      child: ChatHistorySidebar(
+        isDark: isDark,
+        threads: _threads,
+        historySearchQuery: _historySearchQuery,
+        historySearchController: _historySearchController,
+        isLoadingHistory: _isLoadingHistory,
+        currentThreadId: _wsService.threadId,
+        onCloseSidebar: () => Navigator.pop(context),
+        onStartNewChat: _startNewChat,
+        onLoadThread: _loadThread,
+        onRenameThread: _showRenameDialog,
+        onDeleteThread: _confirmDeleteThread,
+        onFinishLesson: _showRatingDialog,
+        onSearchChanged: (value) {
+          setState(() {
+            _historySearchQuery = value;
+            if (value.isEmpty) {
+              _historySearchController.clear();
+            }
+          });
+        },
+      ),
+    );
   }
 
-  Widget _buildEmptyState(bool isDark, ThemeData theme) {
-    return Center(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Removed Cap Icon
-              Padding(
-                padding: const EdgeInsets.only(bottom: 32),
-                child: Text(
-                  _getGreeting(),
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                    letterSpacing: -0.5,
-                  ),
+  Widget _buildSidebar(ThemeData theme, bool isDark) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: _sidebarMode == 'expanded'
+          ? 280
+          : _sidebarMode == 'collapsed'
+          ? 60
+          : 0,
+      curve: Curves.easeInOut,
+      child: _sidebarMode == 'hidden'
+          ? const SizedBox.shrink()
+          : _sidebarMode == 'collapsed'
+          ? CollapsedSidebar(
+              isDark: isDark,
+              onModeChange: (mode) => setState(() => _sidebarMode = mode),
+              onStartNewChat: () => _startNewChat(closeDrawer: false),
+            )
+          : AppTheme.buildGlassContainer(
+              context,
+              borderRadius: 0,
+              opacity: isDark ? 0.3 : 0.5,
+              blur: 20,
+              border: Border(
+                right: BorderSide(
+                  color: theme.dividerColor.withValues(alpha: 0.1),
                 ),
               ),
-
-              // Centered Input Area
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 700),
-                child: _buildInputArea(theme, isCentered: true),
+              child: ChatHistorySidebar(
+                isDark: isDark,
+                threads: _threads,
+                historySearchQuery: _historySearchQuery,
+                historySearchController: _historySearchController,
+                isLoadingHistory: _isLoadingHistory,
+                currentThreadId: _wsService.threadId,
+                onCloseSidebar: () =>
+                    setState(() => _sidebarMode = 'collapsed'),
+                onStartNewChat: _startNewChat,
+                onLoadThread: _loadThread,
+                onRenameThread: _showRenameDialog,
+                onDeleteThread: _confirmDeleteThread,
+                onFinishLesson: _showRatingDialog,
+                onSearchChanged: (value) {
+                  setState(() {
+                    _historySearchQuery = value;
+                    if (value.isEmpty) {
+                      _historySearchController.clear();
+                    }
+                  });
+                },
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
   /* Widget _buildSearchResults(ThemeData theme) { ... } */
 
   // Widget _buildSuggestionCard(...) REMOVED
-
-  Widget _buildMessageBubble(ChatMessage message, ThemeData theme) {
-    final isUser = message.isUser;
-    final isDark = theme.brightness == Brightness.dark;
-
-    if (isUser) {
-      // --- USER MESSAGE (Primary Color + White Text) ---
-      // --- USER MESSAGE (Primary Color + White Text) ---
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 12, bottom: 4),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.75,
-                    ),
-                    decoration: BoxDecoration(
-                      // CHANGE: Use Primary Color for User to make it distinct
-                      color: theme.primaryColor,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(4),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Voice message player
-                        if (message.audioUrl != null &&
-                            message.text == '🎤 Audio Message')
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Play/Pause button
-                                IconButton(
-                                  icon: Icon(
-                                    _playingAudioMessageId == message.id &&
-                                            _isPlayingAudio
-                                        ? Icons.pause_circle_filled
-                                        : Icons.play_circle_filled,
-                                    color: Colors.white,
-                                    size: 32,
-                                  ),
-                                  onPressed: () {
-                                    if (_playingAudioMessageId == message.id &&
-                                        _isPlayingAudio) {
-                                      _audioPlayer.pause();
-                                      setState(() => _isPlayingAudio = false);
-                                    } else if (_playingAudioMessageId ==
-                                            message.id &&
-                                        !_isPlayingAudio) {
-                                      _resumeVoiceMessage();
-                                    } else {
-                                      _playVoiceMessage(
-                                        message.id,
-                                        message.audioUrl!,
-                                      );
-                                    }
-                                  },
-                                ),
-                                const SizedBox(width: 8),
-                                // Waveform placeholder / progress
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Progress bar
-                                      Container(
-                                        height: 3,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            2,
-                                          ),
-                                          color: Colors.white.withValues(
-                                            alpha: 0.3,
-                                          ),
-                                        ),
-                                        child: FractionallySizedBox(
-                                          alignment: Alignment.centerLeft,
-                                          widthFactor:
-                                              _playingAudioMessageId ==
-                                                  message.id
-                                              ? (_audioDuration.inMilliseconds >
-                                                        0
-                                                    ? _audioPosition
-                                                              .inMilliseconds /
-                                                          _audioDuration
-                                                              .inMilliseconds
-                                                    : 0.0)
-                                              : 0.0,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(2),
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      // Duration text
-                                      Text(
-                                        _playingAudioMessageId == message.id
-                                            ? '${_formatDuration(_audioPosition)} / ${_formatDuration(_audioDuration)}'
-                                            : 'Voice message',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 12,
-                                          color: Colors.white.withValues(
-                                            alpha: 0.9,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        if (message.imageUrl != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: NetworkAwareImage(
-                                    imageUrl: message.imageUrl!,
-                                    height: 150,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: InkWell(
-                                    onTap: () =>
-                                        _downloadImage(message.imageUrl!),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.6,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.download_rounded,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        // CHANGE: White text on Blue background (hide for voice messages)
-                        if (!(message.audioUrl != null &&
-                            message.text == '🎤 Audio Message'))
-                          SelectableText(
-                            message.text,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              color: Colors.white, // Always white for contrast
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  // Actions Row
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.edit_outlined,
-                            size: 16,
-                            color: theme.disabledColor,
-                          ),
-                          onPressed: () => _handleUserEdit(message),
-                          tooltip: 'Edit',
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.copy_all_outlined,
-                            size: 16,
-                            color: theme.disabledColor,
-                          ),
-                          onPressed: () => _copyToClipboard(message.text),
-                          tooltip: 'Copy',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    } else {
-      // --- AI MESSAGE (DM Sans Font + Styled Headers) ---
-      // Check if this specific message is currently streaming
-      final isStreaming = _currentStreamingMessageId == message.id;
-
-      return Align(
-        alignment: Alignment.center,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 850),
-          margin: const EdgeInsets.symmetric(vertical: 16),
-          padding: const EdgeInsets.only(right: 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(right: 12, top: 4),
-                child: isStreaming
-                    ? Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.accentTeal,
-                              ),
-                            ),
-                          ),
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: Colors.white,
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/images/logo.png',
-                                width: 36,
-                                height: 36,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Colors.white,
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/images/logo.png',
-                            width: 36,
-                            height: 36,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-              ),
-              Expanded(
-                child: _GlassContainer(
-                  opacity: isDark ? 0.05 : 0.6,
-                  borderRadius: 16,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 1. GEMINI REASONING BLOCK
-                      // Replaced the old ExpansionTile with the new GeminiReasoningView
-                      if (message.reasoning != null &&
-                          message.reasoning!.isNotEmpty)
-                        GeminiReasoningView(
-                          content: message.reasoning!,
-                          // It is "thinking" if the final answer hasn't started streaming yet
-                          isThinking: message.text.isEmpty,
-                        ),
-
-                      // 2. MAIN ANSWER CONTENT
-                      // Only show if there is actually content
-                      if (message.text.isNotEmpty)
-                        MarkdownBody(
-                          data: cleanContent(
-                            message.text,
-                          ), // Use cleanContent helper
-                          selectable:
-                              true, // Enable text selection for AI responses
-                          softLineBreak: true,
-                          builders: {
-                            'latex':
-                                LatexElementBuilder(), // Use our new builder
-                            'mermaid': MermaidElementBuilder(),
-                            'a': YouTubeLinkBuilder(
-                              context,
-                              isDark,
-                              isStreaming: isStreaming,
-                            ), // Inline YouTube videos - defer until streaming done
-                          },
-                          extensionSet: md.ExtensionSet(
-                            [
-                              ...md.ExtensionSet.gitHubFlavored.blockSyntaxes,
-                              MermaidBlockSyntax(),
-                            ],
-                            [
-                              md.EmojiSyntax(),
-                              LatexSyntax(), // Correctly placed in inline syntaxes
-                              ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes,
-                            ],
-                          ),
-                          // ignore: deprecated_member_use
-                          imageBuilder: (uri, title, alt) {
-                            // A. Check if it's a Data URI (Base64)
-                            if (uri.scheme == 'data') {
-                              try {
-                                // Split 'data:image/png;base64,....' to get just the code
-                                final base64String = uri
-                                    .toString()
-                                    .split(',')
-                                    .last;
-
-                                // Sanitize string (remove newlines/spaces if any)
-                                final cleanBase64 = base64String.replaceAll(
-                                  RegExp(r'\s+'),
-                                  '',
-                                );
-
-                                return Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 8.0,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: Colors.grey.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.memory(
-                                      base64Decode(cleanBase64),
-                                      fit: BoxFit.contain,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return const Padding(
-                                              padding: EdgeInsets.all(8.0),
-                                              child: Text(
-                                                "⚠️ Image Decode Error",
-                                              ),
-                                            );
-                                          },
-                                    ),
-                                  ),
-                                );
-                              } catch (e) {
-                                return const Text("⚠️ Invalid Image Data");
-                              }
-                            }
-
-                            // B. Fallback for standard URLs (like the Google Chart link)
-                            return CachedNetworkImage(
-                              imageUrl: uri.toString(),
-                              placeholder: (context, url) => const SizedBox(
-                                height: 100,
-                                child: Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  const SizedBox(), // Hide broken external links
-                            );
-                          },
-                          styleSheet: MarkdownStyleSheet(
-                            // CHANGE: Body text uses DM Sans (Better for long reading)
-                            p: GoogleFonts.dmSans(
-                              fontSize: 16,
-                              height: 1.6,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                            // CHANGE: Headers use Outfit & Primary Color to pop
-                            h1: GoogleFonts.outfit(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: theme.primaryColor,
-                            ),
-                            h2: GoogleFonts.outfit(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: theme.primaryColor.withValues(alpha: 0.8),
-                            ),
-                            h3: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                            // CHANGE: Bold text is Darker/Stronger
-                            strong: GoogleFonts.dmSans(
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                            // Code Blocks
-                            code: GoogleFonts.firaCode(
-                              backgroundColor:
-                                  theme.colorScheme.surfaceContainerHighest,
-                              color: isDark
-                                  ? Colors.amberAccent
-                                  : Colors.blue[800],
-                              fontSize: 13,
-                            ),
-                            codeblockDecoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: theme.dividerColor.withValues(
-                                  alpha: 0.1,
-                                ),
-                              ),
-                            ),
-                            blockquote: TextStyle(
-                              color: theme.colorScheme.onSurface.withValues(
-                                alpha: 0.6,
-                              ),
-                              fontStyle: FontStyle.italic,
-                            ),
-                            blockquoteDecoration: BoxDecoration(
-                              border: Border(
-                                left: BorderSide(
-                                  color: theme.primaryColor,
-                                  width: 4,
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      // 3. FALLBACK LOADING (If absolutely nothing has arrived yet)
-                      else if (message.text.isEmpty &&
-                          (message.reasoning == null ||
-                              message.reasoning!.isEmpty))
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: _TypingIndicator(
-                            messageType: isStreaming
-                                ? _loadingMessageType
-                                : 'thinking',
-                          ),
-                        ),
-
-                      // 3. --- NEW: Quiz Widget ---
-                      if (message.quizData != null)
-                        QuizWidget(
-                          quizData: message.quizData!,
-                          onComplete: (score) {
-                            // Optional: Send score back to Agent
-                            // _sendMessage(text: "I finished the quiz and scored $score points!");
-                          },
-                        ),
-
-                      // ---------------------------
-                      const SizedBox(height: 12),
-
-                      // 4. --- NEW: Math Stepper ---
-                      if (message.mathSteps != null &&
-                          message.mathSteps!.isNotEmpty)
-                        MathStepperWidget(
-                          steps: message.mathSteps!,
-                          finalAnswer: message.mathAnswer,
-                        ),
-
-                      // ----------------------------
-                      const SizedBox(height: 12),
-
-                      // 5. --- NEW: Video Carousel ---
-                      if (message.videos != null && message.videos!.isNotEmpty)
-                        VideoCarousel(videos: message.videos!),
-
-                      const SizedBox(height: 12),
-
-                      // 3. Sources
-                      if (message.sources != null &&
-                          message.sources!.isNotEmpty)
-                        // ... [Existing Source Logic - no font changes needed] ...
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF252525)
-                                : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: theme.dividerColor.withValues(alpha: 0.1),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.verified_user_outlined,
-                                    size: 16,
-                                    color: theme.primaryColor,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "Sources",
-                                    style: GoogleFonts.outfit(
-                                      // Keep Headers consistent
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.primaryColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: message.sources!
-                                    .map(
-                                      (s) => _buildSourceChip(s, theme, isDark),
-                                    )
-                                    .toList(),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                      // 4. Actions Row - Only show when message is complete and not streaming
-                      if (!message.isTemporary && !isStreaming)
-                        Wrap(
-                          spacing: 0,
-                          runSpacing: 4,
-                          alignment: WrapAlignment.spaceBetween,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            // Main Actions Group
-                            Wrap(
-                              children: [
-                                // TTS controls - show different icons based on state
-                                if (_speakingMessageId == message.id &&
-                                    _isTtsSpeaking)
-                                  ..._buildTtsControls(message)
-                                else
-                                  _buildActionIcon(
-                                    Icons.volume_up_outlined,
-                                    () => _speak(
-                                      message.text,
-                                      messageId: message.id,
-                                    ),
-                                    tooltip: 'Listen',
-                                  ),
-                                _buildActionIcon(
-                                  Icons.fact_check_outlined,
-                                  () => _verifyResponse(message),
-                                  tooltip: 'Double Check',
-                                ),
-                                _buildActionIcon(
-                                  Icons.copy_all_outlined,
-                                  () => _copyToClipboard(message.text),
-                                  tooltip: 'Copy',
-                                ),
-                                // BOOKMARK ICON
-                                _buildActionIcon(
-                                  message.isBookmarked
-                                      ? Icons.bookmark
-                                      : Icons.bookmark_border,
-                                  () => _toggleBookmark(message),
-                                  tooltip: message.isBookmarked
-                                      ? 'Remove from Library'
-                                      : 'Save to Library',
-                                  color: message.isBookmarked
-                                      ? Colors.amber
-                                      : null,
-                                ),
-                                _buildActionIcon(
-                                  Icons.share_outlined,
-                                  () => _shareMessage(message.text),
-                                  tooltip: 'Share',
-                                ),
-                                _buildActionIcon(
-                                  Icons.refresh_outlined,
-                                  () => _regenerateResponse(message),
-                                  tooltip: 'Regenerate',
-                                ),
-                              ],
-                            ),
-                            // Feedback Group
-                            Wrap(
-                              children: [
-                                _buildActionIcon(
-                                  Icons.thumb_up_alt_outlined,
-                                  () => _provideFeedback(message, 1),
-                                  tooltip: 'Good',
-                                  isActive: message.feedback == 1,
-                                ),
-                                _buildActionIcon(
-                                  Icons.thumb_down_alt_outlined,
-                                  () => _provideFeedback(message, -1),
-                                  tooltip: 'Bad',
-                                  isActive: message.feedback == -1,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-  }
-
-  // Helper for consistent Action Icons
-  List<Widget> _buildTtsControls(ChatMessage message) {
-    return [
-      if (_isTtsPaused)
-        _buildActionIcon(
-          Icons.play_arrow,
-          _resumeTts,
-          tooltip: 'Resume',
-          isActive: true,
-          color: AppColors.googleBlue,
-        )
-      else
-        _buildActionIcon(
-          Icons.pause,
-          _pauseTts,
-          tooltip: 'Pause',
-          isActive: true,
-          color: AppColors.googleBlue,
-        ),
-      _buildActionIcon(
-        Icons.stop,
-        _stopTts,
-        tooltip: 'Stop',
-        isActive: true,
-        color: Colors.redAccent,
-      ),
-    ];
-  }
-
-  Widget _buildActionIcon(
-    IconData icon,
-    VoidCallback onTap, {
-    String? tooltip,
-    bool isActive = false,
-    Color? color,
-  }) {
-    final theme = Theme.of(context);
-    final finalColor =
-        color ??
-        (isActive
-            ? AppColors.googleBlue
-            : theme.colorScheme.onSurface.withValues(alpha: 0.6));
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 4),
-      child: IconButton(
-        icon: Icon(icon, size: 18, color: finalColor),
-        tooltip: tooltip,
-        onPressed: onTap,
-        splashRadius: 20,
-        constraints: const BoxConstraints(),
-        padding: const EdgeInsets.all(8),
-      ),
-    );
-  }
-
-  Widget _buildSideBar(ThemeData theme, bool isDark) {
-    // Filter threads based on search query
-    final filteredThreads = _threads.where((thread) {
-      final title = (thread['title'] as String? ?? '').toLowerCase();
-      final query = _historySearchQuery.toLowerCase();
-      return title.contains(query);
-    }).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              IconButton(
-                icon: Icon(
-                  Icons.menu_open_rounded,
-                  color: theme.colorScheme.onSurface,
-                ),
-                onPressed: () => setState(() => _isSidebarOpen = false),
-                tooltip: 'Hide menu',
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: InkWell(
-            onTap: () => _startNewChat(closeDrawer: false),
-            borderRadius: BorderRadius.circular(24),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(
-                  alpha: 0.3,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.add, size: 20, color: theme.colorScheme.onSurface),
-                  const SizedBox(width: 12),
-                  Text(
-                    Provider.of<AuthProvider>(
-                              context,
-                            ).userModel?.preferredLanguage ==
-                            'sw'
-                        ? "Mazungumzo Mapya"
-                        : "New chat",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // --- NEW: Search Bar ---
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.03),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TextField(
-              controller: _historySearchController,
-              style: TextStyle(
-                fontSize: 13,
-                color: theme.colorScheme.onSurface,
-              ),
-              decoration: InputDecoration(
-                hintText: 'Search chats...',
-                hintStyle: TextStyle(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                  fontSize: 13,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  size: 18,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-                suffixIcon: _historySearchQuery.isNotEmpty
-                    ? GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _historySearchQuery = '';
-                            _historySearchController.clear();
-                          });
-                        },
-                        child: Icon(
-                          Icons.close,
-                          size: 16,
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.5,
-                          ),
-                        ),
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                isDense: true,
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _historySearchQuery = value;
-                });
-              },
-            ),
-          ),
-        ),
-
-        // -----------------------
-        const SizedBox(height: 8),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
-                  child: Text(
-                    "Chats",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-                _isLoadingHistory
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : filteredThreads.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Text(
-                          _threads.isEmpty
-                              ? "No chats yet"
-                              : "No matches found",
-                          style: TextStyle(color: theme.disabledColor),
-                        ),
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filteredThreads.length,
-                        itemBuilder: (context, index) {
-                          final thread = filteredThreads[index];
-                          final isSelected =
-                              thread['thread_id'] == _wsService.threadId;
-                          return InkWell(
-                            onTap: () => _loadThread(thread['thread_id']),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? theme.primaryColor.withValues(alpha: 0.1)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              child: Row(
-                                children: [
-                                  // Chat Title
-                                  Expanded(
-                                    child: Text(
-                                      thread['title'] ?? 'New Chat',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: isSelected
-                                            ? theme.primaryColor
-                                            : theme.colorScheme.onSurface,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Three-dots menu (Rename & Delete)
-                                  PopupMenuButton<String>(
-                                    icon: Icon(
-                                      Icons.more_vert_rounded,
-                                      size: 18,
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
-                                    splashRadius: 20,
-                                    padding: EdgeInsets.zero,
-                                    tooltip: 'Options',
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    itemBuilder: (context) => [
-                                      PopupMenuItem(
-                                        value: 'rename',
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.edit_outlined,
-                                              size: 20,
-                                              color:
-                                                  theme.colorScheme.onSurface,
-                                            ),
-                                            const SizedBox(width: 12),
-                                            const Text('Rename'),
-                                          ],
-                                        ),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'delete',
-                                        child: Row(
-                                          children: [
-                                            const Icon(
-                                              Icons.delete_outline,
-                                              size: 20,
-                                              color: Colors.redAccent,
-                                            ),
-                                            const SizedBox(width: 12),
-                                            const Text(
-                                              'Delete',
-                                              style: TextStyle(
-                                                color: Colors.redAccent,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                    onSelected: (value) {
-                                      if (value == 'rename') {
-                                        _showRenameDialog(
-                                          thread['thread_id'],
-                                          thread['title'] ?? '',
-                                        );
-                                      } else if (value == 'delete') {
-                                        _confirmDeleteThread(
-                                          thread['thread_id'],
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInputArea(ThemeData theme, {bool isCentered = false}) {
-    final isDark = theme.brightness == Brightness.dark;
-
-    // Glassmorphism colors
-    final glassColor = isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : Colors.white.withValues(alpha: 0.85);
-    final glassBorderColor = isDark
-        ? Colors.white.withValues(alpha: 0.15)
-        : Colors.black.withValues(alpha: 0.08);
-    final accentGlow = theme.primaryColor.withValues(alpha: 0.4);
-
-    return Container(
-      decoration: isCentered
-          ? null
-          : BoxDecoration(
-              // Subtle gradient background
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  theme.scaffoldBackgroundColor.withValues(alpha: 0.0),
-                  theme.scaffoldBackgroundColor,
-                ],
-              ),
-            ),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Main Input Container with Glassmorphism
-              Focus(
-                onFocusChange: (hasFocus) {
-                  setState(() {}); // Trigger rebuild for focus animation
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  decoration: BoxDecoration(
-                    color: glassColor,
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(
-                      color: _messageFocusNode.hasFocus
-                          ? accentGlow
-                          : glassBorderColor,
-                      width: _messageFocusNode.hasFocus ? 1.5 : 1,
-                    ),
-                    boxShadow: [
-                      if (_messageFocusNode.hasFocus)
-                        BoxShadow(
-                          color: theme.primaryColor.withValues(alpha: 0.15),
-                          blurRadius: 20,
-                          spreadRadius: 0,
-                        )
-                      else if (isCentered)
-                        // Stronger shadow when centered to make it pop
-                        BoxShadow(
-                          color: Colors.black.withValues(
-                            alpha: isDark ? 0.2 : 0.05,
-                          ),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      if (!isCentered)
-                        BoxShadow(
-                          color: Colors.black.withValues(
-                            alpha: isDark ? 0.3 : 0.08,
-                          ),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Attachment Preview (Enhanced)
-                        if (_pendingFileName != null)
-                          _buildAttachmentPreview(theme, isDark),
-
-                        // Input Field & Actions
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Text Input with improved styling
-                              ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxHeight: 120,
-                                ),
-                                child: TextField(
-                                  focusNode: _messageFocusNode,
-                                  controller: _textController,
-                                  contextMenuBuilder: (context, editableTextState) {
-                                    final List<ContextMenuButtonItem>
-                                    buttonItems = editableTextState
-                                        .contextMenuButtonItems;
-                                    buttonItems.insert(
-                                      0,
-                                      ContextMenuButtonItem(
-                                        label: 'Paste Image',
-                                        onPressed: () {
-                                          editableTextState.hideToolbar();
-                                          _handleImagePaste();
-                                        },
-                                      ),
-                                    );
-                                    return AdaptiveTextSelectionToolbar.buttonItems(
-                                      anchors:
-                                          editableTextState.contextMenuAnchors,
-                                      buttonItems: buttonItems,
-                                    );
-                                  },
-                                  style: GoogleFonts.inter(
-                                    color: theme.colorScheme.onSurface,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w400,
-                                    height: 1.5,
-                                  ),
-                                  maxLines: null,
-                                  textCapitalization:
-                                      TextCapitalization.sentences,
-                                  decoration: InputDecoration(
-                                    hintText:
-                                        Provider.of<AuthProvider>(
-                                              context,
-                                            ).userModel?.preferredLanguage ==
-                                            'sw'
-                                        ? 'Uliza chochote...'
-                                        : 'Message TopScore AI...',
-                                    hintStyle: GoogleFonts.inter(
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.4),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                    isDense: true,
-                                  ),
-                                  onSubmitted: (value) =>
-                                      _sendMessage(text: value),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-
-                              // Actions Row (Redesigned)
-                              _buildActionsRow(theme, isDark),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Suggested Question Chips (show when available)
-              if (_displayedQuestions.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    child: Row(
-                      children: [
-                        ..._displayedQuestions.map((question) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  _sendMessage(text: question);
-                                },
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        theme.primaryColor.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                        theme.primaryColor.withValues(
-                                          alpha: 0.08,
-                                        ),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: theme.primaryColor.withValues(
-                                        alpha: 0.3,
-                                      ),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.auto_awesome,
-                                        size: 14,
-                                        color: theme.primaryColor,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        question,
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black87,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                        // Refresh button with animation
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: 1),
-                          duration: const Duration(milliseconds: 300),
-                          builder: (context, value, child) {
-                            return Transform.scale(
-                              scale: 0.8 + (0.2 * value),
-                              child: IconButton(
-                                icon: Icon(
-                                  Icons.refresh_rounded,
-                                  size: 20,
-                                  color: theme.primaryColor.withValues(
-                                    alpha: 0.7,
-                                  ),
-                                ),
-                                tooltip: 'More suggestions',
-                                onPressed: () {
-                                  setState(() {
-                                    _shuffleQuestions();
-                                  });
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // Disclaimer text
-              if (_messages.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'AI can make mistakes. Check important info.',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Enhanced attachment preview with larger thumbnail and animations
-  Widget _buildAttachmentPreview(ThemeData theme, bool isDark) {
-    final isImage = _pendingPreviewData != null;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.black.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.05),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Enhanced Thumbnail or File Icon
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: isImage
-                      ? null
-                      : theme.primaryColor.withValues(alpha: 0.1),
-                  border: isImage
-                      ? null
-                      : Border.all(
-                          color: theme.primaryColor.withValues(alpha: 0.2),
-                        ),
-                  boxShadow: [
-                    if (isImage)
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                  ],
-                  image: isImage
-                      ? DecorationImage(
-                          image: MemoryImage(
-                            base64Decode(_pendingPreviewData!.split(',')[1]),
-                          ),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: !isImage
-                    ? Icon(
-                        Icons.description_outlined,
-                        color: theme.primaryColor,
-                        size: 28,
-                      )
-                    : null,
-              ),
-              if (_isUploading)
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 14),
-
-          // File Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _pendingFileName ?? 'Image',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _isUploading ? 'Uploading...' : 'Ready to send',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: _isUploading
-                        ? theme.primaryColor
-                        : Colors.green.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Remove Button (Animated)
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _isUploading ? null : _clearPendingAttachment,
-              borderRadius: BorderRadius.circular(20),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _isUploading
-                      ? Colors.transparent
-                      : (isDark
-                            ? Colors.white.withValues(alpha: 0.1)
-                            : Colors.black.withValues(alpha: 0.05)),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.close_rounded,
-                  size: 18,
-                  color: _isUploading
-                      ? theme.disabledColor
-                      : theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Redesigned actions row with better spacing and animations
-  Widget _buildActionsRow(ThemeData theme, bool isDark) {
-    return Row(
-      children: [
-        // Attachment Button (Redesigned)
-        _buildActionButton(
-          icon: Icons.add_rounded,
-          tooltip: 'Add attachment',
-          theme: theme,
-          isDark: isDark,
-          onTap: () {
-            _showAttachmentMenu(theme, isDark);
-          },
-        ),
-
-        const SizedBox(width: 2),
-
-        // ELI5 Mode Toggle
-        _buildActionButton(
-          icon: _isEli5Mode ? Icons.child_care : Icons.child_care_outlined,
-          tooltip: 'Explain Like I\'m 5',
-          theme: theme,
-          isDark: isDark,
-          isActive: _isEli5Mode,
-          onTap: () {
-            setState(() {
-              _isEli5Mode = !_isEli5Mode;
-            });
-            if (_isEli5Mode) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(Icons.child_care, color: Colors.white, size: 20),
-                      const SizedBox(width: 10),
-                      const Text("ELI5 Mode: Simpler answers enabled"),
-                    ],
-                  ),
-                  duration: const Duration(milliseconds: 1500),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: theme.primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              );
-            }
-          },
-        ),
-
-        // Tools Button Removed
-        const Spacer(),
-
-        // Model Selector Removed
-
-        // Voice Mode Button
-        _buildActionButton(
-          icon: _isDictating ? Icons.stop_circle_outlined : Icons.graphic_eq,
-          tooltip: 'Live Voice',
-          theme: theme,
-          isDark: isDark,
-          isActive: _isDictating,
-          activeColor: Colors.redAccent,
-          onTap: _toggleDictation,
-        ),
-
-        const SizedBox(width: 4),
-
-        // Send/Mic Button (Animated)
-        _buildSendButton(theme, isDark),
-      ],
-    );
-  }
-
-  /// Reusable action button with hover effects
-  Widget _buildActionButton({
-    required IconData icon,
-    required String tooltip,
-    required ThemeData theme,
-    required bool isDark,
-    bool isActive = false,
-    Color? activeColor,
-    required VoidCallback onTap,
-  }) {
-    final color = isActive
-        ? (activeColor ?? theme.primaryColor)
-        : theme.colorScheme.onSurface.withValues(alpha: 0.55);
-
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? (activeColor ?? theme.primaryColor).withValues(alpha: 0.12)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, size: 22, color: color),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // _buildModelSelector removed
-
-  /// Animated send button with state transitions
-  Widget _buildSendButton(ThemeData theme, bool isDark) {
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: _textController,
-      builder: (context, value, child) {
-        final hasText = value.text.trim().isNotEmpty;
-        final hasAttachment = _pendingFileUrl != null;
-        final canSend = hasText || hasAttachment;
-
-        // Stop button when AI is generating
-        if (_isTyping) {
-          return _buildAnimatedButton(
-            icon: Icons.stop_rounded,
-            color: theme.colorScheme.error,
-            onTap: _stopGeneration,
-            size: 44,
-          );
-        }
-
-        // Recording state
-        if (_isRecording) {
-          return _buildAnimatedButton(
-            icon: Icons.stop_rounded,
-            color: Colors.redAccent,
-            onTap: _stopRecording,
-            size: 44,
-            isRecording: true,
-          );
-        }
-
-        // Send or Mic button
-        return _buildAnimatedButton(
-          icon: canSend ? Icons.arrow_upward_rounded : Icons.mic_rounded,
-          color: canSend
-              ? theme.primaryColor
-              : (isDark ? Colors.white24 : Colors.black12),
-          iconColor: canSend
-              ? Colors.white
-              : theme.colorScheme.onSurface.withValues(alpha: 0.7),
-          onTap: () {
-            if (canSend) {
-              _sendMessage();
-            } else {
-              _startRecording();
-            }
-          },
-          size: 44,
-        );
-      },
-    );
-  }
-
-  /// Premium animated button with scale and glow effects
-  Widget _buildAnimatedButton({
-    required IconData icon,
-    required Color color,
-    Color? iconColor,
-    required VoidCallback onTap,
-    required double size,
-    bool isRecording = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Recording pulse animation
-            if (isRecording)
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.8, end: 1.2),
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeInOut,
-                builder: (context, scale, child) {
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: size,
-                      height: size,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: color.withValues(alpha: 0.5),
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                onEnd: () {
-                  // Trigger rebuild to continue animation
-                  if (_isRecording) setState(() {});
-                },
-              ),
-            Icon(icon, size: size * 0.5, color: iconColor ?? Colors.white),
-          ],
-        ),
-      ),
-    );
-  }
 
   /// Show attachment menu as bottom sheet
   void _showAttachmentMenu(ThemeData theme, bool isDark) {
@@ -4955,7 +3076,7 @@ class _ChatScreenState extends State<ChatScreen> {
           margin: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: theme.cardColor,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: const BorderRadius.all(Radius.circular(20)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -4966,7 +3087,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 height: 4,
                 decoration: BoxDecoration(
                   color: theme.dividerColor,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: const BorderRadius.all(Radius.circular(2)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -5005,7 +3126,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Navigator.pop(context);
                   _pickFile(
                     FileType.custom,
-                    allowedExtensions: [
+                    allowedExtensions: const [
                       'pdf',
                       'doc',
                       'docx',
@@ -5024,6 +3145,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  /// Helper widget for attachment options
   Widget _buildAttachmentOption({
     required IconData icon,
     required String label,
@@ -5031,102 +3153,241 @@ class _ChatScreenState extends State<ChatScreen> {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(icon, color: color, size: 24),
-      ),
-      title: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+      leading: Icon(icon, color: color),
+      title: Text(label),
       onTap: onTap,
     );
   }
 
-  // _showToolsMenu removed
+  /// Start live voice mode - full conversation mode
+  Future<void> _startLiveVoiceMode() async {
+    if (!await _audioRecorder.hasPermission()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Microphone permission is required for voice mode'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
 
-  // _showModelMenu removed
+    if (!mounted) return;
 
-  Widget _buildSourceChip(SourceMetadata source, ThemeData theme, bool isDark) {
-    final isBook = source.type == 'book';
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: () async {
-        if (source.url != null && source.url!.isNotEmpty) {
-          final uri = Uri.tryParse(source.url!);
-          if (uri != null && await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          }
-        } else {
-          // Show book details dialog
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(source.title),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (source.author != null) Text('Author: ${source.author}'),
-                  const SizedBox(height: 8),
-                  Text('Type: ${source.type}'),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
-          );
-        }
+    setState(() {
+      _isVoiceMode = true;
+    });
+
+    // Show voice mode overlay
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            _voiceDialogSetState = setState;
+            return VoiceSessionOverlay(
+              isAiSpeaking: _isAiSpeaking,
+              isRecording: _isRecording,
+              statusText: _isAiSpeaking
+                  ? 'Speaking...'
+                  : _isRecording
+                  ? 'Listening...'
+                  : 'Thinking...',
+              transcription: '',
+              amplitude: -50.0,
+              onClose: () {
+                _stopLiveVoice();
+                Navigator.pop(context);
+              },
+              onInterrupt: () {
+                if (_isAiSpeaking) {
+                  _flutterTts.stop();
+                  _audioPlayer.stop();
+                  setState(() {
+                    _isAiSpeaking = false;
+                  });
+                  _startListening();
+                }
+              },
+            );
+          },
+        );
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : theme.colorScheme.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.15)
-                : theme.colorScheme.primary.withValues(alpha: 0.2),
+    );
+  }
+
+  Widget _buildMainChatArea(ThemeData theme) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        // Messages area (takes all remaining space)
+        Expanded(
+          child: Stack(
+            children: [
+              _isLoadingMessages
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: theme.primaryColor,
+                      ),
+                    )
+                  : _messages.isEmpty
+                  ? EmptyStateWidget(
+                      isDark: Theme.of(context).brightness == Brightness.dark,
+                      theme: theme,
+                      suggestions: _dynamicSuggestions,
+                      onSuggestionTap: (prompt) {
+                        _sendMessage(text: prompt);
+                      },
+                    )
+                  : Align(
+                      alignment: Alignment.topCenter,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 900),
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.only(
+                            left: 16,
+                            right: 16,
+                            top: 16,
+                            bottom: 16,
+                          ),
+                          itemCount: _messages.length,
+                          cacheExtent: 500,
+                          findChildIndexCallback: (Key key) {
+                            if (key is ValueKey<String>) {
+                              return _messages.indexWhere(
+                                (m) => m.id == key.value,
+                              );
+                            }
+                            return null;
+                          },
+                          itemBuilder: (context, index) {
+                            final message = _messages[index];
+                            final isStreaming =
+                                _currentStreamingMessageId == message.id;
+                            return ChatMessageBubble(
+                              key: ValueKey(message.id),
+                              message: message,
+                              isStreaming: isStreaming,
+                              playingAudioMessageId: _playingAudioMessageId,
+                              isPlayingAudio: _isPlayingAudio,
+                              audioDuration: _audioDuration,
+                              audioPosition: _audioPosition,
+                              speakingMessageId: _speakingMessageId,
+                              isTtsSpeaking: _isTtsSpeaking,
+                              isTtsPaused: _isTtsPaused,
+                              onPlayVoice: () => _playVoiceMessage(
+                                message.id,
+                                message.audioUrl!,
+                              ),
+                              onPauseVoice: _pauseVoiceMessage,
+                              onResumeVoice: _resumeVoiceMessage,
+                              onSpeak: (text) =>
+                                  _speak(text, messageId: message.id),
+                              onStopTts: _stopTts,
+                              onPauseTts: _pauseTts,
+                              onResumeTts: _resumeTts,
+                              onCopy: () => _copyToClipboard(message.text),
+                              onToggleBookmark: () => _toggleBookmark(message),
+                              onShare: () => _shareMessage(message.text),
+                              onRegenerate: () => _regenerateResponse(message),
+                              onFeedback: (feedback) =>
+                                  _provideFeedback(message, feedback),
+                              onEdit: () => _handleUserEdit(message),
+                              onDownloadImage: () =>
+                                  _downloadImage(message.imageUrl!),
+                              user: authProvider.userModel,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+              // Scroll to Bottom Button
+              if (_showScrollDownButton)
+                Positioned(
+                  bottom: 16,
+                  right: 20,
+                  child: FloatingActionButton.small(
+                    backgroundColor: theme.primaryColor,
+                    onPressed: _scrollToBottomForce,
+                    elevation: 4,
+                    child: const Icon(
+                      Icons.arrow_downward,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isBook ? Icons.menu_book_rounded : Icons.link_rounded,
-              size: 14,
-              color: isDark ? Colors.white70 : theme.colorScheme.primary,
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                source.title,
-                style: GoogleFonts.outfit(
-                  fontSize: 12,
-                  color: isDark ? Colors.white70 : theme.colorScheme.primary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+
+        // Input Area (naturally below messages)
+        Container(
+          color: theme.scaffoldBackgroundColor,
+          padding: const EdgeInsets.only(top: 4),
+          child: _buildInputArea(
+            theme,
+            Theme.of(context).brightness == Brightness.dark,
+          ),
         ),
-      ),
+
+        // AI Disclaimer — pinned to very bottom
+        Container(
+          width: double.infinity,
+          color: theme.scaffoldBackgroundColor,
+          padding: const EdgeInsets.only(bottom: 6, top: 2),
+          child: Text(
+            'AI can make mistakes. Double check information.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInputArea(ThemeData theme, bool isDark) {
+    return ChatInputArea(
+      textController: _textController,
+      messageFocusNode: _messageFocusNode,
+      pendingFileName: _pendingFileName,
+      pendingPreviewData: _pendingPreviewData,
+      pendingFileUrl: _pendingFileUrl,
+      isUploading: _isUploading,
+      isTyping: _isTyping,
+      isRecording: _isRecording,
+      suggestions: _dynamicSuggestions, // NEW: Pass backend suggestions
+      currentPlaceholderIndex: _currentPlaceholderIndex,
+      placeholderMessages: _placeholderMessages,
+      onSendMessage: _sendMessage,
+      onSendMessageWithText: _sendMessage,
+      onShowAttachmentMenu: () => _showAttachmentMenu(theme, isDark),
+
+      onPaste: _handlePaste, // New explicit handler for generic paste
+      onStopGeneration: _stopGeneration,
+      onStopListeningAndSend: _stopListeningAndSend,
+      onStartLiveVoiceMode: _startLiveVoiceMode,
+      onClearPendingAttachment: _clearPendingAttachment,
+      onShuffleQuestions: () {}, // No-op as chips are removed
+      onDictation: _handleDictation,
     );
   }
 }
 
-class _TypingIndicator extends StatefulWidget {
-  final String messageType; // 'thinking', 'analyzing', 'generating'
+// ===========================================================================
+// Typing Indicator Widget (moved outside _ChatScreenState)
+// ===========================================================================
 
-  const _TypingIndicator({this.messageType = 'thinking'});
+class _TypingIndicator extends StatefulWidget {
+  const _TypingIndicator();
 
   @override
   State<_TypingIndicator> createState() => _TypingIndicatorState();
@@ -5158,327 +3419,14 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
   @override
   Widget build(BuildContext context) {
-    // Get appropriate loading text
-    String loadingText;
-    switch (widget.messageType) {
-      case 'analyzing':
-        loadingText = 'Analysing...';
-        break;
-      case 'generating':
-        loadingText = 'Generating...';
-        break;
-      case 'thinking':
-      default:
-        loadingText = 'Thinking...';
-        break;
-    }
-
     return FadeTransition(
       opacity: _opacity,
       child: Text(
-        loadingText,
+        'Thinking...',
         style: TextStyle(
           color: Colors.grey[600],
           fontSize: 14,
           fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
-
-// --- NEW PRODUCTIVE VOICE UI ---
-
-class _VoiceSessionOverlay extends StatefulWidget {
-  final bool isAiSpeaking;
-  final bool isRecording;
-  final String statusText;
-  final String transcription;
-  final double amplitude;
-  final VoidCallback onClose;
-  final VoidCallback onInterrupt;
-
-  const _VoiceSessionOverlay({
-    required this.isAiSpeaking,
-    required this.isRecording,
-    required this.statusText,
-    required this.transcription,
-    required this.amplitude,
-    required this.onClose,
-    required this.onInterrupt,
-  });
-
-  @override
-  State<_VoiceSessionOverlay> createState() => _VoiceSessionOverlayState();
-}
-
-class _VoiceSessionOverlayState extends State<_VoiceSessionOverlay>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  Color _getStateColor() {
-    if (widget.isAiSpeaking) {
-      return const Color(0xFF6C63FF); // AI Speaking (Brand)
-    }
-    if (widget.isRecording) {
-      return const Color(0xFF00C853); // User Speaking (Green)
-    }
-    return Colors.grey; // Processing/Thinking
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _getStateColor();
-    final normalizedAmplitude = ((widget.amplitude + 50) / 50).clamp(0.0, 1.0);
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // 1. Central Orb / Visualizer
-            Center(
-              child: GestureDetector(
-                onTap: widget.onInterrupt, // Tap screen to interrupt
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (context, child) {
-                        final scale = widget.isRecording || widget.isAiSpeaking
-                            ? 1.0 +
-                                  (_pulseController.value * 0.2) +
-                                  (normalizedAmplitude * 0.3)
-                            : 1.0;
-                        return Transform.scale(
-                          scale: scale,
-                          child: Container(
-                            width: 200,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: color.withValues(alpha: 0.2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: color.withValues(
-                                    alpha: 0.6 * _pulseController.value,
-                                  ),
-                                  blurRadius: 50,
-                                  spreadRadius: 10,
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Container(
-                                width: 150,
-                                height: 150,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: color,
-                                ),
-                                child: Icon(
-                                  widget.isAiSpeaking
-                                      ? Icons.graphic_eq
-                                      : (widget.isRecording
-                                            ? Icons.mic
-                                            : Icons.more_horiz),
-                                  size: 60,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 30),
-                    // Audio level bars
-                    if (widget.isRecording)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(5, (index) {
-                          final barHeight =
-                              20.0 +
-                              (normalizedAmplitude *
-                                  40.0 *
-                                  (index % 2 == 0 ? 1.0 : 0.7));
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                            width: 4,
-                            height: barHeight,
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          );
-                        }),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-
-            // 2. Transcription Display
-            if (widget.transcription.isNotEmpty)
-              Positioned(
-                top: 100,
-                left: 30,
-                right: 30,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Text(
-                    widget.transcription,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontStyle: widget.transcription == 'Transcribing...'
-                          ? FontStyle.italic
-                          : FontStyle.normal,
-                    ),
-                  ),
-                ),
-              ),
-
-            // 3. Status Text
-            Positioned(
-              bottom: 150,
-              left: 0,
-              right: 0,
-              child: Column(
-                children: [
-                  Text(
-                    widget.statusText,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  if (widget.isAiSpeaking)
-                    Text(
-                      "Tap anywhere to interrupt",
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 14,
-                      ),
-                    )
-                  else if (widget.isRecording)
-                    Text(
-                      "Speak naturally, I'm listening...",
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 14,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            // 4. Controls
-            Positioned(
-              bottom: 40,
-              left: 20,
-              right: 20,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Close Button
-                  InkWell(
-                    onTap: widget.onClose,
-                    borderRadius: BorderRadius.circular(50),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          width: 2,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassContainer extends StatelessWidget {
-  final Widget child;
-  final double blur;
-  final double opacity;
-  final double borderRadius;
-  final BoxBorder? border;
-  final EdgeInsetsGeometry? padding;
-
-  const _GlassContainer({
-    required this.child,
-    this.blur = 12.0,
-    this.opacity = 0.05,
-    this.borderRadius = 16.0,
-    this.border,
-    this.padding,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: (isDark ? Colors.white : Colors.white).withValues(
-              alpha: opacity,
-            ),
-            borderRadius: BorderRadius.circular(borderRadius),
-            border:
-                border ??
-                Border.all(
-                  color: Colors.white.withValues(alpha: isDark ? 0.08 : 0.4),
-                  width: 1.5,
-                ),
-          ),
-          child: child,
         ),
       ),
     );

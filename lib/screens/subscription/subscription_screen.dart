@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../constants/colors.dart';
-import '../../providers/auth_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/mpesa_service.dart';
+import '../../providers/auth_provider.dart';
+import '../../config/app_theme.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -12,30 +13,13 @@ class SubscriptionScreen extends StatefulWidget {
 }
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
-  final MpesaService _mpesaService = MpesaService();
   final TextEditingController _phoneController = TextEditingController();
+  final MpesaService _mpesaService = MpesaService();
   bool _isLoading = false;
+  String? _errorMessage;
 
-  final List<Map<String, dynamic>> _plans = [
-    {
-      'name': 'Weekly',
-      'price': 50,
-      'duration': 7,
-      'description': 'Access all resources for 7 days',
-    },
-    {
-      'name': 'Monthly',
-      'price': 200,
-      'duration': 30,
-      'description': 'Access all resources for 30 days',
-    },
-    {
-      'name': 'Termly',
-      'price': 500,
-      'duration': 90,
-      'description': 'Access all resources for 3 months',
-    },
-  ];
+  // Selected Plan
+  final int _selectedAmount = 1000; // Default amount
 
   @override
   void dispose() {
@@ -43,214 +27,172 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     super.dispose();
   }
 
-  Future<void> _initiatePayment(Map<String, dynamic> plan) async {
-    if (_phoneController.text.isEmpty || _phoneController.text.length < 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid phone number')),
-      );
+  Future<void> _initiatePayment() async {
+    if (_phoneController.text.isEmpty) {
+      setState(() => _errorMessage = 'Please enter your phone number');
       return;
     }
 
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
 
     try {
-      // 1. Initiate Payment
-      final response = await _mpesaService.initiatePayment(
-        _phoneController.text,
-        (plan['price'] as int).toDouble(),
+      final user = context.read<AuthProvider>().userModel;
+      // Prepend 254 if missing, simple validation
+      String phone = _phoneController.text.trim();
+      if (phone.startsWith('0')) {
+        phone = '254${phone.substring(1)}';
+      } else if (phone.startsWith('+')) {
+        phone = phone.substring(1);
+      }
+
+      final result = await _mpesaService.initiateSTKPush(
+        phoneNumber: phone,
+        amount: _selectedAmount,
+        accountReference: "TopScore Premium",
+        transactionDesc: "Sub for ${user?.displayName ?? 'User'}",
       );
 
-      if (response['success']) {
-        // 2. Simulate waiting for user to enter PIN and callback
-        await Future.delayed(const Duration(seconds: 3));
-
-        // 3. Update User Subscription (In real app, this happens via webhook)
+      // Check if ResponseCode is 0 (Success)
+      if (result['ResponseCode'] == '0') {
         if (mounted) {
-          await Provider.of<AuthProvider>(
-            context,
-            listen: false,
-          ).updateSubscription(plan['duration']);
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Payment Successful! Subscription activated.'),
-                backgroundColor: AppColors.googleGreen,
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'STK Push sent! Please check your phone to complete payment.',
               ),
-            );
-            Navigator.pop(context);
-          }
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Ideally, poll or wait for callback confirmation here.
+          // For now, we simulate success or just let user wait.
+          Navigator.pop(context);
         }
       } else {
-        throw Exception(response['message']);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Payment failed: $e'),
-            backgroundColor: AppColors.googleRed,
-          ),
+        setState(
+          () => _errorMessage =
+              'Payment failed: ${result['ResponseDescription']}',
         );
       }
+    } catch (e) {
+      setState(() => _errorMessage = 'Error: ${e.toString()}');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'Upgrade to Premium',
-          style: TextStyle(color: theme.colorScheme.onSurface),
+          style: GoogleFonts.nunito(fontWeight: FontWeight.bold),
         ),
-        backgroundColor:
-            theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Unlock Unlimited Learning',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.googleBlue,
+            // Plan Card
+            AppTheme.buildGlassContainer(
+              context,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  const Icon(Icons.star, size: 48, color: Colors.amber),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Monthly Access',
+                    style: GoogleFonts.nunito(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'KES 1,000 / month',
+                    style: GoogleFonts.nunito(
+                      fontSize: 18,
+                      color: theme.primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('• Unlimited AI Tutor Access'),
+                  const Text('• All Past Papers & Resources'),
+                  const Text('• Discussion Groups'),
+                  const Text('• No Ads'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Phone Input
+            Text(
+              'Enter M-Pesa Number',
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              'Get access to all revision materials, exams, and schemes of work.',
-              style: TextStyle(
-                fontSize: 16,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Phone Number Input
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              style: TextStyle(color: theme.colorScheme.onSurface),
               decoration: InputDecoration(
-                labelText: 'M-Pesa Phone Number',
-                hintText: '0712345678',
-                hintStyle: TextStyle(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                hintText: 'e.g. 0712345678',
+                prefixIcon: const Icon(Icons.phone),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                prefixIcon: const Icon(
-                  Icons.phone_android,
-                  color: AppColors.googleGreen,
-                ),
-                border: const OutlineInputBorder(),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: theme.dividerColor),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: AppColors.googleGreen,
-                    width: 2,
-                  ),
-                ),
+                errorText: _errorMessage,
               ),
             ),
             const SizedBox(height: 24),
 
-            // Plans
-            ..._plans.map((plan) => _buildPlanCard(plan, theme)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlanCard(Map<String, dynamic> plan, ThemeData theme) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      color: theme.cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.googleBlue.withValues(alpha: 0.2)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  plan['name'],
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
+            // Pay Button
+            ElevatedButton(
+              onPressed: _isLoading ? null : _initiatePayment,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green, // M-Pesa Green
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Text(
-                  'KES ${plan['price']}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.googleBlue,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              plan['description'],
-              style: TextStyle(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'Pay KES $_selectedAmount with M-Pesa',
+                      style: GoogleFonts.nunito(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.googleGreen,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: _isLoading ? null : () => _initiatePayment(plan),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Pay with M-Pesa',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
+            const Text(
+              'A prompt will be sent to your phone to complete the transaction.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
             ),
           ],
         ),

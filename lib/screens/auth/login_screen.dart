@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // Load reCAPTCHA script only on auth pages
     RecaptchaService.loadRecaptchaScript();
   }
-  
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _confirmPasswordController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final isLoading = Provider.of<AuthProvider>(context).isLoading;
@@ -101,19 +101,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           // Google Sign In Button
                           _buildGoogleButton(context, theme, isLoading),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           // Divider with "or"
                           Row(
                             children: [
                               Expanded(
                                 child: Divider(
-                                  color: theme.dividerColor.withValues(alpha: 0.3),
+                                  color: theme.dividerColor.withValues(
+                                    alpha: 0.3,
+                                  ),
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
                                 child: Text(
                                   'or',
                                   style: theme.textTheme.bodySmall?.copyWith(
@@ -123,14 +127,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               Expanded(
                                 child: Divider(
-                                  color: theme.dividerColor.withValues(alpha: 0.3),
+                                  color: theme.dividerColor.withValues(
+                                    alpha: 0.3,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           _buildEmailPasswordForm(context, theme, isLoading),
                         ],
                       ),
@@ -205,8 +211,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (mounted) {
                     ScaffoldMessenger.of(this.context).showSnackBar(
                       SnackBar(
-                        content: Text("Google Sign In failed: ${e.toString()}"),
+                        content: const Text(
+                          'Sign in failed. Please try again.',
+                        ),
                         backgroundColor: AppColors.error,
+                        action: SnackBarAction(
+                          label: 'Retry',
+                          textColor: Colors.white,
+                          onPressed: () async {
+                            try {
+                              await Provider.of<AuthProvider>(
+                                context,
+                                listen: false,
+                              ).signInWithGoogle();
+                            } catch (_) {}
+                          },
+                        ),
                       ),
                     );
                   }
@@ -343,8 +363,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (!(_formKey.currentState?.validate() ?? false)) {
                         return;
                       }
-                      final authProvider =
-                          Provider.of<AuthProvider>(context, listen: false);
+                      final authProvider = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
                       try {
                         final email = _emailController.text.trim();
                         final password = _passwordController.text;
@@ -368,14 +390,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           );
                         } else {
-                          Navigator.of(this.context)
-                              .popUntil((route) => route.isFirst);
+                          Navigator.of(
+                            this.context,
+                          ).popUntil((route) => route.isFirst);
                         }
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(this.context).showSnackBar(
                             SnackBar(
-                              content: Text(e.toString()),
+                              content: Text(_friendlyAuthError(e)),
                               backgroundColor: AppColors.error,
                             ),
                           );
@@ -428,7 +451,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (mounted) {
                           ScaffoldMessenger.of(this.context).showSnackBar(
                             SnackBar(
-                              content: Text(e.toString()),
+                              content: const Text(
+                                'Could not send reset email. Please check your email address.',
+                              ),
                               backgroundColor: AppColors.error,
                             ),
                           );
@@ -452,5 +477,27 @@ class _LoginScreenState extends State<LoginScreen> {
         ],
       ),
     );
+  }
+
+  /// Maps auth exceptions to user-friendly messages
+  String _friendlyAuthError(dynamic e) {
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('user-not-found') || msg.contains('no user record')) {
+      return 'No account found with this email. Would you like to create one?';
+    } else if (msg.contains('wrong-password') ||
+        msg.contains('invalid-credential')) {
+      return 'Incorrect password. Please try again or reset your password.';
+    } else if (msg.contains('email-already-in-use')) {
+      return 'An account already exists with this email. Try signing in instead.';
+    } else if (msg.contains('weak-password')) {
+      return 'Password is too weak. Use at least 6 characters with a mix of letters and numbers.';
+    } else if (msg.contains('invalid-email')) {
+      return 'Please enter a valid email address.';
+    } else if (msg.contains('too-many-requests')) {
+      return 'Too many attempts. Please wait a moment and try again.';
+    } else if (msg.contains('network')) {
+      return 'Network error. Please check your internet connection.';
+    }
+    return 'Something went wrong. Please try again.';
   }
 }

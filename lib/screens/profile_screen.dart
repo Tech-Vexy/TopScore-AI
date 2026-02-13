@@ -61,10 +61,16 @@ class ProfileScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
               ),
               trailing: (user?.isSubscribed ?? false)
-                  ? const Icon(Icons.check_circle,
-                      color: Colors.green, size: 20)
-                  : const Icon(Icons.arrow_forward_ios,
-                      size: 14, color: Colors.grey),
+                  ? const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 20,
+                    )
+                  : const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: Colors.grey,
+                    ),
             ),
 
             const SizedBox(height: 24),
@@ -99,10 +105,14 @@ class ProfileScreen extends StatelessWidget {
               icon: FontAwesomeIcons.language,
               title: "Language",
               subtitle:
-                  user?.preferredLanguage == 'sw' ? 'Kiswahili' : 'English',
+                  context.watch<SettingsProvider>().locale.languageCode == 'sw'
+                  ? 'Kiswahili'
+                  : 'English',
               iconColor: Colors.blueAccent,
-              onTap: () =>
-                  _showLanguageSelector(context, user?.preferredLanguage),
+              onTap: () => _showLanguageSelector(
+                context,
+                context.read<SettingsProvider>().locale.languageCode,
+              ),
             ),
 
             const SizedBox(height: 24),
@@ -141,8 +151,9 @@ class ProfileScreen extends StatelessWidget {
                 title: "Log Out",
                 iconColor: theme.colorScheme.error,
                 textColor: theme.colorScheme.error,
-                backgroundColor:
-                    theme.colorScheme.error.withValues(alpha: 0.05),
+                backgroundColor: theme.colorScheme.error.withValues(
+                  alpha: 0.05,
+                ),
                 hasShadow: false,
                 onTap: () async {
                   await authProvider.signOut();
@@ -195,7 +206,9 @@ class ProfileScreen extends StatelessWidget {
             Text(
               "v1.0.0",
               style: GoogleFonts.nunito(
-                  color: Colors.grey.withValues(alpha: 0.5), fontSize: 11),
+                color: Colors.grey.withValues(alpha: 0.5),
+                fontSize: 11,
+              ),
             ),
             const SizedBox(height: 20),
           ],
@@ -235,18 +248,48 @@ class ProfileScreen extends StatelessWidget {
                       )
                     : null,
               ),
-              child: (user?.photoURL == null || user!.photoURL!.isEmpty)
-                  ? Center(
-                      child: Text(
-                        user?.displayName?.substring(0, 1).toUpperCase() ?? "G",
-                        style: GoogleFonts.nunito(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.accentTeal,
-                        ),
+              child: Semantics(
+                label: 'Profile picture of ${user?.displayName ?? "Guest"}',
+                image: true,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.cardColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
                       ),
-                    )
-                  : null,
+                    ],
+                    image:
+                        (user?.photoURL != null && user!.photoURL!.isNotEmpty)
+                        ? DecorationImage(
+                            image: CachedNetworkImageProvider(
+                              user.photoURL!,
+                              cacheManager: ProfileImageCacheManager(),
+                            ),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: (user?.photoURL == null || user!.photoURL!.isEmpty)
+                      ? Center(
+                          child: Text(
+                            user?.displayName?.substring(0, 1).toUpperCase() ??
+                                "G",
+                            style: GoogleFonts.nunito(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.accentTeal,
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
+              ),
             ),
             if (user != null)
               Positioned(
@@ -258,7 +301,9 @@ class ProfileScreen extends StatelessWidget {
                     color: AppColors.primaryPurple,
                     shape: BoxShape.circle,
                     border: Border.all(
-                        color: theme.scaffoldBackgroundColor, width: 2),
+                      color: theme.scaffoldBackgroundColor,
+                      width: 2,
+                    ),
                   ),
                   child: const Icon(Icons.edit, color: Colors.white, size: 14),
                 ),
@@ -331,33 +376,42 @@ class ProfileScreen extends StatelessWidget {
               ]
             : null,
       ),
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+      child: Semantics(
+        label: '$title settings',
+        button: true,
+        hint: subtitle != null ? 'Current setting: $subtitle' : null,
+        child: ListTile(
+          onTap: onTap,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 2,
           ),
-          child: FaIcon(icon, size: 16, color: iconColor),
-        ),
-        title: Text(
-          title,
-          style: GoogleFonts.nunito(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: textColor ?? theme.colorScheme.onSurface,
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: FaIcon(icon, size: 16, color: iconColor),
           ),
+          title: Text(
+            title,
+            style: GoogleFonts.nunito(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: textColor ?? theme.colorScheme.onSurface,
+            ),
+          ),
+          subtitle: subtitle != null
+              ? Text(
+                  subtitle,
+                  style: GoogleFonts.nunito(fontSize: 13, color: Colors.grey),
+                )
+              : null,
+          trailing:
+              trailing ??
+              const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
         ),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle,
-                style: GoogleFonts.nunito(fontSize: 13, color: Colors.grey),
-              )
-            : null,
-        trailing: trailing ??
-            const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
       ),
     );
   }
@@ -402,7 +456,7 @@ class ProfileScreen extends StatelessWidget {
     final isSelected = current == code;
     return InkWell(
       onTap: () {
-        context.read<AuthProvider>().updateLanguage(code);
+        context.read<SettingsProvider>().setLocale(Locale(code));
         Navigator.pop(context);
       },
       borderRadius: BorderRadius.circular(12),
@@ -424,8 +478,11 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Text(name, style: GoogleFonts.nunito(fontWeight: FontWeight.w600)),
             if (isSelected)
-              const Icon(Icons.check_circle,
-                  color: AppColors.accentTeal, size: 20),
+              const Icon(
+                Icons.check_circle,
+                color: AppColors.accentTeal,
+                size: 20,
+              ),
           ],
         ),
       ),
@@ -438,7 +495,8 @@ class ProfileScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text("Clear Guest Data?"),
         content: const Text(
-            "This will delete your anonymous chat history. This cannot be undone."),
+          "This will delete your anonymous chat history. This cannot be undone.",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),

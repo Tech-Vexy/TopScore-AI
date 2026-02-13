@@ -37,11 +37,15 @@ class NetworkAwareImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit ?? BoxFit.cover,
-      
+
       // Use custom cache manager for profile pictures to prevent 429 errors
-      cacheManager: isProfilePicture 
+      cacheManager: isProfilePicture
           ? ProfileImageCacheManager()
           : AppImageCacheManager(),
+
+      // Smooth Fade-In Animation
+      fadeInDuration: const Duration(milliseconds: 300),
+      fadeOutDuration: const Duration(milliseconds: 100),
 
       // 2. Optimization: Resize image in memory to save RAM
       memCacheWidth: width != null ? (width! * 2).toInt() : null,
@@ -49,7 +53,7 @@ class NetworkAwareImage extends StatelessWidget {
       // Aggressive caching to prevent 429 errors
       maxWidthDiskCache: width != null ? (width! * 3).toInt() : 1000,
       maxHeightDiskCache: height != null ? (height! * 3).toInt() : 1000,
-      
+
       // Use cached image even if stale (for profile pictures)
       cacheKey: isProfilePicture ? imageUrl : null,
 

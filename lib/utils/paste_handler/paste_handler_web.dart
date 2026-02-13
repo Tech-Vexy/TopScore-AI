@@ -14,31 +14,34 @@ void registerPasteHandlerImpl(Function(String dataUri) onImagePasted) {
     if (clipboardData == null) return;
 
     final items = clipboardData.items;
+
     for (int i = 0; i < items.length; i++) {
       final item = items[i];
       // Check if the item is an image
       if (item.type.startsWith('image/')) {
         final blob = item.getAsFile();
         if (blob != null) {
-          // Prevent default behavior to handle it manually
+          // Prevent default to avoid browser trying to paste image as binary string/file path
           event.preventDefault();
 
           final reader = web.FileReader();
           reader.readAsDataURL(blob);
           reader.onloadend = (web.Event e) {
-            if (reader.result != null) {
-              // Convert JSString to Dart String
-              // readAsDataURL returns a string result
-              final result = (reader.result as JSString).toDart;
-              onImagePasted(result);
+            final result = reader.result;
+            if (result != null) {
+              // Safe cast using JS interop
+              final dataUri = (result as JSString).toDart;
+              onImagePasted(dataUri);
             }
           }.toJS;
 
-          // Stop after finding the first image
-          return;
+          break; // Only handle the first image
         }
       }
     }
+
+    // If no image was handled, let naturally fall through to browser's default text paste
+    // (unless we were explicitly called from a keyboard shortcut that already handled text)
   }.toJS;
 
   web.window.addEventListener('paste', _listener);

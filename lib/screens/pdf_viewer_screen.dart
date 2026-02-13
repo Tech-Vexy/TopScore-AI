@@ -15,6 +15,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart'; // Provides XFile
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:pasteboard/pasteboard.dart';
 
 import 'package:provider/provider.dart';
 import '../providers/navigation_provider.dart';
@@ -37,13 +38,13 @@ class PdfViewerScreen extends StatefulWidget {
     this.file,
     required this.title,
   }) : assert(
-          storagePath != null ||
-              url != null ||
-              assetPath != null ||
-              bytes != null ||
-              file != null,
-          'You must provide at least one PDF source',
-        );
+         storagePath != null ||
+             url != null ||
+             assetPath != null ||
+             bytes != null ||
+             file != null,
+         'You must provide at least one PDF source',
+       );
 
   @override
   State<PdfViewerScreen> createState() => _PdfViewerScreenState();
@@ -51,17 +52,23 @@ class PdfViewerScreen extends StatefulWidget {
 
 class _PdfViewerScreenState extends State<PdfViewerScreen> {
   final PdfViewerController _pdfViewerController = PdfViewerController();
-  final GlobalKey _pdfRepaintKey = GlobalKey(); // Key for screenshot capture
+  final GlobalKey _pdfRepaintKey = GlobalKey();
+  final TextEditingController _searchController = TextEditingController();
 
   Uint8List? _pdfBytes;
   bool _isLoading = true;
   String? _errorMessage;
   bool _isSubscriptionError = false;
   OverlayEntry? _overlayEntry;
+  bool _showSearchBar = false;
+  int _currentPage = 1;
+  int _totalPages = 0;
 
   @override
   void dispose() {
     _checkAndCloseContextMenu();
+    _searchController.dispose();
+    _pdfViewerController.dispose();
     super.dispose();
   }
 
@@ -80,7 +87,9 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   /// --- THEMED CONTEXT MENU ---
   void _showContextMenu(
-      BuildContext context, PdfTextSelectionChangedDetails details) {
+    BuildContext context,
+    PdfTextSelectionChangedDetails details,
+  ) {
     _checkAndCloseContextMenu();
 
     final OverlayState overlayState = Overlay.of(context);
@@ -114,7 +123,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                   blurRadius: 8,
                   color: Colors.black.withValues(alpha: 0.2),
                   offset: const Offset(0, 2),
-                )
+                ),
               ],
             ),
             child: Row(
@@ -133,7 +142,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                             content: Text(
                               'Copied to clipboard',
                               style: TextStyle(
-                                  color: colorScheme.onInverseSurface),
+                                color: colorScheme.onInverseSurface,
+                              ),
                             ),
                             backgroundColor: colorScheme.inverseSurface,
                           ),
@@ -162,16 +172,21 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                       _pdfViewerController.clearSelection();
 
                       // Navigate to AI Chat
-                      Provider.of<NavigationProvider>(context, listen: false)
-                          .navigateToChat(
+                      Provider.of<NavigationProvider>(
+                        context,
+                        listen: false,
+                      ).navigateToChat(
                         message:
                             "Please explain this text:\n\n\"$selectedText\"",
                         context: context,
                       );
                     }
                   },
-                  icon: FaIcon(FontAwesomeIcons.wandMagicSparkles,
-                      color: contentColor, size: 14),
+                  icon: FaIcon(
+                    FontAwesomeIcons.wandMagicSparkles,
+                    color: contentColor,
+                    size: 14,
+                  ),
                   label: Text(
                     'Explain',
                     style: TextStyle(color: contentColor, fontSize: 14),
@@ -265,17 +280,15 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
       final tempDir = await getTemporaryDirectory();
       final safeTitle = widget.title.replaceAll(RegExp(r'[^\w\s\.]'), '_');
-      final fileName =
-          safeTitle.endsWith('.pdf') ? safeTitle : '$safeTitle.pdf';
+      final fileName = safeTitle.endsWith('.pdf')
+          ? safeTitle
+          : '$safeTitle.pdf';
       final file = File('${tempDir.path}/$fileName');
 
       await file.writeAsBytes(_pdfBytes!);
 
       await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          text: 'Sharing $fileName',
-        ),
+        ShareParams(files: [XFile(file.path)], text: 'Sharing $fileName'),
       );
     } catch (e) {
       if (mounted) {
@@ -290,8 +303,9 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   Future<Uint8List?> _captureVisibleArea() async {
     try {
-      final boundary = _pdfRepaintKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _pdfRepaintKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
 
       if (boundary == null) return null;
 
@@ -334,7 +348,35 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
     if (croppedBytes == null || !mounted) return;
 
+    // --- AUTOMATIC CLIPBOARD COPY ---
+    try {
+      await Pasteboard.writeImage(croppedBytes);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                SizedBox(width: 10),
+                Text('Selection copied to clipboard!'),
+              ],
+            ),
+            backgroundColor: Theme.of(context).colorScheme.secondary,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            width: 280,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Clipboard Copy Failed: $e");
+    }
+
     // THEMED BOTTOM SHEET
+    if (!mounted) return;
     await showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -456,6 +498,130 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
+  Widget _buildSearchBar(ThemeData theme) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search in document...',
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  hintStyle: TextStyle(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+                onSubmitted: (value) {
+                  if (value.isNotEmpty) {
+                    _pdfViewerController.searchText(value);
+                  }
+                },
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                if (_searchController.text.isNotEmpty) {
+                  _pdfViewerController.searchText(_searchController.text);
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                _pdfViewerController.clearSelection();
+                _searchController.clear();
+                setState(() => _showSearchBar = false);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPageIndicator(ThemeData theme) {
+    return Positioned(
+      bottom: 80,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.inverseSurface.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 8,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.chevron_left,
+                  color: theme.colorScheme.onInverseSurface,
+                ),
+                onPressed: _currentPage > 1
+                    ? () => _pdfViewerController.previousPage()
+                    : null,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$_currentPage / $_totalPages',
+                style: GoogleFonts.inter(
+                  color: theme.colorScheme.onInverseSurface,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.onInverseSurface,
+                ),
+                onPressed: _currentPage < _totalPages
+                    ? () => _pdfViewerController.nextPage()
+                    : null,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openAiTutorDialog() {
     showDialog(
       context: context,
@@ -496,45 +662,69 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: colorScheme.onSurface),
         actions: [
-          // Zoom Controls
           if (!_isLoading && _pdfBytes != null) ...[
             IconButton(
-              icon: const Icon(Icons.zoom_out),
-              tooltip: 'Zoom Out',
-              onPressed: () {
-                final newZoom = _pdfViewerController.zoomLevel - 0.25;
-                if (newZoom >= 1.0) {
-                  _pdfViewerController.zoomLevel = newZoom;
-                }
-              },
+              icon: const Icon(Icons.search),
+              tooltip: 'Search',
+              onPressed: () => setState(() => _showSearchBar = !_showSearchBar),
             ),
-            IconButton(
-              icon: const Icon(Icons.zoom_in),
-              tooltip: 'Zoom In',
-              onPressed: () {
-                final newZoom = _pdfViewerController.zoomLevel + 0.25;
-                if (newZoom <= 50.0) {
-                  _pdfViewerController.zoomLevel = newZoom;
-                }
-              },
-            ),
-          ],
-
-          // Download
-          if (_pdfBytes != null)
             IconButton(
               icon: const Icon(Icons.download_rounded),
-              tooltip: 'Download PDF',
+              tooltip: 'Download',
               onPressed: _downloadFile,
             ),
-
-          // Crop/AI
-          if (!_isLoading && _pdfBytes != null)
-            IconButton(
-              icon: const Icon(Icons.crop),
-              tooltip: 'Capture & Ask AI',
-              onPressed: _captureAndAction,
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                switch (value) {
+                  case 'zoom_in':
+                    _pdfViewerController.zoomLevel += 0.25;
+                    break;
+                  case 'zoom_out':
+                    final newZoom = _pdfViewerController.zoomLevel - 0.25;
+                    if (newZoom >= 1.0) {
+                      _pdfViewerController.zoomLevel = newZoom;
+                    }
+                    break;
+                  case 'crop':
+                    _captureAndAction();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'zoom_in',
+                  child: Row(
+                    children: [
+                      Icon(Icons.zoom_in),
+                      SizedBox(width: 8),
+                      Text('Zoom In'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'zoom_out',
+                  child: Row(
+                    children: [
+                      Icon(Icons.zoom_out),
+                      SizedBox(width: 8),
+                      Text('Zoom Out'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'crop',
+                  child: Row(
+                    children: [
+                      Icon(Icons.crop),
+                      SizedBox(width: 8),
+                      Text('Capture & Ask AI'),
+                    ],
+                  ),
+                ),
+              ],
             ),
+          ],
         ],
       ),
       body: _buildBody(theme),
@@ -544,10 +734,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               onPressed: _openAiTutorDialog,
               backgroundColor: colorScheme.primary,
               foregroundColor: colorScheme.onPrimary,
-              icon: const FaIcon(
-                FontAwesomeIcons.wandMagicSparkles,
-                size: 20,
-              ),
+              icon: const FaIcon(FontAwesomeIcons.wandMagicSparkles, size: 20),
               label: const Text(
                 'Ask AI',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -584,7 +771,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             Text(
               "Please subscribe to access this document.",
               style: TextStyle(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7)),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
           ],
         ),
@@ -621,37 +809,47 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
     if (_pdfBytes == null) {
       return Center(
-        child:
-            Text("No PDF Data", style: TextStyle(color: colorScheme.onSurface)),
+        child: Text(
+          "No PDF Data",
+          style: TextStyle(color: colorScheme.onSurface),
+        ),
       );
     }
 
-    // --- PDF VIEWER ---
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 850),
-        child: RepaintBoundary(
-          key: _pdfRepaintKey,
-          child: SfPdfViewer.memory(
-            _pdfBytes!,
-            controller: _pdfViewerController,
-            canShowPaginationDialog: true,
-            canShowScrollStatus: true,
-            enableDoubleTapZooming: true,
-            enableTextSelection: true,
-            // Styling the PDF background to match app scaffold might break readability
-            // of standard white-page PDFs, so we usually keep the viewer default (gray/white).
-            // However, we can style the Scroll Status:
-            onTextSelectionChanged: (PdfTextSelectionChangedDetails details) {
-              if (details.selectedText == null && _overlayEntry != null) {
-                _checkAndCloseContextMenu();
-              } else if (details.selectedText != null) {
-                _showContextMenu(context, details);
-              }
-            },
+    return Stack(
+      children: [
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 850),
+            child: RepaintBoundary(
+              key: _pdfRepaintKey,
+              child: SfPdfViewer.memory(
+                _pdfBytes!,
+                controller: _pdfViewerController,
+                canShowPaginationDialog: false,
+                canShowScrollStatus: false,
+                enableDoubleTapZooming: true,
+                enableTextSelection: true,
+                onDocumentLoaded: (details) {
+                  setState(() => _totalPages = details.document.pages.count);
+                },
+                onPageChanged: (details) {
+                  setState(() => _currentPage = details.newPageNumber);
+                },
+                onTextSelectionChanged: (details) {
+                  if (details.selectedText == null && _overlayEntry != null) {
+                    _checkAndCloseContextMenu();
+                  } else if (details.selectedText != null) {
+                    _showContextMenu(context, details);
+                  }
+                },
+              ),
+            ),
           ),
         ),
-      ),
+        if (_showSearchBar) _buildSearchBar(theme),
+        if (_totalPages > 0) _buildPageIndicator(theme),
+      ],
     );
   }
 }

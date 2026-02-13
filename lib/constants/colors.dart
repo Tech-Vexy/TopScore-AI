@@ -31,25 +31,43 @@ class AppColors {
   static const Color secondary = edupoaTeal;
   static const Color accent = edupoaTeal;
 
-  // Light Mode Backgrounds
-  static const Color background = Color(0xFFF9F9F9); // EduPoa Light Grey
+  // Enhanced UI Colors
+  static const Color overlay = Color(0x80000000);
+  static const Color overlayLight = Color(0x40000000);
+  static const Color shimmerBase = Color(0xFFF5F5F5);
+  static const Color shimmerHighlight = white;
+  static const Color shimmerBaseDark = Color(0xFF252525);
+  static const Color shimmerHighlightDark = Color(0xFF2C2C2C);
+
+  // Light Mode Backgrounds - Off-white, not stark white
+  static const Color background = Color(0xFFFAFAFA);
   static const Color surface = white;
-  static const Color surfaceVariant = Color(0xFFF1F5F9);
+  static const Color surfaceVariant = Color(0xFFF0F4F9);
   static const Color surfaceElevated = white;
 
-  // Dark Mode Colors
-  static const Color backgroundDark = Color(0xFF0f0f23);
-  static const Color surfaceDark = Color(0xFF1a1a2e);
-  static const Color surfaceVariantDark = Color(0xFF262640);
-  static const Color surfaceElevatedDark = Color(0xFF2d2d4a);
-  static const Color textDark = Color(0xFFF1F5F9);
-  static const Color textSecondaryDark = Color(0xFF94a3b8);
+  // Dark Mode Colors - Full Black (OLED Friendly)
+  static const Color backgroundDark = Color(0xFF000000); // Pure Black
+  static const Color surfaceDark = Color(
+    0xFF0A0A0A,
+  ); // Almost black (Sidebar/Nav)
+  static const Color surfaceVariantDark = Color(
+    0xFF1A1A1A,
+  ); // Muted cards/Inputs
+  static const Color surfaceElevatedDark = Color(
+    0xFF121212,
+  ); // Elevated elements (Cards)
+  static const Color textDark = Color(0xFFEDEDED); // High contrast white
+  static const Color textSecondaryDark = Color(0xFFA0A0A0); // Muted gray
 
   // Text colors (Light mode)
   static const Color text = Color(0xFF333333); // EduPoa Dark Text
   static const Color textSecondary = Color(0xFF64748b);
   static const Color textLight = Color(0xFF94a3b8);
   static const Color textInverse = white;
+
+  // Border colors - Softer, more subtle
+  static const Color border = Color(0xFFE5E7EB);
+  static const Color borderDark = Color(0xFF222222);
 
   // Status colors
   static const Color success = Color(0xFF10b981);
@@ -94,7 +112,7 @@ class AppColors {
   static const LinearGradient darkGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF1a1a2e), Color(0xFF0f0f23)],
+    colors: [Color(0xFF000000), Color(0xFF121212)],
   );
 
   static const LinearGradient glassGradient = LinearGradient(
@@ -102,6 +120,18 @@ class AppColors {
     end: Alignment.bottomRight,
     colors: [Color(0x30FFFFFF), Color(0x10FFFFFF)],
   );
+
+  // Achievement & Discovery Colors (For Gamification)
+  static const Color achievementGreen = Color(
+    0xFF22C55E,
+  ); // Modern Emerald/Green
+  static const Color discoveryOrange = Color(
+    0xFFF97316,
+  ); // Vibrant Discovery Orange
+  static const Color focusYellow = Color(0xFFEAB308); // Strong Attention Yellow
+  static const Color sifaGold = Color(
+    0xFFD4AF37,
+  ); // Gold for "Sifa the Lion" badges
 
   // Backward compatibility aliases
   static const LinearGradient secondaryGradient = accentGradient;

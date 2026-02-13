@@ -108,6 +108,15 @@ class AuthProvider with ChangeNotifier {
       await _ensureBlockedEmailDomainsLoaded();
       User? user = _auth.currentUser;
       if (user != null) {
+        if (user.isAnonymous) {
+          debugPrint(
+            "Anonymous user detected but guest mode is disabled. Signing out...",
+          );
+          await _auth.signOut();
+          _userModel = null;
+          return;
+        }
+
         await user.reload();
         user = _auth.currentUser;
         if (user == null || !user.emailVerified) {
@@ -115,8 +124,10 @@ class AuthProvider with ChangeNotifier {
           _userModel = null;
           return;
         }
-        DocumentSnapshot doc =
-            await _firestore.collection('users').doc(user.uid).get();
+        DocumentSnapshot doc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .get();
         if (doc.exists) {
           _userModel = UserModel.fromMap(
             doc.data() as Map<String, dynamic>,
@@ -134,8 +145,9 @@ class AuthProvider with ChangeNotifier {
   Future<void> _ensureBlockedEmailDomainsLoaded() async {
     if (_blockedEmailDomainsLoaded) return;
     try {
-      final data = await rootBundle
-          .loadString('assets/config/blocked_email_domains.json');
+      final data = await rootBundle.loadString(
+        'assets/config/blocked_email_domains.json',
+      );
       final decoded = jsonDecode(data);
       if (decoded is List) {
         _blockedEmailDomains = decoded
@@ -195,17 +207,19 @@ class AuthProvider with ChangeNotifier {
       _setLoading(true);
 
       final OAuthCredential credential;
-      
+
       if (kIsWeb) {
         // On web, use Firebase Auth directly (google_sign_in 7.x doesn't support programmatic sign-in on web)
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        final UserCredential userCredential = await _auth.signInWithPopup(googleProvider);
-        
+        final UserCredential userCredential = await _auth.signInWithPopup(
+          googleProvider,
+        );
+
         if (userCredential.user == null) {
           _setLoading(false);
           return false;
         }
-        
+
         // For web, we've already signed in, so handle the user directly
         final user = userCredential.user!;
         await _ensureUserProfile(user);
@@ -214,19 +228,19 @@ class AuthProvider with ChangeNotifier {
       } else {
         // On mobile, use google_sign_in package
         await _ensureGoogleSignInInitialized();
-        
+
         final GoogleSignInAccount account = await _googleSignIn.authenticate(
           scopeHint: <String>['email'],
         );
-        
+
         // Get authentication details
         final GoogleSignInAuthentication googleAuth = account.authentication;
-        
+
         credential = GoogleAuthProvider.credential(
           accessToken: null,
           idToken: googleAuth.idToken,
         );
-        
+
         // Check current user state for anonymous upgrade
         final currentUser = _auth.currentUser;
         UserCredential userCredential;
@@ -236,7 +250,8 @@ class AuthProvider with ChangeNotifier {
             // Link the anonymous user to the new Google credential
             userCredential = await currentUser.linkWithCredential(credential);
             debugPrint(
-                "Successfully linked anonymous account to Google credential");
+              "Successfully linked anonymous account to Google credential",
+            );
           } on FirebaseAuthException catch (e) {
             if (e.code == 'credential-already-in-use') {
               // Account already exists, so we sign in to it (merging/overwriting guest session)
@@ -316,7 +331,8 @@ class AuthProvider with ChangeNotifier {
       await _ensureBlockedEmailDomainsLoaded();
       if (_isEmailDomainBlocked(email)) {
         throw Exception(
-            'Disposable or fraudulent email providers are not allowed.');
+          'Disposable or fraudulent email providers are not allowed.',
+        );
       }
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),

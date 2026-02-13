@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For Haptics
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../constants/colors.dart';
+import '../config/app_theme.dart';
+import '../widgets/bounce_wrapper.dart';
 import 'auth/auth_screen.dart';
 
 class LandingPage extends StatefulWidget {
@@ -81,7 +83,6 @@ class _LandingPageState extends State<LandingPage>
           curve: Curves.easeInOut,
         );
       } else {
-        // Loop back to first page
         _pageController.animateToPage(
           0,
           duration: const Duration(milliseconds: 800),
@@ -107,7 +108,7 @@ class _LandingPageState extends State<LandingPage>
     _stopAutoScroll();
     if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 600),
+        duration: AppTheme.durationSlow,
         curve: Curves.fastEaseInToSlowEaseOut,
       );
       _startAutoScroll();
@@ -149,7 +150,10 @@ class _LandingPageState extends State<LandingPage>
           // Top overlay with indicators and login button
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingLg,
+                vertical: AppTheme.spacingMd,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -161,21 +165,28 @@ class _LandingPageState extends State<LandingPage>
                   ),
                   // Login Button
                   if (!_pages[_currentPage].isLast)
-                    TextButton(
-                      onPressed: _goToAuth,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.black.withValues(alpha: 0.3),
+                    BounceWrapper(
+                      onTap: _goToAuth,
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
+                          horizontal: AppTheme.spacingLg,
+                          vertical: AppTheme.spacingSm,
                         ),
-                      ),
-                      child: Text(
-                        'Log In',
-                        style: GoogleFonts.nunito(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          'Log In',
+                          style: GoogleFonts.nunito(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),
@@ -186,9 +197,9 @@ class _LandingPageState extends State<LandingPage>
 
           // Bottom button
           Positioned(
-            bottom: 48,
-            left: 24,
-            right: 24,
+            bottom: AppTheme.spacing2xl,
+            left: AppTheme.spacingLg,
+            right: AppTheme.spacingLg,
             child: SafeArea(
               child: _MorphingNavButton(
                 isLastPage: _pages[_currentPage].isLast,
@@ -335,29 +346,35 @@ class _MorphingNavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return BounceWrapper(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
+        duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOutBack,
-        height: 60,
-        width: isLastPage ? 240 : 60,
+        height: 64,
+        width: isLastPage ? 260 : 64,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Center(
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
+            duration: AppTheme.durationNormal,
             transitionBuilder: (child, animation) {
-              return FadeTransition(opacity: animation, child: child);
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: animation,
+                  child: child,
+                ),
+              );
             },
             child: isLastPage
                 ? Row(
@@ -368,14 +385,15 @@ class _MorphingNavButton extends StatelessWidget {
                         "Get Started",
                         style: GoogleFonts.nunito(
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                           color: Colors.black,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppTheme.spacingSm),
                       const Icon(
                         Icons.arrow_forward_rounded,
                         color: Colors.black,
+                        size: 24,
                       ),
                     ],
                   )
@@ -383,7 +401,7 @@ class _MorphingNavButton extends StatelessWidget {
                     Icons.arrow_forward_rounded,
                     key: ValueKey('icon'),
                     color: Colors.black,
-                    size: 28,
+                    size: 32,
                   ),
           ),
         ),
