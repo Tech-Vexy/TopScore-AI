@@ -1,0 +1,149 @@
+.hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+    position: relative;
+    overflow: hidden;
+}
+
+.bg {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(30, 58, 138, 0.2) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(118, 75, 162, 0.12) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.content {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(30, 58, 138, 0.2);
+    border: 1px solid rgba(30, 58, 138, 0.2);
+    color: #a5b4fc;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 50px;
+    margin-bottom: 28px;
+    animation: fadeInDown 0.6s ease both;
+}
+
+.h1 {
+    font-family: var(--font-display);
+    font-size: clamp(40px, 7vw, 80px);
+    font-weight: 900;
+    line-height: 1.08;
+    letter-spacing: -1.5px;
+    margin-bottom: 24px;
+    animation: fadeInUp 0.7s 0.1s ease both;
+}
+
+.grad {
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.sub {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--text-muted);
+    max-width: 620px;
+    margin: 0 auto 40px;
+    line-height: 1.7;
+    animation: fadeInUp 0.7s 0.2s ease both;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    animation: fadeInUp 0.7s 0.3s ease both;
+}
+
+.btnPrimary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--gradient);
+    color: #fff;
+    padding: 16px 32px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 700;
+    box-shadow: 0 8px 32px rgba(30, 58, 138, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btnPrimary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(30, 58, 138, 0.2);
+}
+
+.btnSecondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    color: var(--text);
+    padding: 16px 32px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.btnSecondary:hover {
+    border-color: rgba(30, 58, 138, 0.2);
+    background: var(--bg-card2);
+}
+
+.stats {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    margin-top: 72px;
+    flex-wrap: wrap;
+    animation: fadeInUp 0.7s 0.4s ease both;
+}
+
+.statItem strong {
+    display: block;
+    font-size: 36px;
+    font-weight: 900;
+    font-family: var(--font-display);
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+}
+
+.statItem span {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-top: 4px;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .stats {
+        gap: 28px;
+    }
+}
+
+

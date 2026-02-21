@@ -1,0 +1,140 @@
+.wrapper {
+    text-align: center;
+    padding: 100px 24px 60px;
+    overflow: hidden;
+}
+
+.label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--primary);
+    background: rgba(30, 58, 138, 0.2);
+    padding: 6px 14px;
+    border-radius: 50px;
+    margin-bottom: 16px;
+}
+
+.title {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 900;
+    margin-bottom: 18px;
+    line-height: 1.15;
+}
+
+.sub {
+    font-size: 17px;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto 48px;
+}
+
+.carousel {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 14%;
+    scrollbar-width: none;
+}
+
+.carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.phone {
+    flex: 0 0 72%;
+    max-width: 320px;
+    scroll-snap-align: center;
+}
+
+.phoneScreen {
+    position: relative;
+    border-radius: 32px;
+    padding: 48px 24px 40px;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    transition: transform 0.3s;
+}
+
+.phoneScreen:hover {
+    transform: translateY(-6px);
+}
+
+.phoneNotch {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 24px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+}
+
+.screenEmoji {
+    font-size: 56px;
+    margin-bottom: 20px;
+}
+
+.screenTitle {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.screenDesc {
+    font-size: 14px;
+    opacity: 0.85;
+    line-height: 1.5;
+    max-width: 220px;
+}
+
+.dots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 32px;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: none;
+    background: var(--text-dim);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.dot:hover {
+    background: var(--text-muted);
+}
+
+.dotActive {
+    background: var(--primary);
+    transform: scale(1.3);
+}
+
+@media (max-width: 768px) {
+    .phone {
+        flex: 0 0 80%;
+    }
+
+    .carousel {
+        padding: 0 10%;
+    }
+}

@@ -1,0 +1,211 @@
+.wrapper {
+    background: var(--bg);
+    padding: 100px 24px;
+}
+
+.section {
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--primary);
+    background: rgba(30, 58, 138, 0.2);
+    padding: 6px 14px;
+    border-radius: 50px;
+    margin-bottom: 16px;
+}
+
+.title {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 900;
+    margin-bottom: 18px;
+    line-height: 1.15;
+}
+
+.sub {
+    font-size: 17px;
+    color: var(--text-muted);
+    max-width: 560px;
+    margin: 0 auto 32px;
+}
+
+/* ── Toggle ── */
+.toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 48px;
+}
+
+.toggleActive {
+    color: var(--text);
+}
+
+.toggleBtn {
+    position: relative;
+    width: 48px;
+    height: 26px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.toggleKnob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--gradient);
+    transition: transform 0.25s;
+}
+
+.toggleKnobRight {
+    transform: translateX(22px);
+}
+
+.save {
+    font-size: 11px;
+    background: rgba(21, 128, 61, 0.2);
+    color: var(--secondary);
+    padding: 2px 8px;
+    border-radius: 50px;
+    font-weight: 700;
+}
+
+/* ── Cards ── */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.card {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 32px;
+    text-align: left;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.featured {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary), 0 8px 32px rgba(30, 58, 138, 0.15);
+}
+
+.badge {
+    position: absolute;
+    top: -12px;
+    right: 24px;
+    background: var(--gradient);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 50px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.planName {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.price {
+    font-family: var(--font-display);
+    font-size: 40px;
+    font-weight: 900;
+    margin-bottom: 24px;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.period {
+    font-size: 16px;
+    font-weight: 500;
+    -webkit-text-fill-color: var(--text-muted);
+}
+
+.features {
+    list-style: none;
+    margin-bottom: 32px;
+}
+
+.features li {
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.features li:last-child {
+    border-bottom: none;
+}
+
+.check {
+    color: var(--secondary);
+    font-weight: 700;
+    margin-right: 8px;
+}
+
+.ctaPrimary {
+    display: block;
+    text-align: center;
+    padding: 14px 24px;
+    background: var(--gradient);
+    color: #fff;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 15px;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.ctaPrimary:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.ctaSecondary {
+    display: block;
+    text-align: center;
+    padding: 14px 24px;
+    background: var(--bg-card2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 15px;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.ctaSecondary:hover {
+    border-color: var(--primary);
+    background: var(--bg-card);
+}

@@ -1,0 +1,98 @@
+.wrapper {
+    padding: 80px 24px;
+    background: var(--bg);
+}
+
+.inner {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.label {
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--primary);
+    background: rgba(30, 58, 138, 0.2);
+    padding: 6px 14px;
+    border-radius: 50px;
+    margin-bottom: 16px;
+}
+
+.title {
+    font-family: var(--font-display);
+    font-size: clamp(24px, 3.5vw, 36px);
+    font-weight: 900;
+    margin-bottom: 12px;
+    line-height: 1.2;
+}
+
+.sub {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin-bottom: 32px;
+}
+
+.form {
+    display: flex;
+    gap: 12px;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.input {
+    flex: 1;
+    padding: 14px 18px;
+    border-radius: 50px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.input:focus {
+    border-color: var(--primary);
+}
+
+.input::placeholder {
+    color: var(--text-dim);
+}
+
+.btn {
+    padding: 14px 28px;
+    border-radius: 50px;
+    border: none;
+    background: var(--gradient);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.btn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.success {
+    padding: 18px 24px;
+    background: rgba(21, 128, 61, 0.15);
+    border: 1px solid rgba(21, 128, 61, 0.3);
+    border-radius: 14px;
+    color: var(--secondary);
+    font-weight: 600;
+    font-size: 15px;
+}
+
+@media (max-width: 480px) {
+    .form {
+        flex-direction: column;
+    }
+}

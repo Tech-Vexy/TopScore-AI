@@ -1,0 +1,26 @@
+'use client';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useLocale } from '@/i18n';
+import styles from './Footer.module.css';
+
+export default function Footer() {
+    const year = new Date().getFullYear();
+    const { t } = useLocale();
+
+    return (
+        <footer className={styles.footer}>
+            <div className={styles.logo}>
+                <Image src="/logo.png" alt="TopScore AI" width={36} height={36} />
+                TopScore AI
+            </div>
+            <p>{t('footer.tagline')}</p>
+            <div className={styles.legalLinks}>
+                <Link href="/privacy">{t('footer.privacy')}</Link>
+                <span className={styles.dot}>·</span>
+                <Link href="/terms">{t('footer.terms')}</Link>
+            </div>
+            <p>{t('footer.copy', { year: String(year) })}</p>
+        </footer>
+    );
+}

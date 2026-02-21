@@ -1,0 +1,40 @@
+/* ── Base: all animated elements start hidden ── */
+.animated {
+    opacity: 0;
+    transition:
+        opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+}
+
+/* ── Initial states ── */
+.fadeUp {
+    transform: translateY(36px);
+}
+
+.fadeIn {
+    transform: translateY(0);
+}
+
+.fadeLeft {
+    transform: translateX(-36px);
+}
+
+.fadeRight {
+    transform: translateX(36px);
+}
+
+/* ── Visible: added by IntersectionObserver ── */
+.visible {
+    opacity: 1 !important;
+    transform: translate(0, 0) !important;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .animated {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}

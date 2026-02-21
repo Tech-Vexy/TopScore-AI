@@ -1,0 +1,59 @@
+.wrapper {
+    padding: 100px 24px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+}
+
+.section {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.label {
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--primary);
+    background: rgba(30, 58, 138, 0.2);
+    padding: 6px 14px;
+    border-radius: 50px;
+    margin-bottom: 16px;
+}
+
+.title {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 900;
+    margin-bottom: 18px;
+    line-height: 1.15;
+}
+
+.sub {
+    font-size: 17px;
+    color: var(--text-muted);
+    margin-bottom: 48px;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.videoWrap {
+    position: relative;
+    padding-bottom: 56.25%;
+    /* 16:9 */
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(30, 58, 138, 0.25);
+}
+
+.iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}

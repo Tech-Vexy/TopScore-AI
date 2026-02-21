@@ -1,0 +1,19 @@
+{
+    "name": "topscore-ai",
+    "version": "1.0.0",
+    "private": true,
+    "packageManager": "npm@11.6.2",
+    "workspaces": [
+        "apps/landing"
+    ],
+    "scripts": {
+        "dev": "turbo dev",
+        "build": "turbo build",
+        "lint": "turbo lint",
+        "dev:landing": "npm run dev --workspace=apps/landing",
+        "build:landing": "npm run build --workspace=apps/landing"
+    },
+    "devDependencies": {
+        "turbo": "^2"
+    }
+}

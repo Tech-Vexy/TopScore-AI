@@ -1,0 +1,41 @@
+.switcher {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(30, 58, 138, 0.15);
+    border: 1px solid rgba(30, 58, 138, 0.25);
+    border-radius: 50px;
+    padding: 3px;
+    gap: 2px;
+}
+
+.option {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 50px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    line-height: 1;
+}
+
+.option:hover {
+    color: var(--text);
+}
+
+.active {
+    background: var(--gradient);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+}
+
+.flag {
+    font-size: 14px;
+    line-height: 1;
+}

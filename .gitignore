@@ -12,7 +12,7 @@
 .swiftpm/
 migrate_working_dir/
 
-# Environment variables (IMPORTANT: Keep .env out of version control)
+# Environment variables
 .env
 
 # IntelliJ related
@@ -20,22 +20,22 @@ migrate_working_dir/
 *.ipr
 *.iws
 .idea/
-*.txt
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# VS Code
 #.vscode/
 
-# Flutter/Dart/Pub related
+# ────────────────────────────────────────────
+# Flutter / Dart (apps/mobile)
+# ────────────────────────────────────────────
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
-/coverage/
+apps/mobile/build/
+apps/mobile/.dart_tool/
 
 # Symbolication related
 app.*.symbols
@@ -43,7 +43,21 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Android Studio build artifacts
+apps/mobile/android/app/debug
+apps/mobile/android/app/profile
+apps/mobile/android/app/release
+
+# ────────────────────────────────────────────
+# Node / Next.js / Turborepo (apps/landing)
+# ────────────────────────────────────────────
+node_modules/
+.next/
+.turbo/
+out/
+dist/
+
+# ────────────────────────────────────────────
+# OS files
+# ────────────────────────────────────────────
+Thumbs.db

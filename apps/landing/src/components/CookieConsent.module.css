@@ -1,0 +1,78 @@
+.banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 24px;
+    background: rgba(10, 10, 14, 0.95);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+.text {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.accept {
+    padding: 10px 22px;
+    border: none;
+    border-radius: 50px;
+    background: var(--gradient);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.accept:hover {
+    opacity: 0.9;
+}
+
+.decline {
+    padding: 10px 22px;
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.decline:hover {
+    border-color: var(--text-muted);
+}
+
+@media (max-width: 600px) {
+    .banner {
+        flex-direction: column;
+        text-align: center;
+    }
+}
