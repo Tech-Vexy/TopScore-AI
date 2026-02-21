@@ -2,7 +2,7 @@ name: topscore_ai  # Suggestion: Use snake_case for package names (Flutter stand
 description: "A learning app for 844 and cbc students powered by AI."
 publish_to: 'none' 
 
-version: 1.0.0+2
+version: 1.0.1+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'

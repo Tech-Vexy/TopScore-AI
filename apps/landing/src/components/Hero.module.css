@@ -108,35 +108,52 @@
 }
 
 .btnSecondary:hover {
-    border-color: rgba(30, 58, 138, 0.2);
+    border-color: rgba(30, 58, 138, 0.4);
     background: var(--bg-card2);
 }
 
 .stats {
     display: flex;
     justify-content: center;
-    gap: 48px;
+    gap: 20px;
     margin-top: 72px;
     flex-wrap: wrap;
     animation: fadeInUp 0.7s 0.4s ease both;
 }
 
+.statItem {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 24px 32px;
+    border-radius: 20px;
+    min-width: 160px;
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.statItem:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.06);
+}
+
 .statItem strong {
     display: block;
-    font-size: 36px;
+    font-size: 32px;
     font-weight: 900;
     font-family: var(--font-display);
     background: var(--gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    line-height: 1;
+    line-height: 1.1;
 }
 
 .statItem span {
-    font-size: 13px;
+    font-size: 11px;
     color: var(--text-muted);
-    font-weight: 500;
-    margin-top: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-top: 8px;
     display: block;
 }
 
@@ -145,5 +162,3 @@
         gap: 28px;
     }
 }
-
-

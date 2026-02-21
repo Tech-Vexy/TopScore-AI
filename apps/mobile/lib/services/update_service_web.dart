@@ -65,31 +65,43 @@ class UpdateService {
 
   Future<String?> _getServerVersion() async {
     final cacheBust = DateTime.now().millisecondsSinceEpoch;
-    final uri = Uri.parse('/version.json?v=$cacheBust');
+    // Use relative path or origin-aware URI to avoid ERR_NAME_NOT_RESOLVED
+    final currentUri = Uri.base;
+    final uri = Uri(
+      scheme: currentUri.scheme,
+      host: currentUri.host,
+      port: currentUri.port,
+      path: '/version.json',
+      queryParameters: {'v': cacheBust.toString()},
+    );
     final response = await http.get(
       uri,
       headers: const {'cache-control': 'no-cache'},
     );
 
     if (response.statusCode != 200) {
-      debugPrint(
-        '[UpdateService] version.json not available (${response.statusCode}).',
-      );
+      debugPrint('[UpdateService] Server returned ${response.statusCode}');
       return null;
     }
 
-    final body = response.body.trim();
-    if (body.isEmpty) return null;
+    final contentType = response.headers['content-type'] ?? '';
+    if (!contentType.contains('application/json') &&
+        !response.body.trim().startsWith('{')) {
+      debugPrint(
+          '[UpdateService] Invalid content type: $contentType. Likely HTML error page.');
+      return null;
+    }
 
     try {
-      final decoded = jsonDecode(body);
+      final decoded = jsonDecode(response.body);
       if (decoded is Map && decoded['version'] != null) {
         return decoded['version'].toString().trim();
       }
-    } catch (_) {
-      // If not JSON, fall through to return raw body.
+    } catch (e) {
+      debugPrint('[UpdateService] JSON Decode failed: $e');
     }
 
+    final body = response.body.trim();
     return body;
   }
 

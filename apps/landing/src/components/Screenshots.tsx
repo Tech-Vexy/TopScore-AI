@@ -2,14 +2,22 @@
 import { useRef, useState, useEffect } from 'react';
 import { useLocale } from '@/i18n';
 import type { TranslationKey } from '@/i18n';
+import Image from 'next/image';
 import AnimatedSection from './AnimatedSection';
 import styles from './Screenshots.module.css';
 
-const screens: { emoji: string; idx: number; gradient: string }[] = [
-    { emoji: '🤖', idx: 0, gradient: 'linear-gradient(135deg, #7C6EEA 0%, #a855f7 100%)' },
-    { emoji: '📚', idx: 1, gradient: 'linear-gradient(135deg, #34D9CB 0%, #3b82f6 100%)' },
-    { emoji: '🔥', idx: 2, gradient: 'linear-gradient(135deg, #FF6B6B 0%, #f7971e 100%)' },
-    { emoji: '👨‍👩‍👧', idx: 3, gradient: 'linear-gradient(135deg, #a8edea 0%, #15803d 100%)' },
+interface Screen {
+    idx: number;
+    gradient: string;
+    image?: string;
+    emoji?: string;
+}
+
+const screens: Screen[] = [
+    { idx: 0, gradient: 'linear-gradient(135deg, #7C6EEA 0%, #a855f7 100%)', emoji: '🤖' },
+    { idx: 1, gradient: 'linear-gradient(135deg, #34D9CB 0%, #3b82f6 100%)', emoji: '📚' },
+    { idx: 2, gradient: 'linear-gradient(135deg, #FF6B6B 0%, #f7971e 100%)', emoji: '🔥' },
+    { idx: 3, gradient: 'linear-gradient(135deg, #a8edea 0%, #15803d 100%)', emoji: '👨‍👩‍👧' },
 ];
 
 export default function Screenshots() {
@@ -51,9 +59,23 @@ export default function Screenshots() {
                             <div className={styles.phone} key={s.idx}>
                                 <div className={styles.phoneScreen} style={{ background: s.gradient }}>
                                     <div className={styles.phoneNotch} />
-                                    <div className={styles.screenEmoji}>{s.emoji}</div>
-                                    <h3 className={styles.screenTitle}>{t(nameKey)}</h3>
-                                    <p className={styles.screenDesc}>{t(descKey)}</p>
+                                    {s.image ? (
+                                        <div className={styles.imageContainer}>
+                                            <Image
+                                                src={s.image}
+                                                alt={t(nameKey)}
+                                                fill
+                                                className={styles.screenImage}
+                                                sizes="(max-width: 768px) 80vw, 320px"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className={styles.placeholderContent}>
+                                            <div className={styles.screenEmoji}>{s.emoji}</div>
+                                            <h3 className={styles.screenTitle}>{t(nameKey)}</h3>
+                                            <p className={styles.screenDesc}>{t(descKey)}</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );

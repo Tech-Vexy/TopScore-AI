@@ -247,11 +247,15 @@ class _LoginScreenState extends State<LoginScreen> {
               'assets/images/google_logo.png',
               height: 24,
               width: 24,
-              errorBuilder: (context, error, stackTrace) => const FaIcon(
-                FontAwesomeIcons.google,
-                size: 20,
-                color: AppColors.error,
-              ),
+              errorBuilder: (context, error, stackTrace) {
+                // Try fallback to just the image name if prefix is still causing issues
+                debugPrint('Google logo asset error: $error');
+                return const FaIcon(
+                  FontAwesomeIcons.google,
+                  size: 20,
+                  color: AppColors.error,
+                );
+              },
             ),
             const SizedBox(width: 12),
             Text(

@@ -1,6 +1,19 @@
 import type { Metadata } from 'next';
+import { Plus_Jakarta_Sans, DM_Sans } from 'next/font/google';
 import './globals.css';
 import { LocaleProvider } from '@/i18n';
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  variable: '--font-body',
+  display: 'swap',
+});
 
 const siteUrl = 'https://topscore-ai.com';
 
@@ -59,14 +72,48 @@ export const metadata: Metadata = {
   },
 };
 
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'TopScore AI',
+  url: siteUrl,
+  logo: `${siteUrl}/logo.png`,
+  sameAs: [
+    'https://twitter.com/TopScoreAI',
+    // Add other social links here
+  ],
+  description: 'AI-powered tutoring and study resources for Kenyan students.',
+};
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Home',
+      item: siteUrl,
+    },
+  ],
+};
+
 import BackToTop from '@/components/BackToTop';
 import CookieConsent from '@/components/CookieConsent';
 import Analytics from '@/components/Analytics';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${plusJakarta.variable} ${dmSans.variable}`}>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        />
         {/* Enable CSS View Transitions for smooth page navigation */}
         <style>{`
           @view-transition { navigation: auto; }

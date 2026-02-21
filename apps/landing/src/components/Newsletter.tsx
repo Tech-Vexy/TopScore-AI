@@ -8,16 +8,23 @@ export default function Newsletter() {
     const { t } = useLocale();
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email) return;
-        // Placeholder: store locally until a backend is connected
+        if (!email || loading) return;
+
+        setLoading(true);
+        // Simulate a tiny networking delay for better perceived feedback
+        await new Promise(r => setTimeout(r, 800));
+
         try {
             const list = JSON.parse(localStorage.getItem('topscore_newsletter') ?? '[]');
             list.push({ email, date: new Date().toISOString() });
             localStorage.setItem('topscore_newsletter', JSON.stringify(list));
         } catch { /* noop */ }
+
+        setLoading(false);
         setSubmitted(true);
     };
 
@@ -45,8 +52,8 @@ export default function Newsletter() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                             />
-                            <button type="submit" className={styles.btn}>
-                                {t('newsletter.cta')}
+                            <button type="submit" className={styles.btn} disabled={loading}>
+                                {loading ? '...' : t('newsletter.cta')}
                             </button>
                         </form>
                     )}

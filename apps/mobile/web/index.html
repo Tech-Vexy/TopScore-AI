@@ -34,7 +34,7 @@
   <meta property="og:title" content="TopScore AI - Ace Your Exams | #1 AI Tutor for KCSE & CBC">
   <meta property="og:description"
     content="Your 24/7 AI Tutor for Kenyan students. Snap a photo, chat with textbooks, and get instant, accurate explanations for KCSE, CBC & 8-4-4 revision.">
-  <meta property="og:image" content="https://topscoreapp.ai/assets/social-preview.png">
+  <meta property="og:image" content="assets/social-preview.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="TopScore AI - AI-Powered Learning Platform for Kenyan Students">
@@ -47,7 +47,7 @@
   <meta name="twitter:title" content="TopScore AI - Ace Your Exams | #1 AI Tutor for KCSE & CBC">
   <meta name="twitter:description"
     content="Your 24/7 AI Tutor for Kenyan students. Snap a photo, chat with textbooks, and get instant explanations for KCSE, CBC & 8-4-4 revision.">
-  <meta name="twitter:image" content="https://topscoreapp.ai/assets/social-preview.png">
+  <meta name="twitter:image" content="assets/social-preview.png">
   <meta name="twitter:image:alt" content="TopScore AI - AI-Powered Learning Platform for Kenyan Students">
 
   <!-- Theme & App Identity -->
@@ -282,7 +282,7 @@
       "width": 512,
       "height": 512
     },
-    "image": "https://topscoreapp.ai/assets/social-preview.png",
+    "image": "assets/social-preview.png",
     "sameAs": [
       "https://twitter.com/TopScoreAI",
       "https://facebook.com/TopScoreAI"
@@ -346,7 +346,7 @@
       "CBC and 8-4-4 Curriculum Support",
       "KCSE & KCPE Past Papers"
     ],
-    "screenshot": "https://topscoreapp.ai/assets/social-preview.png",
+    "screenshot": "assets/social-preview.png",
     "creator": {
       "@id": "https://topscoreapp.ai/#organization"
     },
@@ -449,7 +449,8 @@
       <h1>TopScore AI - Kenya's #1 AI-Powered Learning Platform</h1>
       <p>JavaScript is required to run this application.</p>
       <h2>AI Tutor for KCSE, CBC & 8-4-4 Students</h2>
-      <p>TopScore AI is Kenya's premier AI-powered education platform for students following the CBC and 8-4-4 curricula.
+      <p>TopScore AI is Kenya's premier AI-powered education platform for students following the CBC and 8-4-4
+        curricula.
         Get personalized help with Mathematics, English, Kiswahili, Chemistry, Biology, Physics, History, Geography, and
         more.</p>
       <h3>Features</h3>
@@ -466,23 +467,53 @@
       <h3>Supported Curricula</h3>
       <p>CBC (Competency-Based Curriculum) - Grade 1 to Grade 12</p>
       <p>8-4-4 / KCSE - Form 1 to Form 4</p>
-      <p>Please enable JavaScript in your browser to access personalized tutoring, AI flashcards, and smart study tools.</p>
+      <p>Please enable JavaScript in your browser to access personalized tutoring, AI flashcards, and smart study tools.
+      </p>
       <p><a href="https://topscoreapp.ai/">Visit TopScore AI</a></p>
     </div>
   </noscript>
 
   <script>
-    // Force unregister service workers to fix cache/timeout issues
+    // Force unregister service workers if corrupted or requested via ?force_update=true
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function (registrations) {
-        for (let registration of registrations) {
-          if (registration.scope.includes('/')) {
-            console.log('Unregistering Service Worker:', registration);
-            registration.unregister();
+      const forceUpdate = window.location.search.includes('force_update=true');
+      const hasAssetErrors = document.cookie.includes('clear_sw=true');
+
+      if (forceUpdate || hasAssetErrors) {
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+          if (registrations.length === 0) {
+            console.log('No service workers found to unregister.');
+            return;
           }
-        }
-      });
+          for (let registration of registrations) {
+            console.log('Unregistering Service Worker:', registration.scope);
+            registration.unregister().then(function (success) {
+              console.log('Unregistration ' + (success ? 'successful' : 'failed') + ' for:', registration.scope);
+            });
+          }
+          // Clear cookie and reload to ensure a clean slate
+          if (hasAssetErrors) {
+            document.cookie = "clear_sw=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            console.log('Reloading page after service worker cleanup...');
+            setTimeout(() => window.location.reload(), 500);
+          }
+        });
+      }
     }
+
+    // Global error listener to detect asset loading failures
+    window.addEventListener('error', function (e) {
+      // Ignore GA/GTM and other external scripts if they fail
+      const src = e.target && (e.target.src || e.target.href);
+      if (src && !src.includes('google-analytics') && !src.includes('googletagmanager')) {
+        console.warn('Asset load failed:', src);
+        // Only trigger SW clear for internal assets (same origin or assets folder)
+        if (src.includes(window.location.origin) || src.includes('assets/')) {
+          console.log('Marking service worker for cleanup on next reload.');
+          document.cookie = "clear_sw=true; path=/; max-age=60";
+        }
+      }
+    }, true);
   </script>
   <script src="flutter_bootstrap.js?v=2" async></script>
 </body>

@@ -242,104 +242,104 @@ class _LandingPageState extends State<LandingPage>
           _startAutoScroll();
         },
         child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Fullscreen Image
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 600),
-            child: Image.asset(
-              content.imagePath,
-              key: ValueKey(content.imagePath),
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: Colors.black,
-                child: const Center(
-                  child: Icon(
-                    Icons.image_outlined,
-                    size: 100,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Gradient overlay for text readability
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.7),
-                    Colors.black.withValues(alpha: 0.9),
-                  ],
-                  stops: const [0.0, 0.4, 0.7, 1.0],
-                ),
-              ),
-            ),
-          ),
-
-          // Text content at bottom
-          Positioned(
-            bottom: 120,
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Title
-                  Text(
-                    content.title,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
+          fit: StackFit.expand,
+          children: [
+            // Fullscreen Image
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 600),
+              child: Image.asset(
+                content.imagePath,
+                key: ValueKey(content.imagePath),
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: Colors.black,
+                  child: const Center(
+                    child: Icon(
+                      Icons.image_outlined,
+                      size: 100,
                       color: Colors.white,
-                      height: 1.1,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          offset: const Offset(0, 2),
-                          blurRadius: 8,
-                        ),
-                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Subtitle
-                  Text(
-                    content.subtitle,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.nunito(
-                      fontSize: 18,
-                      color: Colors.white.withValues(alpha: 0.95),
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          offset: const Offset(0, 1),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+
+            // Gradient overlay for text readability
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.7),
+                      Colors.black.withValues(alpha: 0.9),
+                    ],
+                    stops: const [0.0, 0.4, 0.7, 1.0],
+                  ),
+                ),
+              ),
+            ),
+
+            // Text content at bottom
+            Positioned(
+              bottom: 120,
+              left: 0,
+              right: 0,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Title
+                    Text(
+                      content.title,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.1,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            offset: const Offset(0, 2),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Subtitle
+                    Text(
+                      content.subtitle,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunito(
+                        fontSize: 18,
+                        color: Colors.white.withValues(alpha: 0.95),
+                        height: 1.5,
+                        fontWeight: FontWeight.w500,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            offset: const Offset(0, 1),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -363,64 +363,64 @@ class _MorphingNavButton extends StatelessWidget {
       child: BounceWrapper(
         onTap: onTap,
         child: AnimatedContainer(
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOutBack,
-        height: 64,
-        width: isLastPage ? 260 : 64,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Center(
-          child: AnimatedSwitcher(
-            duration: AppTheme.durationNormal,
-            transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: ScaleTransition(
-                  scale: animation,
-                  child: child,
-                ),
-              );
-            },
-            child: isLastPage
-                ? Row(
-                    key: const ValueKey('text'),
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Get Started",
-                        style: GoogleFonts.nunito(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(width: AppTheme.spacingSm),
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Colors.black,
-                        size: 24,
-                      ),
-                    ],
-                  )
-                : const Icon(
-                    Icons.arrow_forward_rounded,
-                    key: ValueKey('icon'),
-                    color: Colors.black,
-                    size: 32,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOutBack,
+          height: 64,
+          width: isLastPage ? 260 : 64,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Center(
+            child: AnimatedSwitcher(
+              duration: AppTheme.durationNormal,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(
+                    scale: animation,
+                    child: child,
                   ),
+                );
+              },
+              child: isLastPage
+                  ? Row(
+                      key: const ValueKey('text'),
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Get Started",
+                          style: GoogleFonts.nunito(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(width: AppTheme.spacingSm),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.black,
+                          size: 24,
+                        ),
+                      ],
+                    )
+                  : const Icon(
+                      Icons.arrow_forward_rounded,
+                      key: ValueKey('icon'),
+                      color: Colors.black,
+                      size: 32,
+                    ),
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 }
