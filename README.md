@@ -1,4 +1,4 @@
-# 🎓 TopScore AI (Elimisha)
+# 🎓 TopScore AI
 
 ![TopScore Logo](apps/mobile/assets/images/logo.png)
 
