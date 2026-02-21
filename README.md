@@ -1,8 +1,18 @@
 # 🎓 TopScore AI (Elimisha)
 
-![TopScore Logo](assets/images/topscore_logo.jpg)
+![TopScore Logo](apps/mobile/assets/images/logo.png)
 
 **TopScore AI** is a cutting-edge education platform for Kenyan students (CBC/8-4-4). It combines AI tutoring, gamification, and essential study tools into one "Juicy" experience.
+
+---
+
+## 🏗️ Monorepo Architecture
+
+This project is a monorepo managed by **Turborepo**, separating the core applications into focused workspaces:
+
+-   **`apps/mobile/`**: The main Flutter application (iOS, Android, Web).
+-   **`apps/landing/`**: Modern Next.js landing page for product marketing and waitlist management.
+-   **`docs/`**: Centralized documentation and implementation guides.
 
 ---
 
@@ -17,23 +27,23 @@
 -   **Streaks**: Daily login rewards.
 -   **Vibrant UI**: Beautiful gradients, shadows, and fonts (Nunito).
 
-### 🛠️ Smart Toolkit (New!)
+### 🛠️ Smart Toolkit
 -   **AI Flashcards**: Generate study cards instantly from any text/note.
 -   **Smart Timetable**: Plan your weekly classes. Data persists to the cloud.
 -   **Document Scanner**: Native "Google Lens-style" camera to digitize notes into PDFs.
 
-### 🔒 Content Security
--   **Secure PDF Viewer**: Prevents unauthorized downloads.
--   **Freemium Model**: 7-Day Free Trial on signup. Automated subscription expiry checks.
+### 📊 Integrated Analytics
+-   **Flutter Analytics**: Comprehensive event tracking for user progression, AI tutor usage, and study sessions.
+-   **Landing Page GA4**: Optimized for tracking pre-launch conversion and waitlist signups.
 
 ---
 
-## 🛠️ Tech Stack using Flutter & Firebase
+## 🛠️ Tech Stack
 
--   **Frontend**: Flutter (Mobile & Web)
+-   **Frontend**: Flutter (Mobile) & Next.js (Landing)
 -   **Backend**: Firebase (Functions, Firestore, Storage, Auth, Messaging)
 -   **AI**: Google Gemini Pro (via Cloud Functions)
--   **Search**: Algolia (Optional integration)
+-   **Orchestration**: Turborepo, npm Workspaces
 
 ---
 
@@ -43,60 +53,48 @@
 -   Flutter SDK (`3.x`)
 -   Node.js (`18+`)
 -   Firebase CLI (`npm i -g firebase-tools`)
--   VS Code (Recommended)
 
 ### 2. Installation
-```bash
-# Clone the repo
-git clone https://github.com/your-repo/topscore-ai.git
-cd topscore-ai
 
-# Install Flutter dependencies
-flutter pub get
-
-# Install Backend dependencies
-cd functions
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 3. Firebase Configuration
-1.  Enable **Authentication** (Email/Password, Google).
-2.  Enable **Firestore** and **Storage**.
-3.  Deploy Rules & Indexes:
+1.  **Clone the repo**:
     ```bash
-    firebase deploy --only firestore:rules,firestore:indexes,storage
+    git clone https://github.com/your-repo/topscore-ai.git
+    cd topscore-ai
     ```
-4.  Deploy Cloud Functions:
+
+2.  **Install project-wide dependencies**:
     ```bash
-    firebase deploy --only functions
+    npm install
     ```
-    *Make sure to set your Gemini API Key in Google Cloud Secret Manager or environment variables.*
 
-### 4. Running the App
+3.  **Bootstrap Flutter**:
+    ```bash
+    cd apps/mobile
+    flutter pub get
+    ```
+
+### 3. Running the Development environment
+
+From the root directory:
+
 ```bash
-# Run on Chrome
-flutter run -d chrome
+# Run both applications
+npm run dev
 
-# Run on Android
-flutter run -d android
+# Run only the landing page
+npm run dev -- --filter=landing
+
+# Run the mobile app directly
+cd apps/mobile
+flutter run
 ```
-
----
-
-## 🏗️ Project Structure
--   `lib/screens`: All UI Screens (Home, Chat, Tools).
--   `lib/services`: Logic for AI, Auth, and Gamification.
--   `lib/widgets`: Reusable UI components (Scanner, PDF Viewer).
--   `functions/`: Python Cloud Functions (FastAPI style).
 
 ---
 
 ## 🤝 Contributing
 1.  Fork the Project
 2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+3.  Commit your Changes (`git commit -m 'feat: add some AmazingFeature'`)
 4.  Push to the Branch (`git push origin feature/AmazingFeature`)
 5.  Open a Pull Request
 
