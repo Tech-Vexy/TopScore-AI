@@ -18,7 +18,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   bool _isRegister = false;
   bool _obscurePassword = true;
 
@@ -33,7 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -336,27 +334,6 @@ class _LoginScreenState extends State<LoginScreen> {
               return null;
             },
           ),
-          if (_isRegister) ...[
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _confirmPasswordController,
-              obscureText: _obscurePassword,
-              autofillHints: const [AutofillHints.password],
-              decoration: InputDecoration(
-                labelText: 'Confirm password',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              validator: (value) {
-                if ((_confirmPasswordController.text) !=
-                    (_passwordController.text)) {
-                  return 'Passwords do not match';
-                }
-                return null;
-              },
-            ),
-          ],
           const SizedBox(height: 16),
           SizedBox(
             height: 50,

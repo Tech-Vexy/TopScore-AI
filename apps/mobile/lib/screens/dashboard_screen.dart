@@ -12,7 +12,6 @@ import 'support/support_screen.dart';
 import 'subscription/subscription_screen.dart';
 import 'package:topscore_ai/models/user_model.dart' as user_model;
 import 'profile_screen.dart' as profile_page;
-import 'parent/parent_home_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final user_model.UserModel? viewAsUser; // Add this
@@ -25,13 +24,8 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
-    // Use passed user (for parents) or current auth user
     final user =
         widget.viewAsUser ?? Provider.of<AuthProvider>(context).userModel;
-    if (user?.role == 'parent') {
-      return const ParentHomeScreen(); // Redirect parents
-    }
-
     final displayName = user?.displayName.split(' ')[0] ?? 'Student';
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;

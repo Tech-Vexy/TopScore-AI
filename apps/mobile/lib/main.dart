@@ -9,11 +9,12 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:app_links/app_links.dart';
 
 import 'providers/auth_provider.dart';
-import 'providers/resource_provider.dart';
 import 'providers/download_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/connectivity_provider.dart';
+import 'providers/resources_provider.dart';
+import 'providers/ai_tutor_history_provider.dart';
 import 'router.dart' as app_router;
 
 import 'screens/home_screen.dart';
@@ -150,22 +151,24 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late final AuthProvider _authProvider;
-  late final ResourceProvider _resourceProvider;
   late final DownloadProvider _downloadProvider;
   late final SettingsProvider _settingsProvider;
   late final NavigationProvider _navigationProvider;
   late final ConnectivityProvider _connectivityProvider;
+  late final ResourcesProvider _resourcesProvider;
+  late final AiTutorHistoryProvider _aiTutorHistoryProvider;
   late final AppLinks _appLinks;
 
   @override
   void initState() {
     super.initState();
     _authProvider = AuthProvider();
-    _resourceProvider = ResourceProvider();
     _downloadProvider = DownloadProvider();
     _settingsProvider = SettingsProvider();
     _navigationProvider = NavigationProvider();
     _connectivityProvider = ConnectivityProvider();
+    _resourcesProvider = ResourcesProvider();
+    _aiTutorHistoryProvider = AiTutorHistoryProvider();
 
     if (kIsWeb) {
       UpdateService().startAutoCheck();
@@ -182,6 +185,7 @@ class _MyAppState extends State<MyApp> {
       _authProvider.init();
       _downloadProvider.init();
       _navigationProvider.init();
+      _resourcesProvider.loadRecentlyOpened();
 
       // Set analytics user properties once auth resolves
       _authProvider.addListener(_syncAnalyticsUser);
@@ -193,6 +197,9 @@ class _MyAppState extends State<MyApp> {
     if (user != null) {
       AnalyticsService.instance.setUserId(user.uid);
       AnalyticsService.instance.setUserRole(user.role);
+
+      // Also fetch AI Tutor history when auth resolves
+      _aiTutorHistoryProvider.fetchHistory(user.uid);
     }
   }
 
@@ -230,9 +237,6 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthProvider>.value(value: _authProvider),
-        ChangeNotifierProvider<ResourceProvider>.value(
-          value: _resourceProvider,
-        ),
         ChangeNotifierProvider<DownloadProvider>.value(
           value: _downloadProvider,
         ),
@@ -244,6 +248,12 @@ class _MyAppState extends State<MyApp> {
         ),
         ChangeNotifierProvider<ConnectivityProvider>.value(
           value: _connectivityProvider,
+        ),
+        ChangeNotifierProvider<ResourcesProvider>.value(
+          value: _resourcesProvider,
+        ),
+        ChangeNotifierProvider<AiTutorHistoryProvider>.value(
+          value: _aiTutorHistoryProvider,
         ),
       ],
       child: Consumer<AuthProvider>(

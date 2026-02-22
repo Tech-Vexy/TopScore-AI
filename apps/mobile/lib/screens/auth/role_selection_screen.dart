@@ -156,6 +156,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         displayName: _nameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
         curriculum: selectedCurriculum,
+        educationLevel:
+            selectedCurriculum, // Now explicitly specifying as requested
         interests: selectedRole == 'Student' ? _selectedInterests : null,
         subjects: selectedRole == 'Teacher' ? _selectedSubjects : null,
         dateOfBirth: _dateOfBirth,

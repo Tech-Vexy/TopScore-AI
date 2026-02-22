@@ -20,9 +20,11 @@ class PaginatedResult<T> {
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<List<ResourceModel>> getResources(int grade, {String? subject}) async {
+  Future<List<ResourceModel>> getResources(int grade,
+      {String? subject, String? curriculum}) async {
+    final collectionName = _getCollectionName(curriculum);
     Query query =
-        _firestore.collection('resources').where('grade', isEqualTo: grade);
+        _firestore.collection(collectionName).where('grade', isEqualTo: grade);
 
     if (subject != null) {
       query = query.where('subject', isEqualTo: subject);
@@ -42,13 +44,15 @@ class FirestoreService {
   Future<PaginatedResult<ResourceModel>> getPaginatedResources(
     int grade, {
     String? subject,
+    String? curriculum,
     String? collection,
     DocumentSnapshot? lastDoc,
     int limit = 20,
   }) async {
     try {
+      final collectionName = collection ?? _getCollectionName(curriculum);
       Query query = _firestore
-          .collection(collection ?? 'resources')
+          .collection(collectionName)
           .where('grade', isEqualTo: grade)
           .orderBy('title')
           .limit(limit + 1); // fetch one extra to detect hasMore
@@ -74,10 +78,12 @@ class FirestoreService {
     }
   }
 
-  Future<List<ResourceModel>> getRecentDriveResources(int limit) async {
+  Future<List<ResourceModel>> getRecentDriveResources(int limit,
+      {String? curriculum}) async {
     try {
+      final collectionName = _getCollectionName(curriculum);
       Query query = _firestore
-          .collection('resources')
+          .collection(collectionName)
           .where('source', isEqualTo: 'google_drive')
           .orderBy('createdAt', descending: true)
           .limit(limit);
@@ -224,5 +230,18 @@ class FirestoreService {
     } catch (e) {
       debugPrint("Error tracking file open: $e");
     }
+  }
+
+  // Helper for dynamic collection naming
+  String _getCollectionName(String? curriculum) {
+    if (curriculum == null || curriculum.isEmpty) return 'cbc_files';
+    final upper = curriculum.toUpperCase().trim();
+    if (upper == '8.4.4' ||
+        upper == '844' ||
+        upper == '8-4-4' ||
+        upper == 'KCSE') {
+      return '844_files';
+    }
+    return 'cbc_files';
   }
 }

@@ -237,7 +237,10 @@ class FirebaseStorageService {
         category.toLowerCase(),
       ];
 
-      await FirebaseFirestore.instance.collection('resources').add({
+      final collectionName =
+          curriculum.toUpperCase().contains('8') ? '844_files' : 'cbc_files';
+
+      await FirebaseFirestore.instance.collection(collectionName).add({
         'name': title,
         'fileNameLower': title.toLowerCase(),
         'path': storagePath,

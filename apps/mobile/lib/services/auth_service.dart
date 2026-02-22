@@ -92,7 +92,8 @@ class AuthService {
     try {
       if (kIsWeb) {
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        final UserCredential userCredential = await _auth.signInWithPopup(googleProvider);
+        final UserCredential userCredential =
+            await _auth.signInWithPopup(googleProvider);
         return userCredential.user;
       } else {
         await _ensureGoogleSignInInitialized();
@@ -160,8 +161,19 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    await _auth.signOut();
+    try {
+      // Only sign out from Google if it was initialized in this session.
+      // This prevents "Bad state" errors on Web where the plugin may not be initialized.
+      if (_googleSignInInitialized) {
+        await _googleSignIn.signOut();
+      }
+    } catch (e) {
+      debugPrint(
+          'Google Sign Out error (safe to ignore if not initialized): $e');
+    } finally {
+      await _auth.signOut();
+      _googleSignInInitialized = false;
+    }
   }
 
   Future<void> deleteAccount() async {
@@ -173,10 +185,8 @@ class AuthService {
 
   Future<UserModel?> getUserProfile(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(uid)
-          .get();
+      DocumentSnapshot doc =
+          await _firestore.collection('users').doc(uid).get();
       if (doc.exists) {
         return UserModel.fromMap(doc.data() as Map<String, dynamic>, uid);
       }

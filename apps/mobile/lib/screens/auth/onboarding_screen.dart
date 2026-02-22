@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/offline_service.dart';
+import '../../constants/colors.dart';
+import '../../config/app_theme.dart';
 
 /// 3-step onboarding walkthrough shown to first-time users after role selection.
 /// Completion is stored in OfflineService so it only shows once.
@@ -18,33 +20,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<_OnboardingPage> _pages = const [
     _OnboardingPage(
-      emoji: '🤖',
+      imagePath: 'assets/images/onboarding_ai.png',
       title: 'Meet Your AI Tutor',
       subtitle:
           'Ask any question. Get step-by-step explanations in Maths, Science, English, and more — available 24/7.',
-      color: Color(0xFF667EEA),
     ),
     _OnboardingPage(
-      emoji: '📚',
+      imagePath: 'assets/images/onboarding_library.png',
       title: 'Access Your Resources',
       subtitle:
           'All your CBC and 8-4-4 study materials, past papers, and notes — organised by subject and grade.',
-      color: Color(0xFF4ECDC4),
     ),
     _OnboardingPage(
-      emoji: '🛠️',
-      title: 'Powerful Study Tools',
+      imagePath: 'assets/images/onboarding_tools.png',
+      title: 'Smart Study Tools',
       subtitle:
-          'Smart Scanner, Flashcards, Science Lab, Periodic Table, Calculator — everything a student needs.',
-      color: Color(0xFFFF6B6B),
+          'Smart Scanner, Flashcards, Calculator, and more — everything you need to excel in one app.',
     ),
   ];
 
   void _next() {
     if (_currentPage < _pages.length - 1) {
       _controller.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeOutQuart,
       );
     } else {
       _finish();
@@ -69,7 +68,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           // Skip button
           Positioned(
-            top: 48,
+            top: MediaQuery.of(context).padding.top + 10,
             right: 20,
             child: TextButton(
               onPressed: _finish,
@@ -77,6 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 'Skip',
                 style: GoogleFonts.nunito(
                   fontSize: 15,
+                  fontWeight: FontWeight.bold,
                   color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
@@ -84,7 +84,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           // Bottom controls
           Positioned(
-            bottom: 48,
+            bottom: 60,
             left: 0,
             right: 0,
             child: Column(
@@ -107,26 +107,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: ElevatedButton(
                     onPressed: _next,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: _pages[_currentPage].color,
-                      minimumSize: const Size(double.infinity, 52),
+                      foregroundColor: AppColors.edupoaBlue,
+                      minimumSize: const Size(double.infinity, 56),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                       ),
+                      elevation: 4,
+                      shadowColor: Colors.black.withValues(alpha: 0.2),
                     ),
                     child: Text(
                       _currentPage == _pages.length - 1
-                          ? "Let's Go! 🚀"
+                          ? "Get Started"
                           : 'Next',
                       style: GoogleFonts.nunito(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
@@ -142,59 +145,100 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildPage(_OnboardingPage page) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [page.color, page.color.withValues(alpha: 0.7)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+        gradient: AppColors.heroGradient,
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(flex: 2),
-              Text(page.emoji, style: const TextStyle(fontSize: 80)),
-              const SizedBox(height: 32),
-              Text(
-                page.title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.nunito(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
+      child: Stack(
+        children: [
+          // Background Decorative circles
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
               ),
-              const SizedBox(height: 16),
-              Text(
-                page.subtitle,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.nunito(
-                  fontSize: 16,
-                  color: Colors.white.withValues(alpha: 0.9),
-                  height: 1.6,
-                ),
-              ),
-              const Spacer(flex: 3),
-            ],
+            ),
           ),
-        ),
+
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  const Spacer(flex: 2),
+                  // Image Asset
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.8, end: 1.0),
+                    duration: const Duration(seconds: 2),
+                    curve: Curves.easeInOut,
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: child,
+                      );
+                    },
+                    child: Image.asset(
+                      page.imagePath,
+                      height: MediaQuery.of(context).size.height * 0.35,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Glassmorphism Card
+                  AppTheme.buildGlassContainer(
+                    context,
+                    padding: const EdgeInsets.all(24),
+                    borderRadius: 24,
+                    opacity: 0.1,
+                    child: Column(
+                      children: [
+                        Text(
+                          page.title,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.nunito(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          page.subtitle,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.nunito(
+                            fontSize: 16,
+                            color: Colors.white.withValues(alpha: 0.9),
+                            height: 1.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(flex: 4),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _OnboardingPage {
-  final String emoji;
+  final String imagePath;
   final String title;
   final String subtitle;
-  final Color color;
 
   const _OnboardingPage({
-    required this.emoji,
+    required this.imagePath,
     required this.title,
     required this.subtitle,
-    required this.color,
   });
 }

@@ -95,6 +95,9 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
           return Scaffold(
             body: Row(
               children: [
+                // Main Content
+                Expanded(child: widget.navigationShell),
+                // Right Sidebar
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
@@ -102,7 +105,7 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.surfaceDark : Colors.white,
                     border: Border(
-                      right: BorderSide(
+                      left: BorderSide(
                         color: isDark
                             ? Colors.white.withValues(alpha: 0.05)
                             : Colors.black.withValues(alpha: 0.05),
@@ -156,8 +159,8 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
                             IconButton(
                               icon: Icon(
                                 _isCollapsed
-                                    ? Icons.chevron_right
-                                    : Icons.chevron_left,
+                                    ? Icons.chevron_left
+                                    : Icons.chevron_right,
                                 size: 20,
                                 color: Colors.grey,
                               ),
@@ -295,8 +298,6 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
                     ],
                   ),
                 ),
-                // Main Content
-                Expanded(child: widget.navigationShell),
               ],
             ),
           );
@@ -357,12 +358,30 @@ class _SidebarItem extends StatelessWidget {
                     ? MainAxisAlignment.center
                     : MainAxisAlignment.start,
                 children: [
-                  FaIcon(
-                    icon,
-                    size: 18,
-                    color: isSelected
-                        ? AppColors.accentTeal
-                        : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      FaIcon(
+                        icon,
+                        size: 18,
+                        color: isSelected
+                            ? AppColors.accentTeal
+                            : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                      ),
+                      if (isCollapsed && isProminent && !isSelected)
+                        Positioned(
+                          right: -4,
+                          top: -4,
+                          child: Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: AppColors.accentTeal,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   if (!isCollapsed) ...[
                     const SizedBox(width: 12),
@@ -392,20 +411,6 @@ class _SidebarItem extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ] else if (isProminent && !isSelected) ...[
-                    // Show indicator even when collapsed if prominent
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        width: 4,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                          color: AppColors.accentTeal,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
                   ],
                 ],
               ),

@@ -166,11 +166,15 @@ class AuthProvider with ChangeNotifier {
       final credential = await _authService.signUpWithEmail(email, password);
       final user = credential?.user;
       if (user != null) {
-        await user.sendEmailVerification();
-        _requiresEmailVerification = true;
-        _userModel = null;
+        // Send verification email in the background, but don't block login
+        await user.sendEmailVerification().catchError((e) {
+          debugPrint("Failed to send verification email: $e");
+        });
+
+        _requiresEmailVerification = false;
+        await _ensureUserProfile(user);
         notifyListeners();
-        return false;
+        return true;
       }
       return false;
     } catch (e) {
@@ -225,6 +229,7 @@ class AuthProvider with ChangeNotifier {
     String? displayName,
     String? phoneNumber,
     String? curriculum,
+    String? educationLevel,
     List<String>? interests,
     List<String>? subjects,
     DateTime? dateOfBirth,
@@ -243,6 +248,8 @@ class AuthProvider with ChangeNotifier {
         'displayName': displayName ?? _userModel!.displayName,
         'phoneNumber': phoneNumber,
         'curriculum': curriculum,
+        'educationLevel':
+            educationLevel ?? curriculum, // Sync both for compatibility
         'interests': interests,
         'subjects': subjects,
         if (dateOfBirth != null)
@@ -265,6 +272,7 @@ class AuthProvider with ChangeNotifier {
         displayName: displayName,
         phoneNumber: phoneNumber,
         curriculum: curriculum,
+        educationLevel: educationLevel ?? _userModel!.educationLevel,
         interests: interests,
         subjects: subjects,
         dateOfBirth: dateOfBirth,

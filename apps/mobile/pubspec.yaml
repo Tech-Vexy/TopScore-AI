@@ -122,6 +122,8 @@ dependencies:
   chewie: ^1.8.1
   timezone: ^0.10.1
   just_audio: ^0.10.5
+  shimmer: ^3.0.0
+  easy_debounce: ^2.0.3
 
 dev_dependencies:
   flutter_test:

@@ -34,7 +34,7 @@ class AppTheme {
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    fontFamily: 'UniversalSans',
+    fontFamily: 'Inter',
 
     // Color Scheme: Maps AppColors to Material Slots
     colorScheme: ColorScheme.fromSeed(
@@ -54,63 +54,63 @@ class AppTheme {
     // Text Theme (UniversalSans)
     textTheme: const TextTheme(
       displayLarge: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       displayMedium: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       displaySmall: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       headlineLarge: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       headlineMedium: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       headlineSmall: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       titleLarge: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       titleMedium: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       titleSmall: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       bodyLarge: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       bodyMedium: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       bodySmall: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       labelLarge: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       labelMedium: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       labelSmall: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
     ).apply(bodyColor: AppColors.text, displayColor: AppColors.text),
@@ -123,7 +123,7 @@ class AppTheme {
       iconTheme: const IconThemeData(color: AppColors.text),
       systemOverlayStyle: SystemUiOverlayStyle.dark,
       titleTextStyle: const TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         color: AppColors.text,
         fontSize: 20,
         fontWeight: FontWeight.w500,
@@ -146,7 +146,7 @@ class AppTheme {
         ),
         minimumSize: const Size(120, 48),
         textStyle: const TextStyle(
-          fontFamily: 'UniversalSans',
+          fontFamily: 'Inter',
           fontSize: 16,
           fontWeight: FontWeight.w500,
         ),
@@ -161,7 +161,7 @@ class AppTheme {
           vertical: spacingSm,
         ),
         textStyle: const TextStyle(
-          fontFamily: 'UniversalSans',
+          fontFamily: 'Inter',
           fontSize: 15,
           fontWeight: FontWeight.w500,
         ),
@@ -221,7 +221,7 @@ class AppTheme {
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surfaceVariant,
       labelStyle: const TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
@@ -243,7 +243,7 @@ class AppTheme {
     snackBarTheme: SnackBarThemeData(
       backgroundColor: AppColors.primaryDark,
       contentTextStyle: const TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         color: Colors.white,
         fontSize: 14,
       ),
@@ -293,7 +293,7 @@ class AppTheme {
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
-    fontFamily: 'UniversalSans',
+    fontFamily: 'Inter',
 
     // Color Scheme
     colorScheme: ColorScheme.fromSeed(
@@ -314,63 +314,63 @@ class AppTheme {
     // Text Theme
     textTheme: const TextTheme(
       displayLarge: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       displayMedium: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       displaySmall: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       headlineLarge: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       headlineMedium: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       headlineSmall: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       titleLarge: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       titleMedium: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       titleSmall: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       bodyLarge: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       bodyMedium: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       bodySmall: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       labelLarge: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       labelMedium: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
       labelSmall: TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontWeight: FontWeight.w500,
       ),
     ).apply(bodyColor: AppColors.textDark, displayColor: AppColors.textDark),
@@ -383,7 +383,7 @@ class AppTheme {
       iconTheme: const IconThemeData(color: AppColors.textDark),
       systemOverlayStyle: SystemUiOverlayStyle.light,
       titleTextStyle: const TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         color: AppColors.textDark,
         fontSize: 20,
         fontWeight: FontWeight.w500,
@@ -406,7 +406,7 @@ class AppTheme {
         ),
         minimumSize: const Size(120, 48),
         textStyle: const TextStyle(
-          fontFamily: 'UniversalSans',
+          fontFamily: 'Inter',
           fontSize: 16,
           fontWeight: FontWeight.w500,
         ),
@@ -421,7 +421,7 @@ class AppTheme {
           vertical: spacingSm,
         ),
         textStyle: const TextStyle(
-          fontFamily: 'UniversalSans',
+          fontFamily: 'Inter',
           fontSize: 15,
           fontWeight: FontWeight.w500,
         ),
@@ -481,7 +481,7 @@ class AppTheme {
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surfaceVariantDark,
       labelStyle: const TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppColors.textDark,
@@ -504,7 +504,7 @@ class AppTheme {
     snackBarTheme: SnackBarThemeData(
       backgroundColor: AppColors.surfaceElevatedDark,
       contentTextStyle: const TextStyle(
-        fontFamily: 'UniversalSans',
+        fontFamily: 'Inter',
         color: AppColors.textDark,
         fontSize: 14,
       ),
@@ -608,8 +608,7 @@ class AppTheme {
                 alpha: opacity,
               ),
               borderRadius: BorderRadius.circular(borderRadius),
-              border:
-                  border ??
+              border: border ??
                   Border.all(
                     color: Colors.white.withValues(alpha: isDark ? 0.08 : 0.4),
                     width: 1.5,
@@ -619,6 +618,29 @@ class AppTheme {
           ),
         ),
       ),
+    );
+  }
+
+  // --- Search Field Decoration Helper ---
+  static InputDecoration searchFieldDecoration({required String hint}) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+      filled: true,
+      fillColor: AppColors.surfaceVariant.withValues(alpha: 0.5),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(radiusMd),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(radiusMd),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(radiusMd),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(vertical: 0),
     );
   }
 }

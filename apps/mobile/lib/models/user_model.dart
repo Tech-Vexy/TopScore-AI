@@ -59,7 +59,8 @@ class UserModel {
   bool get isMinor {
     if (dateOfBirth == null) return true; // Assume minor if unknown
     final now = DateTime.now();
-    final age = now.year - dateOfBirth!.year -
+    final age = now.year -
+        dateOfBirth!.year -
         ((now.month < dateOfBirth!.month ||
                 (now.month == dateOfBirth!.month && now.day < dateOfBirth!.day))
             ? 1
@@ -99,9 +100,15 @@ class UserModel {
 
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
     DateTime? getDateTime(dynamic val) {
-      if (val == null) return null;
-      if (val is Timestamp) return val.toDate();
-      if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
+      if (val == null) {
+        return null;
+      }
+      if (val is Timestamp) {
+        return val.toDate();
+      }
+      if (val is int) {
+        return DateTime.fromMillisecondsSinceEpoch(val);
+      }
       return null;
     }
 
@@ -207,9 +214,13 @@ class UserModel {
   }
 
   String get gradeLabel {
-    if (grade == null) return 'General';
-    final cur = curriculum?.toUpperCase() ?? '';
-    if (cur == 'KCSE' || cur == '8-4-4' || cur == '8.4.4') return 'Form $grade';
+    if (grade == null) {
+      return 'General';
+    }
+    final cur = (educationLevel ?? curriculum)?.toUpperCase() ?? '';
+    if (cur == 'KCSE' || cur == '8-4-4' || cur == '8.4.4' || cur == '844') {
+      return 'Form $grade';
+    }
     return 'Grade $grade';
   }
 }

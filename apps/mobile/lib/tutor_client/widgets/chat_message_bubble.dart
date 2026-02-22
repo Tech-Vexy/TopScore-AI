@@ -105,29 +105,13 @@ class ChatMessageBubble extends StatelessWidget {
                     maxWidth: MediaQuery.of(context).size.width * 0.75,
                   ),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        theme.primaryColor,
-                        HSLColor.fromColor(
-                          theme.primaryColor,
-                        ).withLightness(0.45).toColor(),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: theme.primaryColor.withValues(alpha: 0.1),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
                       bottomLeft: Radius.circular(20),
                       bottomRight: Radius.circular(4),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.primaryColor.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -142,7 +126,7 @@ class ChatMessageBubble extends StatelessWidget {
                           message.text,
                           style: GoogleFonts.inter(
                             fontSize: 16,
-                            color: Colors.white,
+                            color: theme.colorScheme.onSurface,
                             fontWeight: FontWeight.w400,
                             height: 1.5,
                           ),
@@ -178,63 +162,50 @@ class ChatMessageBubble extends StatelessWidget {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(top: 4.0),
-                    child: Container(
-                      // Simplified GlassContainer usage or use standard
-                      decoration: BoxDecoration(
-                        color: theme.cardColor.withValues(
-                          alpha: isDark ? 0.3 : 0.8,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Thinking skeleton — shows when streaming starts before any content
-                          if (isStreaming &&
-                              message.text.isEmpty &&
-                              (message.reasoning == null ||
-                                  message.reasoning!.isEmpty))
-                            _ThinkingSkeleton(isDark: isDark),
-                          if (message.reasoning != null &&
-                              message.reasoning!.isNotEmpty)
-                            GeminiReasoningView(
-                              content: message.reasoning!,
-                              isThinking: message.text.isEmpty,
-                            ),
-                          if (message.text.isNotEmpty)
-                            _buildMarkdown(context, theme, isDark),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Thinking skeleton — shows when streaming starts before any content
+                        if (isStreaming &&
+                            message.text.isEmpty &&
+                            (message.reasoning == null ||
+                                message.reasoning!.isEmpty))
+                          _ThinkingSkeleton(isDark: isDark),
+                        if (message.reasoning != null &&
+                            message.reasoning!.isNotEmpty)
+                          GeminiReasoningView(
+                            content: message.reasoning!,
+                            isThinking: message.text.isEmpty,
+                          ),
+                        if (message.text.isNotEmpty)
+                          _buildMarkdown(context, theme, isDark),
 
-                          // Specialized Widgets
-                          if (message.quizData != null)
-                            QuizWidget(
-                              quizData: message.quizData!,
-                              onComplete: (score) {},
-                            ),
-                          if (message.mathSteps != null &&
-                              message.mathSteps!.isNotEmpty)
-                            MathStepperWidget(
-                              steps: message.mathSteps!,
-                              finalAnswer: message.mathAnswer,
-                            ),
-                          if (message.videos != null &&
-                              message.videos!.isNotEmpty)
-                            VideoCarousel(videos: message.videos!),
+                        // Specialized Widgets
+                        if (message.quizData != null)
+                          QuizWidget(
+                            quizData: message.quizData!,
+                            onComplete: (score) {},
+                          ),
+                        if (message.mathSteps != null &&
+                            message.mathSteps!.isNotEmpty)
+                          MathStepperWidget(
+                            steps: message.mathSteps!,
+                            finalAnswer: message.mathAnswer,
+                          ),
+                        if (message.videos != null &&
+                            message.videos!.isNotEmpty)
+                          VideoCarousel(videos: message.videos!),
 
-                          // Sources
-                          if (message.sources != null &&
-                              message.sources!.isNotEmpty)
-                            _buildSources(theme, isDark),
+                        // Sources
+                        if (message.sources != null &&
+                            message.sources!.isNotEmpty)
+                          _buildSources(theme, isDark),
 
-                          if (!message.isUser &&
-                              message.isComplete &&
-                              !isStreaming)
-                            _buildAiActions(theme),
-                        ],
-                      ),
+                        if (!message.isUser &&
+                            message.isComplete &&
+                            !isStreaming)
+                          _buildAiActions(theme),
+                      ],
                     ),
                   ),
                 ],
@@ -472,7 +443,7 @@ class ChatMessageBubble extends StatelessWidget {
         ],
       ),
       styleSheet: MarkdownStyleSheet(
-        p: GoogleFonts.inter(
+        p: GoogleFonts.dmSans(
           fontSize: 16,
           height: 1.6,
           color: theme.colorScheme.onSurface,

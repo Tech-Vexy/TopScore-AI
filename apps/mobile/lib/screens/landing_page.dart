@@ -27,41 +27,41 @@ class _LandingPageState extends State<LandingPage>
   final List<OnboardingContent> _pages = [
     OnboardingContent(
       title: "TopScore AI",
-      subtitle: "Your Personal AI Tutor.\nLearn Smarter, Not Harder.",
+      subtitle: "Your Unified Learning Hub.\nLearn Smarter, Not Harder.",
       imagePath: "assets/images/logo.png",
       color: AppColors.accentTeal,
     ),
     OnboardingContent(
-      title: "Instant Answers",
+      title: "Personalized Dashboard",
       subtitle:
-          "Stuck on a problem? Snap a photo. Our AI explains concepts in seconds.",
-      imagePath: "assets/images/onboarding_snap_solve.png",
+          "Pick up right where you left off. Jump back into recent files and AI Tutor chats instantly.",
+      imagePath: "assets/images/onboarding_snap_solve.png", // Reuse image
       color: Colors.amber,
     ),
     OnboardingContent(
-      title: "AI Tutor",
+      title: "Dedicated AI Tutor",
       subtitle:
-          "Get personalized explanations and step-by-step guidance from your AI tutor.",
+          "Get personalized explanations and step-by-step guidance. The new app layout gives your tutor plenty of space.",
       imagePath: "assets/images/onboarding_ai_tutor.png",
       color: const Color(0xFF6C63FF),
     ),
     OnboardingContent(
-      title: "Digital Library",
+      title: "Expansive Library",
       subtitle:
-          "Access thousands of past papers, notes, and quizzes tailored to your syllabus.",
+          "Access thousands of CBC & 844 resources, past papers, notes, and quizzes, all prioritized for you.",
       imagePath: "assets/images/onboarding_digital_library.png",
       color: const Color(0xFFFF6B6B),
     ),
     OnboardingContent(
       title: "Smart Tools",
       subtitle:
-          "From scientific calculators to study schedulers, we have what you need.",
+          "From scientific calculators to study schedulers, we have what you need, organized perfectly.",
       imagePath: "assets/images/onboarding_smart_tools.png",
       color: const Color(0xFF4ECDC4),
     ),
     OnboardingContent(
       title: "Ready to Excel?",
-      subtitle: "Join thousands of students achieving their goals today.",
+      subtitle: "Join thousands of learners in our new unified platform today.",
       imagePath: "assets/images/onboarding_success.png",
       color: AppColors.primaryPurple,
       isLast: true,

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/resource_model.dart';
+import '../../services/storage_service.dart';
 
 /// Global search screen covering resources, topics, and AI history.
 class SearchScreen extends StatefulWidget {
@@ -36,8 +39,13 @@ class _SearchScreenState extends State<SearchScreen> {
       final lowerQuery = query.trim().toLowerCase();
       final upperBound = '$lowerQuery\uf8ff';
 
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.userModel;
+      final curriculum = user?.educationLevel ?? user?.curriculum;
+      final collectionName = StorageService.getCollectionName(curriculum);
+
       final snap = await FirebaseFirestore.instance
-          .collection('resources')
+          .collection(collectionName)
           .where('titleLower', isGreaterThanOrEqualTo: lowerQuery)
           .where('titleLower', isLessThanOrEqualTo: upperBound)
           .limit(30)

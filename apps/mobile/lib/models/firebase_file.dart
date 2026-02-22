@@ -109,6 +109,50 @@ class FirebaseFile {
     };
   }
 
+  /// Convert to generic Map for local storage
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'path': path,
+      'fileNameLower': fileNameLower,
+      'subject': subject,
+      'grade': grade,
+      'curriculum': curriculum,
+      'category': category,
+      'type': type,
+      'size': size,
+      'downloadUrl': downloadUrl,
+      'uploadedAt': uploadedAt?.millisecondsSinceEpoch,
+      'tags': tags,
+      'strand': strand,
+      'subStrand': subStrand,
+    };
+  }
+
+  /// Create from generic map from local storage
+  factory FirebaseFile.fromMap(Map<String, dynamic> map) {
+    return FirebaseFile(
+      id: map['id'],
+      name: map['name'] ?? 'Unknown',
+      path: map['path'] ?? '',
+      fileNameLower: map['fileNameLower'],
+      subject: map['subject'],
+      grade: map['grade'],
+      curriculum: map['curriculum'],
+      category: map['category'],
+      type: map['type'] ?? 'pdf',
+      size: map['size'],
+      downloadUrl: map['downloadUrl'],
+      uploadedAt: map['uploadedAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['uploadedAt'])
+          : null,
+      tags: map['tags'] != null ? List<String>.from(map['tags']) : null,
+      strand: map['strand'],
+      subStrand: map['subStrand'],
+    );
+  }
+
   /// Extract metadata from storage path
   /// Example: "844/Math/Form1/Algebra/chapter1.pdf"
   /// Extracts metadata (subject, level, curriculum, category) from a file path
@@ -148,7 +192,7 @@ class FirebaseFile {
             upper.contains('8.4.4') ||
             upper.contains('8-4-4') ||
             upper.contains('KCSE')) {
-          cur = '8-4-4';
+          cur = '8.4.4';
           cat ??= 'Curriculum'; // NEW: Default category for curriculum parts
           consumed = true;
         } else if (upper.contains('IGCSE')) {
@@ -208,6 +252,14 @@ class FirebaseFile {
       'tags': extraTags,
     };
   }
+
+  /// Returns a cleaned version of the filename for display.
+  String get displayName => name
+      .replaceAll('.pdf', '')
+      .replaceAll('.doc', '')
+      .replaceAll('.docx', '')
+      .replaceAll('-', ' ')
+      .replaceAll('_', ' ');
 
   String get gradeLabel {
     if (grade == null) return 'General';

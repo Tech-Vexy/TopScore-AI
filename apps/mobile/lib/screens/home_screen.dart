@@ -9,10 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 import '../config/app_theme.dart';
 import '../providers/auth_provider.dart';
-import '../providers/resource_provider.dart';
-import 'tools/science_lab_screen.dart';
-import 'student/career_compass_screen.dart';
-import 'discussion/group_allocation_screen.dart';
+import '../providers/resources_provider.dart';
 
 import '../widgets/interest_update_sheet.dart';
 import '../widgets/animated_search_bar.dart';
@@ -22,25 +19,9 @@ import '../widgets/skeleton_loader.dart';
 import 'pdf_viewer_screen.dart';
 import '../models/firebase_file.dart';
 import '../services/storage_service.dart';
-import '../models/resource_model.dart';
 import '../widgets/session_history_carousel.dart';
 
-// --- Feature Model (Local Definition for Safety) ---
-class FeatureItem {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final Color endColor;
-  final int routeIndex;
-
-  FeatureItem(
-    this.title,
-    this.icon,
-    this.color,
-    this.endColor,
-    this.routeIndex,
-  );
-}
+// Feature Items removed as they are now redundant with the Nav Bar.
 
 /// HomeScreen is kept as a simple wrapper around HomeTab for backward compatibility.
 /// Navigation is handled by go_router's StatefulShellRoute in router.dart.
@@ -56,12 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final resourceProvider = Provider.of<ResourceProvider>(
+      final resourcesProvider = Provider.of<ResourcesProvider>(
         context,
         listen: false,
       );
-      resourceProvider.fetchRecentDriveResources();
-      resourceProvider.loadRecentlyOpened();
+      resourcesProvider.loadRecentlyOpened();
       _checkMissingInterests();
     });
   }
@@ -103,31 +83,6 @@ class _HomeTabState extends State<HomeTab> {
   bool _isLoadingFiles = true;
   bool _isSearching = false;
 
-  final List<FeatureItem> _features = [
-    FeatureItem(
-      "Career Compass",
-      FontAwesomeIcons.compass,
-      const Color(0xFF6C63FF),
-      const Color(0xFF8B80FF),
-      -2,
-    ),
-    FeatureItem(
-      "Study Groups",
-      FontAwesomeIcons.peopleGroup,
-      const Color(0xFFFF6B6B),
-      const Color(0xFFFF8E8E),
-      -1,
-    ),
-    FeatureItem(
-      "Science Lab",
-      FontAwesomeIcons.flask,
-      const Color(0xFF4ECDC4),
-      const Color(0xFF6EE7E0),
-      -3,
-    ),
-    // Removed "My Library" as requested
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -147,8 +102,7 @@ class _HomeTabState extends State<HomeTab> {
     }
 
     try {
-      final user =
-          Provider.of<AuthProvider>(context, listen: false).userModel;
+      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
       final files = await StorageService.getAllFilesFromFirestore(
         grade: user?.grade,
         curriculum: user?.curriculum,
@@ -180,8 +134,7 @@ class _HomeTabState extends State<HomeTab> {
     setState(() => _isSearching = true);
 
     try {
-      final user =
-          Provider.of<AuthProvider>(context, listen: false).userModel;
+      final user = Provider.of<AuthProvider>(context, listen: false).userModel;
       final results = await StorageService.searchFiles(
         query,
         grade: user?.grade,
@@ -221,23 +174,11 @@ class _HomeTabState extends State<HomeTab> {
       if (!context.mounted) return;
 
       // Track file opening
-      final resourceProvider = Provider.of<ResourceProvider>(
+      final resourcesProvider = Provider.of<ResourcesProvider>(
         context,
         listen: false,
       );
-      final resourceModel = ResourceModel(
-        id: file.path,
-        title: file.name,
-        type: 'file',
-        subject: '',
-        grade: 0,
-        curriculum: '',
-        downloadUrl: url,
-        fileSize: 0,
-        premium: false,
-        storagePath: file.path,
-      );
-      await resourceProvider.trackFileOpen(resourceModel);
+      await resourcesProvider.trackFileOpen(file);
 
       if (!context.mounted) return;
 
@@ -291,12 +232,11 @@ class _HomeTabState extends State<HomeTab> {
                 onRefresh: () async {
                   await _loadFiles();
                   if (context.mounted) {
-                    final resourceProvider = Provider.of<ResourceProvider>(
+                    final resourcesProvider = Provider.of<ResourcesProvider>(
                       context,
                       listen: false,
                     );
-                    await resourceProvider.fetchRecentDriveResources();
-                    await resourceProvider.loadRecentlyOpened();
+                    await resourcesProvider.loadRecentlyOpened();
                   }
                 },
                 color: AppColors.accentTeal,
@@ -317,16 +257,6 @@ class _HomeTabState extends State<HomeTab> {
                       if (_isSearching)
                         _buildSearchResultsSection(context)
                       else ...[
-                        Text(
-                          "Explore",
-                          style: GoogleFonts.nunito(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: AppTheme.spacingMd),
-                        _buildActionGrid(context),
                         const SizedBox(height: AppTheme.spacingXl),
                       ],
                     ],
@@ -459,59 +389,61 @@ class _HomeTabState extends State<HomeTab> {
     final folderContext =
         pathParts.length > 1 ? pathParts[pathParts.length - 2] : "General";
 
-    return EnhancedCard(
+    return BounceWrapper(
       onTap: () => _openFile(context, file),
-      padding: const EdgeInsets.all(AppTheme.spacingMd),
-      margin: EdgeInsets.zero,
-      child: Row(
-        children: [
-          _getFileIcon(file.name),
-          const SizedBox(width: AppTheme.spacingMd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  file.name,
-                  style: GoogleFonts.nunito(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: theme.colorScheme.onSurface,
+      child: EnhancedCard(
+        padding: const EdgeInsets.all(AppTheme.spacingMd),
+        margin: EdgeInsets.zero,
+        child: Row(
+          children: [
+            _getFileIcon(file.name),
+            const SizedBox(width: AppTheme.spacingMd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    file.name,
+                    style: GoogleFonts.nunito(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppTheme.spacingXs),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.folder_outlined,
-                      size: 14,
-                      color: theme.hintColor,
-                    ),
-                    const SizedBox(width: AppTheme.spacingXs),
-                    Expanded(
-                      child: Text(
-                        folderContext,
-                        style: GoogleFonts.nunito(
-                          color: theme.hintColor,
-                          fontSize: 13,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: AppTheme.spacingXs),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.folder_outlined,
+                        size: 14,
+                        color: theme.hintColor,
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: AppTheme.spacingXs),
+                      Expanded(
+                        child: Text(
+                          folderContext,
+                          style: GoogleFonts.nunito(
+                            color: theme.hintColor,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color: theme.iconTheme.color?.withValues(alpha: 0.4),
-          ),
-        ],
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: theme.iconTheme.color?.withValues(alpha: 0.4),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -619,12 +551,7 @@ class _HomeTabState extends State<HomeTab> {
       },
       child: BounceWrapper(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const CareerCompassScreen(),
-            ),
-          );
+          context.push('/career-compass');
         },
         child: Container(
           width: double.infinity,
@@ -732,105 +659,6 @@ class _HomeTabState extends State<HomeTab> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionGrid(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 200,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 1.1,
-      ),
-      itemCount: _features.length,
-      itemBuilder: (context, index) {
-        final feature = _features[index];
-        return _buildGridItem(
-          feature.title,
-          feature.icon,
-          feature.color,
-          feature.endColor,
-          () {
-            if (feature.routeIndex == -1) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const GroupAllocationScreen(),
-                ),
-              );
-            } else if (feature.routeIndex == 1) {
-              context.go('/library');
-            } else if (feature.routeIndex == -3) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ScienceLabScreen()),
-              );
-            } else if (feature.routeIndex == -2) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CareerCompassScreen()),
-              );
-            }
-            // Add other routes
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildGridItem(
-    String title,
-    IconData icon,
-    Color startColor,
-    Color endColor,
-    VoidCallback onTap,
-  ) {
-    return BounceWrapper(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [startColor, endColor],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-          boxShadow: AppTheme.getGlowShadow(startColor, intensity: 0.25),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppTheme.spacingMd),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: FaIcon(icon, color: Colors.white, size: 28),
-            ),
-            const SizedBox(height: AppTheme.spacingMd),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppTheme.spacingSm),
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.nunito(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  height: 1.2,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
         ),
       ),
     );

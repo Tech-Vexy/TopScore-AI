@@ -6,53 +6,25 @@ import '../models/firebase_file.dart';
 
 class StorageService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const String _filesCollection = 'resources';
-
-  /// Normalizes curriculum strings to the canonical stored values.
-  /// User profiles store 'CBC' or '8-4-4'. Firestore docs also use these.
-  /// This handles variants like 'KCSE', '844', '8.4.4' → '8-4-4'.
-  static String? _normalizeCurriculum(String? curriculum) {
-    if (curriculum == null || curriculum.isEmpty) return null;
-    final upper = curriculum.toUpperCase().trim();
-    if (upper == 'CBC' || upper == 'PRIMARY' || upper == 'JUNIOR') {
-      return 'CBC';
-    }
-    if (upper == '8-4-4' ||
-        upper == '844' ||
-        upper == '8.4.4' ||
-        upper == 'KCSE') {
-      return '8-4-4';
-    }
-    if (upper == 'IGCSE') return 'IGCSE';
-    return curriculum;
-  }
-
-  /// Applies a Firestore curriculum filter using the normalized value.
-  static Query _applyCurriculumFilter(Query query, String? curriculum) {
-    final normalized = _normalizeCurriculum(curriculum);
-    if (normalized != null) {
-      query = query.where('curriculum', isEqualTo: normalized);
-    }
-    return query;
-  }
+  static const String _filesCollection =
+      'cbc_files'; // Changed from 'resources' to a valid default
 
   /// Determines the Firestore collection based on curriculum.
-  static String _getCollectionName(String? curriculum) {
-    final normalized = _normalizeCurriculum(curriculum);
-    if (normalized == 'CBC') return 'cbc_files';
-    if (normalized == '8-4-4') return '844_files';
-    return _filesCollection; // Default fallback to 'resources'
+  // We are no longer using this dynamically. We will query both cbc_files and 844_files.
+  static String getCollectionName(String? curriculum) {
+    return 'cbc_files'; // Default fallback
   }
 
   // ============================================================
   // FIRESTORE-BASED METHODS (Recommended for search)
   // ============================================================
 
-  /// Gets files from Firestore filtered by the student's grade and curriculum.
+  /// Gets files from Firestore.
   static Future<List<FirebaseFile>> getAllFilesFromFirestore({
     int limit = 1000,
     int? grade,
     String? curriculum,
+    String? role,
   }) async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -61,198 +33,255 @@ class StorageService {
         return [];
       }
 
-      final collectionName = _getCollectionName(curriculum);
-      Query query = _firestore.collection(collectionName);
-
-      if (grade != null) {
-        query = query.where('grade', isEqualTo: grade);
+      List<FirebaseFile> files = [];
+      // Query cbc_files first
+      try {
+        Query cbcQuery =
+            _firestore.collection('cbc_files').orderBy('name').limit(limit);
+        final cbcSnapshot = await cbcQuery.get();
+        files = cbcSnapshot.docs
+            .map((doc) => FirebaseFile.fromFirestore(doc))
+            .toList();
+      } catch (e) {
+        debugPrint('Error fetching cbc_files from Firestore: $e');
       }
-      query = _applyCurriculumFilter(query, curriculum);
 
-      query = query.orderBy('name').limit(limit);
+      // If we haven't reached the limit, query 844_files
+      if (files.length < limit) {
+        try {
+          int remainingLimit = limit - files.length;
+          Query query844 = _firestore
+              .collection('844_files')
+              .orderBy('name')
+              .limit(remainingLimit);
+          final snapshot844 = await query844.get();
+          files.addAll(snapshot844.docs
+              .map((doc) => FirebaseFile.fromFirestore(doc))
+              .toList());
+        } catch (e) {
+          debugPrint('Error fetching 844_files from Firestore: $e');
+        }
+      }
 
-      final snapshot = await query.get();
-
-      return snapshot.docs
-          .map((doc) => FirebaseFile.fromFirestore(doc))
-          .toList();
+      return files;
     } catch (e) {
       debugPrint('Error fetching files from Firestore: $e');
       return [];
     }
   }
 
-  /// Paginated fetch with optional file type filtering
+  /// Paginated fetch prioritizing cbc_files then 844_files
   static Future<List<FirebaseFile>> getPaginatedFiles({
     int limit = 15,
     DocumentSnapshot? lastDocument,
     String? fileType,
     String? folder,
-    int? grade,
-    String? curriculum,
+    int? grade, // Ignored now
+    String? curriculum, // Ignored now
     String? category,
     String? pathPrefix,
+    String? role, // Ignored now
+    String? collectionScope, // Explicitly target 'cbc_files' or '844_files'
   }) async {
     try {
-      final collectionName = _getCollectionName(curriculum);
-      Query query = _firestore.collection(collectionName);
-
-      // Apply Folder Filter (Subject) -> Replaced by pathPrefix logic potentially,
-      // but keeping for backward compatibility if needed.
-      // If pathPrefix is set, we use that for "folder" navigation.
-      if (folder != null && folder.isNotEmpty) {
-        query = query.where('subject', isEqualTo: folder);
+      // Determine which collection the lastDocument belongs to
+      String currentCollection = 'cbc_files';
+      if (collectionScope != null) {
+        currentCollection = collectionScope;
+      } else if (lastDocument != null) {
+        if (lastDocument.reference.path.contains('844_files')) {
+          currentCollection = '844_files';
+        }
       }
 
-      // Apply Path Filter (Prefix Search for Folder Navigation)
-      if (pathPrefix != null && pathPrefix.isNotEmpty) {
-        // Ensure prefix ends with / if it's a folder, though the caller should handle this.
-        // We use the standard prefix query technique:
-        // path >= 'prefix' AND path < 'prefix' + last_char_increment
-        final endPrefix = '$pathPrefix\uf8ff';
-        query = query
-            .where('path', isGreaterThanOrEqualTo: pathPrefix)
-            .where('path', isLessThan: endPrefix);
+      List<FirebaseFile> results = [];
+
+      Query buildQuery(String collectionName) {
+        Query query = _firestore.collection(collectionName);
+        if (pathPrefix != null && pathPrefix.isNotEmpty) {
+          final endPrefix = '$pathPrefix\uf8ff';
+          query = query
+              .where('path', isGreaterThanOrEqualTo: pathPrefix)
+              .where('path', isLessThan: endPrefix);
+        }
+        if (category != null && category.isNotEmpty) {
+          query = query.where('category', isEqualTo: category);
+        }
+        if (fileType != null) {
+          final type =
+              fileType.startsWith('.') ? fileType.substring(1) : fileType;
+          query = query.where('type', isEqualTo: type.toLowerCase());
+        }
+        if (pathPrefix != null && pathPrefix.isNotEmpty) {
+          query = query.orderBy('path');
+        }
+        query = query.orderBy('name');
+        return query;
       }
 
-      // Apply Grade Filter (Numeric)
-      if (grade != null) {
-        query = query.where('grade', isEqualTo: grade);
+      // If we are currently paginating cbc_files
+      if (currentCollection == 'cbc_files') {
+        try {
+          Query cbcQuery = buildQuery('cbc_files');
+          if (lastDocument != null) {
+            cbcQuery = cbcQuery.startAfterDocument(lastDocument);
+          }
+          final cbcSnapshot = await cbcQuery.limit(limit).get();
+          results.addAll(cbcSnapshot.docs
+              .map((doc) => FirebaseFile.fromFirestore(doc))
+              .toList());
+        } catch (e) {
+          debugPrint('Error fetching paginated cbc_files: $e');
+        }
+
+        // If we exhausted cbc_files, seamlessly start querying 844_files
+        if (results.length < limit && collectionScope == null) {
+          try {
+            int remaining = limit - results.length;
+            Query query844 = buildQuery('844_files');
+            final snapshot844 = await query844.limit(remaining).get();
+            results.addAll(snapshot844.docs
+                .map((doc) => FirebaseFile.fromFirestore(doc))
+                .toList());
+          } catch (e) {
+            debugPrint('Error fetching paginated 844_files: $e');
+          }
+        }
+      }
+      // If we are already paginating 844_files
+      else if (currentCollection == '844_files') {
+        try {
+          Query query844 = buildQuery('844_files');
+          if (lastDocument != null) {
+            query844 = query844.startAfterDocument(lastDocument);
+          }
+          final snapshot844 = await query844.limit(limit).get();
+          results.addAll(snapshot844.docs
+              .map((doc) => FirebaseFile.fromFirestore(doc))
+              .toList());
+        } catch (e) {
+          debugPrint('Error fetching paginated 844_files: $e');
+        }
       }
 
-      // Apply Curriculum Filter (normalized)
-      query = _applyCurriculumFilter(query, curriculum);
-
-      // Apply Category Filter
-      if (category != null && category.isNotEmpty) {
-        query = query.where('category', isEqualTo: category);
-      }
-
-      // Apply File Type Filter
-      if (fileType != null) {
-        final type =
-            fileType.startsWith('.') ? fileType.substring(1) : fileType;
-        query = query.where('type', isEqualTo: type.toLowerCase());
-      }
-
-      // Retrieve Ordered Data
-      // IMPORTANT: In Firestore, if you have an inequality filter (like our path range),
-      // the first orderBy field MUST be the same as the filtered field.
-      if (pathPrefix != null && pathPrefix.isNotEmpty) {
-        query = query.orderBy('path');
-      }
-      query = query.orderBy('name');
-
-      if (lastDocument != null) {
-        query = query.startAfterDocument(lastDocument);
-      }
-
-      final snapshot = await query.limit(limit).get();
-      return snapshot.docs
-          .map((doc) => FirebaseFile.fromFirestore(doc))
-          .toList();
+      return results;
     } catch (e) {
       debugPrint('Error fetching paginated files: $e');
-      if (e.toString().contains('FAILED_PRECONDITION')) {
-        debugPrint(
-            'TIP: You likely need to create a Firestore composite index in the Firebase Console.');
-      }
       return [];
     }
   }
 
   /// Exhaustive search across file names, tags, and subjects.
-  /// Combines multiple Firestore queries for comprehensive results:
-  ///   1. Prefix match on fileNameLower (files whose name starts with query)
-  ///   2. Tag match (files tagged with the search keyword)
-  ///   3. Subject match (files whose subject starts with the query)
-  /// All queries are filtered by the student's grade and curriculum.
   static Future<List<FirebaseFile>> searchFiles(
     String query, {
     int limit = 50,
     int? grade,
     String? curriculum,
     String? category,
+    String? role,
+    String? collectionScope,
   }) async {
     if (query.trim().isEmpty) {
-      return getAllFilesFromFirestore(
-        limit: limit,
-        grade: grade,
-        curriculum: curriculum,
-      );
+      if (collectionScope != null) {
+        try {
+          final q = _firestore
+              .collection(collectionScope)
+              .orderBy('name')
+              .limit(limit);
+          final snap = await q.get();
+          return snap.docs
+              .map((doc) => FirebaseFile.fromFirestore(doc))
+              .toList();
+        } catch (e) {
+          return [];
+        }
+      }
+      return getAllFilesFromFirestore(limit: limit);
     }
-
     final searchTerm = query.toLowerCase().trim();
     final Map<String, FirebaseFile> resultsMap = {};
 
-    // Helper to build a base query with grade+curriculum+category filters
-    Query buildBaseQuery() {
-      final collectionName = _getCollectionName(curriculum);
+    Query buildBaseQuery(String collectionName) {
       Query q = _firestore.collection(collectionName);
-      if (grade != null) {
-        q = q.where('grade', isEqualTo: grade);
-      }
-      q = _applyCurriculumFilter(q, curriculum);
       if (category != null && category.isNotEmpty) {
         q = q.where('category', isEqualTo: category);
       }
       return q;
     }
 
-    // Strategy 1: Prefix match on fileNameLower
-    try {
-      final prefixQuery = buildBaseQuery()
-          .where('fileNameLower', isGreaterThanOrEqualTo: searchTerm)
-          .where('fileNameLower', isLessThanOrEqualTo: '$searchTerm\uf8ff')
-          .limit(limit);
-
-      final snapshot = await prefixQuery.get();
-      for (final doc in snapshot.docs) {
-        resultsMap[doc.id] = FirebaseFile.fromFirestore(doc);
-      }
-    } catch (e) {
-      debugPrint('Search prefix query error: $e');
-    }
-
-    // Strategy 2: Tag-based search (matches substring keywords in filename/subject)
-    if (resultsMap.length < limit) {
+    Future<void> executeQueries(String collectionName) async {
+      // Strategy 1: Prefix match
       try {
-        final tagQuery = buildBaseQuery()
-            .where('tags', arrayContains: searchTerm)
+        final prefixQuery = buildBaseQuery(collectionName)
+            .where('fileNameLower', isGreaterThanOrEqualTo: searchTerm)
+            .where('fileNameLower', isLessThanOrEqualTo: '$searchTerm\uf8ff')
             .limit(limit);
-
-        final snapshot = await tagQuery.get();
+        final snapshot = await prefixQuery.get();
         for (final doc in snapshot.docs) {
-          resultsMap.putIfAbsent(doc.id, () => FirebaseFile.fromFirestore(doc));
+          resultsMap[doc.id] = FirebaseFile.fromFirestore(doc);
         }
       } catch (e) {
-        debugPrint('Search tag query error: $e');
+        debugPrint('Search prefix query error ($collectionName): $e');
       }
-    }
 
-    // Strategy 3: Subject prefix match
-    if (resultsMap.length < limit) {
-      try {
-        // Capitalize first letter for subject match (e.g. "math" → "Math")
-        final subjectTerm =
-            searchTerm[0].toUpperCase() + searchTerm.substring(1);
-        final subjectQuery = buildBaseQuery()
-            .where('subject', isGreaterThanOrEqualTo: subjectTerm)
-            .where('subject', isLessThanOrEqualTo: '$subjectTerm\uf8ff')
-            .limit(limit);
-
-        final snapshot = await subjectQuery.get();
-        for (final doc in snapshot.docs) {
-          resultsMap.putIfAbsent(doc.id, () => FirebaseFile.fromFirestore(doc));
+      // Strategy 2: Tag-based search
+      if (resultsMap.length < limit) {
+        try {
+          final tagQuery = buildBaseQuery(collectionName)
+              .where('tags', arrayContains: searchTerm)
+              .limit(limit);
+          final snapshot = await tagQuery.get();
+          for (final doc in snapshot.docs) {
+            resultsMap.putIfAbsent(
+                doc.id, () => FirebaseFile.fromFirestore(doc));
+          }
+        } catch (e) {
+          debugPrint('Search tag query error ($collectionName): $e');
         }
-      } catch (e) {
-        debugPrint('Search subject query error: $e');
+      }
+
+      // Strategy 3: Subject prefix match
+      if (resultsMap.length < limit) {
+        try {
+          final subjectTerm =
+              searchTerm[0].toUpperCase() + searchTerm.substring(1);
+          final subjectQuery = buildBaseQuery(collectionName)
+              .where('subject', isGreaterThanOrEqualTo: subjectTerm)
+              .where('subject', isLessThanOrEqualTo: '$subjectTerm\uf8ff')
+              .limit(limit);
+          final snapshot = await subjectQuery.get();
+          for (final doc in snapshot.docs) {
+            resultsMap.putIfAbsent(
+                doc.id, () => FirebaseFile.fromFirestore(doc));
+          }
+        } catch (e) {
+          debugPrint('Search subject query error ($collectionName): $e');
+        }
       }
     }
 
-    // Sort results by name for consistent ordering
+    if (collectionScope == 'cbc_files') {
+      await executeQueries('cbc_files');
+    } else if (collectionScope == '844_files') {
+      await executeQueries('844_files');
+    } else {
+      await executeQueries('cbc_files');
+      if (resultsMap.length < limit) {
+        await executeQueries('844_files');
+      }
+    }
+
+    // Sort results, prioritizing cbc_files
     final results = resultsMap.values.toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      ..sort((a, b) {
+        bool aIsCbc = a.path.contains('cbc_files') ||
+            a.curriculum?.toLowerCase() == 'cbc';
+        bool bIsCbc = b.path.contains('cbc_files') ||
+            b.curriculum?.toLowerCase() == 'cbc';
+        if (aIsCbc && !bIsCbc) return -1;
+        if (!aIsCbc && bIsCbc) return 1;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
 
     return results.take(limit).toList();
   }
@@ -388,7 +417,7 @@ class StorageService {
         // Extract metadata from path first to determine collection
         final metadata = FirebaseFile.extractMetadataFromPath(file.path);
         final curriculum = metadata['curriculum'];
-        final collectionName = _getCollectionName(curriculum);
+        final collectionName = getCollectionName(curriculum);
 
         // Check if exists in the specific collection
         final existingQuery = await _firestore

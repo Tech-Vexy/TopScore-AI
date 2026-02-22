@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import 'providers/auth_provider.dart';
 import 'services/analytics_service.dart';
+import 'services/offline_service.dart';
 
 // Screens
 import 'screens/home_screen.dart';
 import 'screens/student/resources_screen.dart';
-import 'screens/teacher/resources_management_screen.dart';
-import 'screens/teacher/teacher_home_screen.dart';
+// Teacher screens removed for unified learner experience
 import 'screens/tools/tools_screen.dart';
 import 'screens/profile_screen.dart' as profile_page;
+import 'screens/pdf_viewer_screen.dart';
 
 // Deferred imports for heavy screens (code splitting)
 import 'tutor_client/chat_screen.dart' deferred as chat;
@@ -24,6 +23,7 @@ import 'screens/tools/smart_scanner_screen.dart';
 import 'screens/tools/timetable_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/auth/onboarding_screen.dart';
+import 'screens/student/career_compass_screen.dart';
 
 // Widget that holds the BottomNavigationBar
 import 'widgets/scaffold_with_navbar.dart';
@@ -72,14 +72,7 @@ final GoRouter router = GoRouter(
           routes: [
             GoRoute(
               path: '/home',
-              builder: (context, state) {
-                final user =
-                    Provider.of<AuthProvider>(context, listen: false).userModel;
-                if (user?.role == 'teacher') {
-                  return const TeacherHomeScreen();
-                }
-                return const HomeTab();
-              },
+              builder: (context, state) => const HomeTab(),
             ),
           ],
         ),
@@ -89,14 +82,7 @@ final GoRouter router = GoRouter(
           routes: [
             GoRoute(
               path: '/library',
-              builder: (context, state) {
-                final user =
-                    Provider.of<AuthProvider>(context, listen: false).userModel;
-                if (user?.role == 'teacher') {
-                  return const ResourceManagementScreen();
-                }
-                return const ResourcesScreen();
-              },
+              builder: (context, state) => const ResourcesScreen(),
             ),
           ],
         ),
@@ -203,11 +189,6 @@ final GoRouter router = GoRouter(
         ),
       ],
     ),
-    // Teacher Routes
-    GoRoute(
-      path: '/teacher/resources',
-      builder: (context, state) => const ResourceManagementScreen(),
-    ),
     // Search
     GoRoute(
       path: '/search',
@@ -218,5 +199,52 @@ final GoRouter router = GoRouter(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
     ),
+    // Career Compass
+    GoRoute(
+      path: '/career-compass',
+      builder: (context, state) => const CareerCompassScreen(),
+    ),
+    // PDF Viewer
+    GoRoute(
+      path: '/pdf-viewer',
+      pageBuilder: (context, state) {
+        final extras = state.extra as Map<String, dynamic>? ?? {};
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: PdfViewerScreen(
+            url: extras['url'],
+            storagePath: extras['storagePath'],
+            assetPath: extras['assetPath'],
+            bytes: extras['bytes'],
+            file: extras['file'],
+            title: extras['title'] ?? 'Document',
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        );
+      },
+    ),
   ],
+  redirect: (context, state) {
+    // Check if onboarding is complete
+    final onboardingComplete =
+        OfflineService().getStringList('onboarding_complete').isNotEmpty;
+
+    // If trying to access home/library/tutor/tools and onboarding isn't done
+    const protectedRoutes = [
+      '/home',
+      '/library',
+      '/ai-tutor',
+      '/tools',
+      '/profile'
+    ];
+    if (!onboardingComplete &&
+        protectedRoutes
+            .any((route) => state.fullPath?.startsWith(route) ?? false)) {
+      return '/onboarding';
+    }
+
+    return null;
+  },
 );

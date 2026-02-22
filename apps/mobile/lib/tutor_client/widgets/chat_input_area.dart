@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 class ChatInputArea extends StatefulWidget {
   final TextEditingController textController;
@@ -113,7 +114,7 @@ class _ChatInputAreaState extends State<ChatInputArea> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(
-              maxWidth: 750,
+              maxWidth: 850,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -193,31 +194,21 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                   builder: (context, child) {
                     return Container(
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF121212) : Colors.white,
-                        borderRadius: BorderRadius.circular(28),
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(
-                              alpha: isDark ? 0.5 : 0.15, // Increased opacity
-                            ),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                            spreadRadius: 2,
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                              alpha: isDark ? 0.3 : 0.08, // Increased opacity
-                            ),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
+                            color: Colors.black
+                                .withValues(alpha: isDark ? 0.4 : 0.08),
+                            blurRadius: 15,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                         border: Border.all(
                           color: isDark
-                              ? Colors.white.withValues(
-                                  alpha: 0.15) // Increased border visibility
-                              : Colors.black.withValues(alpha: 0.08),
-                          width: 1,
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : Colors.black.withValues(alpha: 0.05),
+                          width: 1.5,
                         ),
                       ),
                       padding: const EdgeInsets.fromLTRB(
@@ -230,10 +221,8 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                     children: [
                       IconButton(
                         icon: Icon(
-                          Icons.add_circle_outline_rounded,
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.6,
-                          ),
+                          Icons.add_rounded,
+                          color: theme.primaryColor,
                           size: 26,
                         ),
                         onPressed: widget.onShowAttachmentMenu,
@@ -276,12 +265,29 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                             maxLines: 6,
                             minLines: 1,
                             textCapitalization: TextCapitalization.sentences,
+                            textInputAction: (kIsWeb ||
+                                    Platform.isWindows ||
+                                    Platform.isMacOS ||
+                                    Platform.isLinux)
+                                ? TextInputAction.send
+                                : TextInputAction.newline,
                             decoration: InputDecoration(
                               hintText: widget.isUploading
                                   ? 'Uploading...'
-                                  : widget.placeholderMessages[
-                                      _currentPlaceholderIndex %
-                                          widget.placeholderMessages.length],
+                                  : (() {
+                                      final baseHint =
+                                          widget.placeholderMessages[
+                                              _currentPlaceholderIndex %
+                                                  widget.placeholderMessages
+                                                      .length];
+                                      final isDesktopOrWeb = kIsWeb ||
+                                          Platform.isWindows ||
+                                          Platform.isMacOS ||
+                                          Platform.isLinux;
+                                      return isDesktopOrWeb
+                                          ? '$baseHint\n(Enter to send, Shift+Enter for new line)'
+                                          : baseHint;
+                                    })(),
                               border: InputBorder.none,
                               hintStyle: TextStyle(
                                 color: theme.colorScheme.onSurface.withValues(
@@ -293,8 +299,13 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                                 vertical: 12,
                               ),
                             ),
-                            onSubmitted: (value) =>
-                                widget.onSendMessageWithText(text: value),
+                            onSubmitted: (kIsWeb ||
+                                    Platform.isWindows ||
+                                    Platform.isMacOS ||
+                                    Platform.isLinux)
+                                ? (value) =>
+                                    widget.onSendMessageWithText(text: value)
+                                : null,
                           ),
                         ),
                       ),

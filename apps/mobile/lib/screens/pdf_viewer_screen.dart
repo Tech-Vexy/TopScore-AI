@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:universal_io/io.dart';
 import 'dart:ui' as ui;
 
-import 'package:clipboard/clipboard.dart';
 import 'package:croppy/croppy.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
@@ -38,13 +37,13 @@ class PdfViewerScreen extends StatefulWidget {
     this.file,
     required this.title,
   }) : assert(
-         storagePath != null ||
-             url != null ||
-             assetPath != null ||
-             bytes != null ||
-             file != null,
-         'You must provide at least one PDF source',
-       );
+          storagePath != null ||
+              url != null ||
+              assetPath != null ||
+              bytes != null ||
+              file != null,
+          'You must provide at least one PDF source',
+        );
 
   @override
   State<PdfViewerScreen> createState() => _PdfViewerScreenState();
@@ -280,9 +279,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
       final tempDir = await getTemporaryDirectory();
       final safeTitle = widget.title.replaceAll(RegExp(r'[^\w\s\.]'), '_');
-      final fileName = safeTitle.endsWith('.pdf')
-          ? safeTitle
-          : '$safeTitle.pdf';
+      final fileName =
+          safeTitle.endsWith('.pdf') ? safeTitle : '$safeTitle.pdf';
       final file = File('${tempDir.path}/$fileName');
 
       await file.writeAsBytes(_pdfBytes!);
@@ -303,9 +301,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   Future<Uint8List?> _captureVisibleArea() async {
     try {
-      final boundary =
-          _pdfRepaintKey.currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
+      final boundary = _pdfRepaintKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
 
       if (boundary == null) return null;
 
@@ -375,87 +372,10 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       debugPrint("Clipboard Copy Failed: $e");
     }
 
-    // THEMED BOTTOM SHEET
-    if (!mounted) return;
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        final theme = Theme.of(ctx);
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Drag Handle
-              Container(
-                margin: const EdgeInsets.only(top: 8, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.dividerColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  "Selection Action",
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-              ),
-              ListTile(
-                leading: Icon(Icons.copy, color: theme.colorScheme.secondary),
-                title: Text(
-                  'Copy to Clipboard',
-                  style: theme.textTheme.bodyLarge,
-                ),
-                subtitle: Text(
-                  'Paste it into notes or other apps',
-                  style: theme.textTheme.bodySmall,
-                ),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await FlutterClipboard.copyImage(croppedBytes);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Copied to clipboard!')),
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                leading: FaIcon(
-                  FontAwesomeIcons.wandMagicSparkles,
-                  color: theme.colorScheme.primary,
-                ),
-                title: Text(
-                  'Ask AI Tutor',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: Text(
-                  'Get an explanation or solution instantly',
-                  style: theme.textTheme.bodySmall,
-                ),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  _sendToAI(croppedBytes);
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
-    );
+    // INSTANT AI TUTOR FLOW (Google Lens style)
+    if (mounted) {
+      _sendToAI(croppedBytes);
+    }
   }
 
   /// --- 4. AI SENDING LOGIC ---
@@ -480,10 +400,25 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
       if (!mounted) return;
 
-      Provider.of<NavigationProvider>(context, listen: false).navigateToChat(
-        image: xFile,
-        message: "Help me understand this section.",
+      // Open Chat instantly as a full-screen overlay dialog so user doesn't lose PDF context
+      showDialog(
         context: context,
+        useSafeArea: false,
+        builder: (ctx) => Dialog.fullscreen(
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('AI Tutor'),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+            body: ChatScreen(
+              initialImage: xFile,
+              initialMessage: "Help me understand this section.",
+            ),
+          ),
+        ),
       );
     } catch (e) {
       debugPrint("AI Send Error: $e");

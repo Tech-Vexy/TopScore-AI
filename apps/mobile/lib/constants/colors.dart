@@ -27,7 +27,7 @@ class AppColors {
   static const Color white = Color(0xFFFFFFFF);
 
   // App Theme Aliases - This is what main.dart uses
-  static const Color primary = edupoaBlue;
+  static const Color primary = Color(0xFF2563EB); // Premium Blue
   static const Color secondary = edupoaTeal;
   static const Color accent = edupoaTeal;
 
@@ -39,30 +39,24 @@ class AppColors {
   static const Color shimmerBaseDark = Color(0xFF252525);
   static const Color shimmerHighlightDark = Color(0xFF2C2C2C);
 
-  // Light Mode Backgrounds - Off-white, not stark white
-  static const Color background = Color(0xFFFAFAFA);
+  // Light Mode Backgrounds - Softer premium off-white
+  static const Color background = Color(0xFFF9FAFB);
   static const Color surface = white;
-  static const Color surfaceVariant = Color(0xFFF0F4F9);
+  static const Color surfaceVariant = Color(0xFFF3F4F6);
   static const Color surfaceElevated = white;
 
-  // Dark Mode Colors - Full Black (OLED Friendly)
-  static const Color backgroundDark = Color(0xFF000000); // Pure Black
-  static const Color surfaceDark = Color(
-    0xFF0A0A0A,
-  ); // Almost black (Sidebar/Nav)
-  static const Color surfaceVariantDark = Color(
-    0xFF1A1A1A,
-  ); // Muted cards/Inputs
-  static const Color surfaceElevatedDark = Color(
-    0xFF121212,
-  ); // Elevated elements (Cards)
-  static const Color textDark = Color(0xFFEDEDED); // High contrast white
-  static const Color textSecondaryDark = Color(0xFFA0A0A0); // Muted gray
+  // Dark Mode Colors - Deep Charcoal/Zinc (Premium)
+  static const Color backgroundDark = Color(0xFF0B0B0F);
+  static const Color surfaceDark = Color(0xFF16161E);
+  static const Color surfaceVariantDark = Color(0xFF1F1F29);
+  static const Color surfaceElevatedDark = Color(0xFF18181B);
+  static const Color textDark = Color(0xFFF9FAFB);
+  static const Color textSecondaryDark = Color(0xFF9CA3AF);
 
   // Text colors (Light mode)
-  static const Color text = Color(0xFF333333); // EduPoa Dark Text
-  static const Color textSecondary = Color(0xFF64748b);
-  static const Color textLight = Color(0xFF94a3b8);
+  static const Color text = Color(0xFF111827); // Deep Charcoal
+  static const Color textSecondary = Color(0xFF4B5563);
+  static const Color textLight = Color(0xFF9CA3AF);
   static const Color textInverse = white;
 
   // Border colors - Softer, more subtle

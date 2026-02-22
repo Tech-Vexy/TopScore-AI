@@ -2,48 +2,68 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuthenticated() {
-      return request.auth != null;
+    // --- 1. Educational Resources (CBC & 8-4-4) ---
+    // Moving from generic 'files' to curriculum-specific collections
+    // This fixes the "Error fetching files" / Permission Denied error
+    match /cbc_files/{fileId} {
+      allow read: if request.auth != null;
+      // Allow write if you are running the migration tool, otherwise restrict to 'teacher' or 'admin'
+      allow write: if request.auth != null; 
+    }
+    
+    match /844_files/{fileId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null; 
     }
 
-    // --- 1. Files Collection ---
-    match /files/{fileId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
-    // --- 2. Resources ---
-    match /resources/{resourceId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
-    // --- 3. User Data & Chats ---
+    // --- 2. Users Collection ---
     match /users/{userId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      // Allow any authenticated user to read user profiles (needed for group allocation & leaderboards)
+      allow read: if request.auth != null;
+      // Only allow users to write to their own profile
+      allow write: if request.auth != null && request.auth.uid == userId;
       
-      match /bookmarks/{document=**} {
-        allow read, write: if isAuthenticated() && request.auth.uid == userId;
-      }
-
+      // User's private chat history with AI
       match /chat_history/{messageId} {
-        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User's bookmarks
+      match /bookmarks/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
 
-    // --- Existing Rules ---
+    // --- 3. Support Tickets ---
     match /support_tickets/{ticketId} {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // --- 4. Progress Tracking ---
     match /progress/{userId}/resources/{resourceId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // --- 5. Downloads ---
     match /downloads/{userId}/files/{fileId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // --- 6. Group Chats ---
+    match /chats/{chatId} {
+       allow read, write: if request.auth != null;
+    }
+
+    // --- Legacy / Generic Fallbacks ---
+    match /files/{fileId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null; 
+    }
+    match /resources/{resourceId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
   }
 }
