@@ -11,17 +11,17 @@ export const metadata: Metadata = {
     openGraph: {
         title: 'Study Tools — TopScore AI',
         description: '8 built-in tools: scanner, calculator, science lab, periodic table, flashcards, timetable, search & PDF viewer.',
-        url: 'https://topscore-ai.com/tools',
+        url: 'https://topscoreapp.ai/tools',
         images: [{ url: '/og-image.png', width: 1200, height: 630 }],
     },
-    alternates: { canonical: 'https://topscore-ai.com/tools' },
+    alternates: { canonical: 'https://topscoreapp.ai/tools' },
 };
 
 const schema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: 'TopScore AI Study Tools',
-    url: 'https://topscore-ai.com/tools',
+    url: 'https://topscoreapp.ai/tools',
     itemListElement: [
         'Smart Scanner', 'Scientific Calculator', 'Science Lab',
         'Periodic Table', 'Flashcard Generator', 'Timetable',

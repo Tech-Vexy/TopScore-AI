@@ -2,6 +2,7 @@
 import { useLocale } from '@/i18n';
 import type { TranslationKey } from '@/i18n';
 import AnimatedSection from './AnimatedSection';
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import styles from './HowItWorks.module.css';
 
 const stepNums = ['1', '2', '3', '4'];
@@ -24,13 +25,19 @@ export default function HowItWorks() {
                     {stepNums.map((num, i) => {
                         const titleKey = `howItWorks.${i}.title` as TranslationKey;
                         const descKey = `howItWorks.${i}.desc` as TranslationKey;
+
+                        // ... (in the mapping loop)
                         return (
                             <AnimatedSection key={num} animation="fadeUp" delay={`${i * 0.1}s`}>
-                                <div className={styles.step}>
+                                <Card className={styles.step}>
                                     <div className={styles.num}>{num}</div>
-                                    <h3>{t(titleKey)}</h3>
-                                    <p>{t(descKey)}</p>
-                                </div>
+                                    <CardHeader className="p-0 space-y-2">
+                                        <h3 className="font-bold text-xl">{t(titleKey)}</h3>
+                                    </CardHeader>
+                                    <CardContent className="p-0 pt-2">
+                                        <p className="text-muted-foreground">{t(descKey)}</p>
+                                    </CardContent>
+                                </Card>
                             </AnimatedSection>
                         );
                     })}

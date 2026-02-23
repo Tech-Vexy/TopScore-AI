@@ -1,15 +1,15 @@
 'use client';
-import { useState } from 'react';
 import { useLocale } from '@/i18n';
 import type { TranslationKey } from '@/i18n';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import AnimatedSection from './AnimatedSection';
 import styles from './FAQ.module.css';
 
 const faqCount = 8;
 
+
 export default function FAQ() {
     const { t } = useLocale();
-    const [openIdx, setOpenIdx] = useState<number | null>(null);
 
     return (
         <section id="faq" className={styles.wrapper}>
@@ -21,28 +21,24 @@ export default function FAQ() {
                 </AnimatedSection>
 
                 <div className={styles.list}>
-                    {Array.from({ length: faqCount }, (_, i) => {
-                        const qKey = `faq.${i}.q` as TranslationKey;
-                        const aKey = `faq.${i}.a` as TranslationKey;
-                        const isOpen = openIdx === i;
-                        return (
-                            <AnimatedSection key={i} animation="fadeUp" delay={`${i * 0.05}s`}>
-                                <div className={`${styles.item} ${isOpen ? styles.itemOpen : ''}`}>
-                                    <button
-                                        className={styles.question}
-                                        onClick={() => setOpenIdx(isOpen ? null : i)}
-                                        aria-expanded={isOpen}
-                                    >
-                                        <span>{t(qKey)}</span>
-                                        <span className={styles.chevron}>{isOpen ? '−' : '+'}</span>
-                                    </button>
-                                    <div className={styles.answer} style={{ maxHeight: isOpen ? '500px' : '0' }}>
-                                        <p>{t(aKey)}</p>
-                                    </div>
-                                </div>
-                            </AnimatedSection>
-                        );
-                    })}
+                    <Accordion type="single" collapsible className="w-full">
+                        {Array.from({ length: faqCount }, (_, i) => {
+                            const qKey = `faq.${i}.q` as TranslationKey;
+                            const aKey = `faq.${i}.a` as TranslationKey;
+                            return (
+                                <AnimatedSection key={i} animation="fadeUp" delay={`${i * 0.05}s`}>
+                                    <AccordionItem value={`item-${i}`} className={styles.item}>
+                                        <AccordionTrigger className={styles.question}>
+                                            <span>{t(qKey)}</span>
+                                        </AccordionTrigger>
+                                        <AccordionContent className={styles.answer}>
+                                            <p>{t(aKey)}</p>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                </AnimatedSection>
+                            );
+                        })}
+                    </Accordion>
                 </div>
             </div>
         </section>

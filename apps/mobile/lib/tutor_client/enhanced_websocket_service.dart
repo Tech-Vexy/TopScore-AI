@@ -186,6 +186,7 @@ class EnhancedWebSocketService {
     String? fileUrl,
     String? fileType,
     String? audioData,
+    bool dataSaver = false,
     Map<String, dynamic>? extraData,
   }) async {
     final messageId = const Uuid().v4();
@@ -198,6 +199,7 @@ class EnhancedWebSocketService {
       "user_id": userId,
       "thread_id": targetThreadId,
       "model_preference": modelPreference ?? "smart",
+      "data_saver": dataSaver,
       "timestamp": DateTime.now().millisecondsSinceEpoch,
       if (fileUrl != null) 'file_url': fileUrl,
       if (fileType != null) 'file_type': fileType,

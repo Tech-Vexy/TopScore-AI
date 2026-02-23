@@ -10,10 +10,10 @@
   <meta name="google" content="notranslate">
 
   <!-- Primary SEO Meta Tags -->
-  <title>TopScore AI - Ace Your Exams | #1 AI Tutor for KCSE & CBC</title>
-  <meta name="title" content="TopScore AI - Ace Your Exams | #1 AI Tutor for KCSE & CBC">
+  <title>TopScore AI - #1 AI Tutor for KCSE & CBC | Ace Your Exams</title>
+  <meta name="title" content="TopScore AI - #1 AI Tutor for KCSE & CBC | Ace Your Exams">
   <meta name="description"
-    content="Your 24/7 AI Tutor for Kenyan students. Snap a photo of a problem, chat with your textbooks, generate flashcards, and get instant, accurate explanations for KCSE, CBC, and 8-4-4 revision. Study smarter with personalized coaching.">
+    content="The #1 AI-powered tutoring and study platform for CBC & KCSE. Snap photos, chat with books, and ace your exams. Free to download.">
   <meta name="keywords"
     content="TopScore AI, AI Tutor Kenya, KCSE Revision, KCPE Revision, CBC Grade 6, CBC Grade 7, CBC Grade 8, Form 1, Form 2, Form 3, Form 4, Form 4 Revision, Homework helper, 8-4-4, KNEC Past Papers, Study App, EdTech Kenya, Personal Tutor, Online Learning Kenya, AI Education, KCSE Past Papers, CBC Revision, Study Notes Kenya">
   <meta name="author" content="TopScore AI">
@@ -31,10 +31,10 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://topscoreapp.ai/">
-  <meta property="og:title" content="TopScore AI - Ace Your Exams | #1 AI Tutor for KCSE & CBC">
+  <meta property="og:title" content="TopScore AI - #1 AI Tutor for KCSE & CBC | Ace Your Exams">
   <meta property="og:description"
-    content="Your 24/7 AI Tutor for Kenyan students. Snap a photo, chat with textbooks, and get instant, accurate explanations for KCSE, CBC & 8-4-4 revision.">
-  <meta property="og:image" content="assets/social-preview.png">
+    content="The #1 AI-powered tutoring and study platform for CBC & KCSE. Snap photos, chat with books, and ace your exams. Free to download.">
+  <meta property="og:image" content="https://topscoreapp.ai/assets/social-preview.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="TopScore AI - AI-Powered Learning Platform for Kenyan Students">
@@ -44,10 +44,10 @@
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://topscoreapp.ai/">
-  <meta name="twitter:title" content="TopScore AI - Ace Your Exams | #1 AI Tutor for KCSE & CBC">
+  <meta name="twitter:title" content="TopScore AI - #1 AI Tutor for KCSE & CBC | Ace Your Exams">
   <meta name="twitter:description"
-    content="Your 24/7 AI Tutor for Kenyan students. Snap a photo, chat with textbooks, and get instant explanations for KCSE, CBC & 8-4-4 revision.">
-  <meta name="twitter:image" content="assets/social-preview.png">
+    content="The #1 AI-powered tutoring and study platform for CBC & KCSE. Snap photos, chat with books, and ace your exams. Free to download.">
+  <meta name="twitter:image" content="https://topscoreapp.ai/assets/social-preview.png">
   <meta name="twitter:image:alt" content="TopScore AI - AI-Powered Learning Platform for Kenyan Students">
 
   <!-- Theme & App Identity -->
@@ -75,136 +75,17 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png">
 
-  <style>
-    :root {
-      --splash-bg: #FFFFFF;
-      --splash-text: #1F2937;
-      --splash-sub: #6B7280;
-      --splash-logo-bg: #F3F4F6;
-      --spinner-border: rgba(43, 78, 154, 0.2);
-      --spinner-top: #2B4E9A;
-    }
+  <!-- Performance Optimizations -->
+  <link rel="preload" href="flutter_bootstrap.js?v=2" as="script">
+  <link rel="preload" href="assets/assets/images/onboarding_ai_tutor.png" as="image">
+  <link rel="preload" href="assets/assets/images/onboarding_digital_library.png" as="image">
+  <link rel="preload" href="assets/assets/images/onboarding_smart_tools.png" as="image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --splash-bg: #121212;
-        --splash-text: #F9FAFB;
-        --splash-sub: #9CA3AF;
-        --splash-logo-bg: #1F2937;
-        --spinner-border: rgba(255, 255, 255, 0.1);
-        --spinner-top: #FFFFFF;
-      }
-    }
 
-    #loading-splash {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: var(--splash-bg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      transition: opacity 0.5s ease-out, background-color 0.3s ease;
-    }
-
-    #loading-splash.fade-out {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .splash-logo {
-      width: 120px;
-      height: 120px;
-      background: var(--splash-logo-bg);
-      border-radius: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 24px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      animation: float 3s ease-in-out infinite;
-    }
-
-    .splash-logo img {
-      width: auto;
-      height: auto;
-    }
-
-    .splash-title {
-      color: var(--splash-text);
-      font-size: 28px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      text-align: center;
-    }
-
-    .splash-subtitle {
-      color: var(--splash-sub);
-      font-size: 16px;
-      font-weight: 400;
-      margin-bottom: 40px;
-      text-align: center;
-    }
-
-    .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid var(--spinner-border);
-      border-top-color: var(--spinner-top);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    .loading-text {
-      color: var(--splash-sub);
-      font-size: 14px;
-      margin-top: 16px;
-      opacity: 0.8;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    @keyframes float {
-
-      0%,
-      100% {
-        transform: translateY(0px);
-      }
-
-      50% {
-        transform: translateY(-10px);
-      }
-    }
-
-    @media (max-width: 600px) {
-      .splash-logo {
-        width: 100px;
-        height: 100px;
-      }
-
-      .splash-logo img {
-        width: 60px;
-        height: 60px;
-      }
-
-      .splash-title {
-        font-size: 24px;
-      }
-
-      .splash-subtitle {
-        font-size: 14px;
-      }
-    }
-  </style>
   <link rel="manifest" href="manifest.json">
 
   <link rel="preload" href="icons/Icon-192.png" as="image" type="image/png">
@@ -236,35 +117,9 @@
 
 <body translate="no">
   <!-- Splash screen shown while Flutter loads -->
-  <div id="loading-splash" role="status" aria-label="Loading application">
-    <div class="splash-logo">
-      <img src="icons/Icon-192.png" alt="TopScore AI Logo" width="80" height="80" onerror="this.style.display='none'">
-    </div>
-    <div class="splash-title">TopScore AI</div>
-    <div class="splash-subtitle">Your Personal Academic Coach</div>
-    <div class="loading-spinner" aria-hidden="true"></div>
-    <div class="loading-text">Loading your study tools...</div>
-  </div>
 
-  <script>
-    // Hide splash screen when Flutter is ready
-    window.addEventListener('flutter-first-frame', function () {
-      const splash = document.getElementById('loading-splash');
-      if (splash) {
-        splash.classList.add('fade-out');
-        setTimeout(() => splash.remove(), 500);
-      }
-    });
 
-    // Fallback: Remove splash after 10 seconds
-    setTimeout(function () {
-      const splash = document.getElementById('loading-splash');
-      if (splash && splash.parentNode) {
-        splash.classList.add('fade-out');
-        setTimeout(() => splash.remove(), 500);
-      }
-    }, 10000);
-  </script>
+
 
   <!-- Structured Data: Organization -->
   <script type="application/ld+json">

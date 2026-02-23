@@ -11,17 +11,17 @@ export const metadata: Metadata = {
     openGraph: {
         title: 'For Students, Parents & Teachers — TopScore AI',
         description: 'Role-specific dashboards for students, parents, and teachers.',
-        url: 'https://topscore-ai.com/roles',
+        url: 'https://topscoreapp.ai/roles',
         images: [{ url: '/og-image.png', width: 1200, height: 630 }],
     },
-    alternates: { canonical: 'https://topscore-ai.com/roles' },
+    alternates: { canonical: 'https://topscoreapp.ai/roles' },
 };
 
 const schema = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: 'TopScore AI — For Students, Parents & Teachers',
-    url: 'https://topscore-ai.com/roles',
+    url: 'https://topscoreapp.ai/roles',
     description: metadata.description,
 };
 

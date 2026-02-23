@@ -25,6 +25,7 @@ import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import '../screens/auth/auth_screen.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
 import '../providers/navigation_provider.dart';
 import 'widgets/chat_message_bubble.dart';
 import 'widgets/chat_input_area.dart';
@@ -98,6 +99,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // Settings
   final String _selectedModelKey = 'gemini-2.5-flash';
+
+  // Throttling timers for streaming UI updates
+  Timer? _chunkUpdateTimer;
+  Timer? _scrollDebounceTimer;
+  final Map<String, String> _pendingChunks =
+      {}; // Accumulate content between renders
 
   // TTS state tracking
   bool _isTtsSpeaking = false;
@@ -278,6 +285,16 @@ class _ChatScreenState extends State<ChatScreen> {
           _playingAudioMessageId = null;
           _audioPosition = Duration.zero;
         });
+
+        // Handle Native Audio Voice Mode completion
+        // If the AI just finished speaking, immediately return to listening state
+        if (_isVoiceMode) {
+          setState(() {
+            _isAiSpeaking = false;
+          });
+          _voiceDialogSetState?.call(() {});
+          Future.delayed(const Duration(milliseconds: 300), _startListening);
+        }
       }
     });
 
@@ -1153,39 +1170,54 @@ class _ChatScreenState extends State<ChatScreen> {
         break;
 
       case 'chunk':
-        // Update temporary message with streamed content (Deltas)
+        // Accumulate chunks and throttle setState to prevent UI freeze
         final chunkContent = data['content'] as String? ?? '';
         final targetId = messageId ?? _currentStreamingMessageId;
 
         if (targetId != null) {
-          setState(() {
-            // Find temporary message by ID
-            final index = _messages.indexWhere(
-              (m) => m.id == targetId && m.isTemporary,
-            );
+          _pendingChunks[targetId] =
+              (_pendingChunks[targetId] ?? '') + chunkContent;
 
-            if (index != -1) {
-              // Append new chunk to existing text
-              final currentText = _messages[index].text;
-              _messages[index] = _messages[index].copyWith(
-                text: currentText + chunkContent,
-              );
-            } else {
-              // Message doesn't exist yet - create temporary message
-              _messages.add(
-                ChatMessage(
-                  id: targetId,
-                  text: chunkContent,
-                  isUser: false,
-                  timestamp: DateTime.now(),
-                  isTemporary: true,
-                  isComplete: false,
-                ),
-              );
-              _isTyping = false;
-              _currentStreamingMessageId = targetId;
-              _scrollToBottom();
-            }
+          if (_chunkUpdateTimer?.isActive ?? false) {
+            // Timer is running, just accumulate
+            return;
+          }
+
+          // Trigger update every 100ms
+          _chunkUpdateTimer = Timer(const Duration(milliseconds: 100), () {
+            if (!mounted) return;
+            setState(() {
+              for (final entry in _pendingChunks.entries) {
+                final cId = entry.key;
+                final accumulatedContent = entry.value;
+
+                final index = _messages.indexWhere(
+                  (m) => m.id == cId && m.isTemporary,
+                );
+
+                if (index != -1) {
+                  final currentText = _messages[index].text;
+                  _messages[index] = _messages[index].copyWith(
+                    text: currentText + accumulatedContent,
+                  );
+                } else {
+                  _messages.add(
+                    ChatMessage(
+                      id: cId,
+                      text: accumulatedContent,
+                      isUser: false,
+                      timestamp: DateTime.now(),
+                      isTemporary: true,
+                      isComplete: false,
+                    ),
+                  );
+                  _isTyping = false;
+                  _currentStreamingMessageId = cId;
+                }
+              }
+              _pendingChunks.clear();
+            });
+            _scrollToBottom();
           });
         }
         break;
@@ -1230,13 +1262,35 @@ class _ChatScreenState extends State<ChatScreen> {
       case 'done':
       case 'complete':
       case 'end':
+        // Flush any pending chunks first!
+        _chunkUpdateTimer?.cancel();
+        if (_pendingChunks.isNotEmpty) {
+          setState(() {
+            for (final entry in _pendingChunks.entries) {
+              final cId = entry.key;
+              final accumulatedContent = entry.value;
+              final index = _messages.indexWhere(
+                (m) => m.id == cId && m.isTemporary,
+              );
+              if (index != -1) {
+                _messages[index] = _messages[index].copyWith(
+                  text: _messages[index].text + accumulatedContent,
+                );
+              }
+            }
+            _pendingChunks.clear();
+          });
+        }
+
         // Mark temporary message as complete (streaming finished)
         // Firebase will have the final version soon
         String? completedMessageText;
-        if (messageId != null) {
+        final targetId = messageId ?? _currentStreamingMessageId;
+
+        if (targetId != null) {
           setState(() {
             final index = _messages.indexWhere(
-              (m) => m.id == messageId && m.isTemporary,
+              (m) => m.id == targetId && m.isTemporary,
             );
 
             if (index != -1) {
@@ -1245,6 +1299,12 @@ class _ChatScreenState extends State<ChatScreen> {
                 isTemporary: false, // Mark as permanent when streaming ends
               );
               completedMessageText = _messages[index].text;
+            } else {
+              // Fallback if already marked permanent
+              final permIndex = _messages.indexWhere((m) => m.id == targetId);
+              if (permIndex != -1) {
+                completedMessageText = _messages[permIndex].text;
+              }
             }
 
             // Update with any final content if provided
@@ -1262,13 +1322,15 @@ class _ChatScreenState extends State<ChatScreen> {
         }
 
         // VOICE MODE: Speak the AI response aloud using TTS (fallback)
-        // Only use client-side TTS if server didn't send pre-generated audio
-        // This creates the full voice loop: user speaks -> AI responds -> speak response -> listen again
-        if (_isVoiceMode &&
-            !_receivedServerAudio &&
-            completedMessageText != null &&
-            completedMessageText!.isNotEmpty) {
-          _speakInVoiceMode(completedMessageText!);
+        // This creates the full voice loop: user speaks -> AI responds -> speak -> listen
+        if (_isVoiceMode && !_receivedServerAudio) {
+          if (completedMessageText != null &&
+              completedMessageText!.isNotEmpty) {
+            _speakInVoiceMode(completedMessageText!);
+          } else {
+            // If AI yielded no text, still return to listening to keep the loop alive
+            Future.delayed(const Duration(milliseconds: 500), _startListening);
+          }
         }
 
         _finalizeTurn();
@@ -1602,12 +1664,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+
       _wsService.sendMessage(
         message: messageText,
         userId: authProvider.userModel?.uid ?? 'anon',
         fileUrl: fileUrlToSend,
         fileType: fileTypeToSend,
         modelPreference: 'auto',
+        dataSaver: settings.isLiteMode,
       );
     } catch (e) {
       _addSystemMessage("Failed to send: $e");
@@ -2330,21 +2395,25 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollToBottom() {
-    // Smart auto-scroll: Only scroll if user is already near bottom or it's a new user message
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        final max = _scrollController.position.maxScrollExtent;
-        final current = _scrollController.position.pixels;
-        // Auto-scroll if within 200px of bottom OR the last message is from user
-        if ((max - current) < 200 ||
-            (_messages.isNotEmpty && _messages.last.isUser)) {
-          _scrollController.animateTo(
-            max,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutQuad,
-          );
+    if (_scrollDebounceTimer?.isActive ?? false) return;
+
+    _scrollDebounceTimer = Timer(const Duration(milliseconds: 150), () {
+      // Smart auto-scroll: Only scroll if user is already near bottom or it's a new user message
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          final max = _scrollController.position.maxScrollExtent;
+          final current = _scrollController.position.pixels;
+          // Auto-scroll if within 400px of bottom OR the last message is from user
+          if ((max - current) < 400 ||
+              (_messages.isNotEmpty && _messages.last.isUser)) {
+            _scrollController.animateTo(
+              max,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+            );
+          }
         }
-      }
+      });
     });
   }
 
@@ -2356,6 +2425,10 @@ class _ChatScreenState extends State<ChatScreen> {
     _childAddedSub?.cancel();
     _childChangedSub?.cancel();
     _childRemovedSub?.cancel();
+
+    // Cancel Timers
+    _chunkUpdateTimer?.cancel();
+    _scrollDebounceTimer?.cancel();
 
     // Cancel WebSocket subscriptions
     _wsMessageSub?.cancel();
@@ -2695,18 +2768,9 @@ class _ChatScreenState extends State<ChatScreen> {
         name: 'ChatScreen',
       );
 
-      // Ensure we catch the end
-      _audioPlayer.onPlayerComplete.listen((event) {
-        if (mounted && _isVoiceMode) {
-          setState(() {
-            _isAiSpeaking = false;
-            // _statusMessage = "Listening...";
-          });
-          _voiceDialogSetState?.call(() {});
-          // Auto-listen after AI finishes
-          Future.delayed(const Duration(milliseconds: 300), _startListening);
-        }
-      });
+      // Audio playback has started. The completion is handled by the globally
+      // registered _audioPlayer.onPlayerComplete listener in initState, which
+      // will also automatically call _startListening() to bounce back cleanly.
     } catch (e) {
       developer.log("Gemini audio play error: $e", name: 'ChatScreen');
       setState(() {
@@ -3227,6 +3291,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           ? EmptyStateWidget(
                               isDark: isDark,
                               theme: theme,
+                              userName: authProvider.userModel?.displayName,
                               suggestions: _dynamicSuggestions,
                               onSuggestionTap: (prompt) =>
                                   _sendMessage(text: prompt),

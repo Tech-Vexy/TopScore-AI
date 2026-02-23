@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:js_interop';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -44,7 +45,7 @@ class UpdateService {
 
       if (cleanLocal != cleanServer) {
         debugPrint('[UpdateService] Real update found. Reloading...');
-        _reloadApp();
+        await _reloadApp();
       } else {
         debugPrint(
           '[UpdateService] Versions match (ignoring trailing metadata).',
@@ -109,7 +110,29 @@ class UpdateService {
     return version.trim();
   }
 
-  void _reloadApp() {
+  Future<void> _reloadApp() async {
+    try {
+      // 1. Unregister Service Workers
+      final registrations =
+          (await web.window.navigator.serviceWorker.getRegistrations().toDart)
+              .toDart;
+      for (final reg in registrations) {
+        await reg.unregister().toDart;
+        debugPrint('[UpdateService] Unregistered service worker');
+      }
+
+      // 2. Clear Cache Storage
+      final cacheKeys = (await web.window.caches.keys().toDart).toDart;
+      for (final key in cacheKeys) {
+        final keyString = key.toDart;
+        await web.window.caches.delete(keyString).toDart;
+        debugPrint('[UpdateService] Deleted cache: $keyString');
+      }
+    } catch (e) {
+      debugPrint('[UpdateService] Cache clearing failed: $e');
+    }
+
+    // 3. Final Reload
     web.window.location.reload();
   }
 }

@@ -13,9 +13,6 @@ class UserModel {
   final bool isSubscribed;
   final DateTime? subscriptionExpiry;
   final String? preferredLanguage;
-  final String? linkCode;
-  final List<String>? parentIds;
-  final List<String>? childrenIds;
   final int xp;
   final int level;
   final List<String> badges;
@@ -40,9 +37,6 @@ class UserModel {
     this.isSubscribed = false,
     this.subscriptionExpiry,
     this.preferredLanguage,
-    this.linkCode,
-    this.parentIds,
-    this.childrenIds,
     this.xp = 0,
     this.level = 1,
     this.badges = const [],
@@ -82,9 +76,6 @@ class UserModel {
       'isSubscribed': isSubscribed,
       'subscriptionExpiry': subscriptionExpiry?.millisecondsSinceEpoch,
       'preferred_language': preferredLanguage,
-      'link_code': linkCode,
-      'parent_ids': parentIds,
-      'children_ids': childrenIds,
       'xp': xp,
       'level': level,
       'badges': badges,
@@ -130,13 +121,6 @@ class UserModel {
       isSubscribed: map['isSubscribed'] ?? false,
       subscriptionExpiry: getDateTime(map['subscriptionExpiry']),
       preferredLanguage: map['preferred_language'],
-      linkCode: map['link_code'],
-      parentIds: map['parent_ids'] != null
-          ? List<String>.from(map['parent_ids'])
-          : null,
-      childrenIds: map['children_ids'] != null
-          ? List<String>.from(map['children_ids'])
-          : null,
       xp: map['xp'] ?? 0,
       level: map['level'] ?? 1,
       badges: map['badges'] != null ? List<String>.from(map['badges']) : [],
@@ -170,9 +154,6 @@ class UserModel {
     bool? isSubscribed,
     DateTime? subscriptionExpiry,
     String? preferredLanguage,
-    String? linkCode,
-    List<String>? parentIds,
-    List<String>? childrenIds,
     int? xp,
     int? level,
     List<String>? badges,
@@ -197,9 +178,6 @@ class UserModel {
       isSubscribed: isSubscribed ?? this.isSubscribed,
       subscriptionExpiry: subscriptionExpiry ?? this.subscriptionExpiry,
       preferredLanguage: preferredLanguage ?? this.preferredLanguage,
-      linkCode: linkCode ?? this.linkCode,
-      parentIds: parentIds ?? this.parentIds,
-      childrenIds: childrenIds ?? this.childrenIds,
       xp: xp ?? this.xp,
       level: level ?? this.level,
       badges: badges ?? this.badges,

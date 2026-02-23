@@ -2,6 +2,7 @@
 import { useLocale } from '@/i18n';
 import type { TranslationKey } from '@/i18n';
 import AnimatedSection from './AnimatedSection';
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import styles from './Features.module.css';
 
 const featureMeta: { icon: string; bg: string; idx: number }[] = [
@@ -38,18 +39,22 @@ export default function Features() {
                         const tagsKey = `features.${f.idx}.tags` as TranslationKey;
                         return (
                             <AnimatedSection key={f.idx} animation="fadeUp" delay={`${i * 0.08}s`}>
-                                <div className={styles.card}>
+                                <Card className={styles.card}>
                                     <div className={styles.icon} style={{ background: f.bg }}>
                                         {f.icon}
                                     </div>
-                                    <h3>{t(titleKey)}</h3>
-                                    <p>{t(descKey)}</p>
+                                    <CardHeader className="p-0 space-y-2">
+                                        <h3 className="font-bold text-xl">{t(titleKey)}</h3>
+                                    </CardHeader>
+                                    <CardContent className="p-0 pt-2 pb-4">
+                                        <p className="text-muted-foreground">{t(descKey)}</p>
+                                    </CardContent>
                                     <div className={styles.tags}>
                                         {t(tagsKey).split(',').map((tag) => (
                                             <span className={styles.tag} key={tag}>{tag}</span>
                                         ))}
                                     </div>
-                                </div>
+                                </Card>
                             </AnimatedSection>
                         );
                     })}

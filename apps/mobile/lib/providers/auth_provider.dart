@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../services/offline_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -101,7 +102,6 @@ class AuthProvider with ChangeNotifier {
         role: '',
         grade: null,
         schoolName: '',
-        linkCode: _generateLinkCode(),
       );
       await _authService.updateUserProfile(user.uid, newUser.toMap());
       _userModel = newUser;
@@ -117,6 +117,10 @@ class AuthProvider with ChangeNotifier {
       if (user != null) {
         _requiresEmailVerification = false;
         await _ensureUserProfile(user);
+
+        // Mark onboarding complete on successful sign-in
+        await OfflineService().setStringList('onboarding_complete', ['true']);
+
         notifyListeners();
         return true;
       }
@@ -149,6 +153,10 @@ class AuthProvider with ChangeNotifier {
 
       _requiresEmailVerification = false;
       await _ensureUserProfile(refreshedUser);
+
+      // Mark onboarding complete on successful sign-in
+      await OfflineService().setStringList('onboarding_complete', ['true']);
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -173,6 +181,10 @@ class AuthProvider with ChangeNotifier {
 
         _requiresEmailVerification = false;
         await _ensureUserProfile(user);
+
+        // Mark onboarding complete on successful sign-up
+        await OfflineService().setStringList('onboarding_complete', ['true']);
+
         notifyListeners();
         return true;
       }
@@ -205,6 +217,10 @@ class AuthProvider with ChangeNotifier {
     }
     _requiresEmailVerification = false;
     await _ensureUserProfile(refreshedUser);
+
+    // Mark onboarding complete
+    await OfflineService().setStringList('onboarding_complete', ['true']);
+
     notifyListeners();
     return true;
   }
@@ -378,6 +394,10 @@ class AuthProvider with ChangeNotifier {
       }
       _requiresEmailVerification = false;
       await _ensureUserProfile(user);
+
+      // Mark onboarding complete
+      await OfflineService().setStringList('onboarding_complete', ['true']);
+
       notifyListeners();
     }
   }
@@ -385,10 +405,5 @@ class AuthProvider with ChangeNotifier {
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
-  }
-
-  String _generateLinkCode() {
-    // Generate a 6-char code (simple timestamp-based for now)
-    return DateTime.now().millisecondsSinceEpoch.toString().substring(7);
   }
 }

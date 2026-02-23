@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import { useLocale } from '@/i18n';
 import AnimatedSection from './AnimatedSection';
+import { Button } from "@/components/ui/button";
 import styles from './CtaBanner.module.css';
 
 export default function CtaBanner() {
@@ -32,14 +33,20 @@ export default function CtaBanner() {
                         {t('cta.sub')}
                     </p>
                 </AnimatedSection>
+
+
                 <AnimatedSection animation="fadeUp" delay="0.3s">
                     <div className={styles.buttons}>
-                        <a href="https://app.topscoreapp.ai" className={styles.storeBtn} aria-label={playBadgeAlt}>
-                            <Image src={playBadgeSrc} alt={playBadgeAlt} width={200} height={59} className={styles.badge} />
-                        </a>
-                        <a href="https://app.topscoreapp.ai" className={styles.storeBtn} aria-label="Download on the App Store">
-                            <Image src="/app-store-badge.svg" alt="Download on the App Store" width={200} height={59} className={styles.badge} />
-                        </a>
+                        <Button asChild variant="outline" className={styles.storeBtn} aria-label={playBadgeAlt}>
+                            <a href="https://app.topscoreapp.ai">
+                                <Image src={playBadgeSrc} alt={playBadgeAlt} width={200} height={59} className={styles.badge} />
+                            </a>
+                        </Button>
+                        <Button asChild variant="outline" className={styles.storeBtn} aria-label="Download on the App Store">
+                            <a href="https://app.topscoreapp.ai">
+                                <Image src="/app-store-badge.svg" alt="Download on the App Store" width={200} height={59} className={styles.badge} />
+                            </a>
+                        </Button>
                     </div>
                 </AnimatedSection>
             </div>

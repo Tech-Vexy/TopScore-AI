@@ -9,7 +9,8 @@ export default function robots(): MetadataRoute.Robots {
                 disallow: ['/api/', '/_next/'],
             },
         ],
-        sitemap: 'https://topscore-ai.com/sitemap.xml',
-        host: 'https://topscore-ai.com',
+        sitemap: 'https://topscoreapp.ai/sitemap.xml',
+        host: 'https://topscoreapp.ai',
+
     };
 }

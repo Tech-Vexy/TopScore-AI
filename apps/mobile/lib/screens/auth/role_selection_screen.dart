@@ -466,12 +466,15 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 // Parental consent required for minors under Kenya DPA 2019 Section 33
                 if (_isMinor) ...[
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 24),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.orange.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.3)),
+                        color: Colors.orange.withValues(alpha: 0.4),
+                        width: 1.5,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,30 +482,32 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         Row(
                           children: [
                             const Icon(Icons.shield_outlined,
-                                color: Colors.orange, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Parental/Guardian Consent Required",
-                              style: GoogleFonts.nunito(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.orange.shade800,
+                                color: Colors.orange, size: 24),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                "Parental/Guardian Consent Required",
+                                style: GoogleFonts.nunito(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: Colors.orange.shade800,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Text(
                           "Under the Kenya Data Protection Act 2019, students under 18 require parental or guardian consent to use this app. "
                           "By checking below, you confirm that a parent/guardian has reviewed and agreed to the Privacy Policy and Terms of Use.",
                           style: GoogleFonts.nunito(
-                            fontSize: 12,
+                            fontSize: 13,
                             height: 1.5,
                             color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.7),
+                                .withValues(alpha: 0.8),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         CheckboxListTile(
                           value: _parentalConsentGiven,
                           onChanged: (val) => setState(
@@ -510,18 +515,21 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                           controlAffinity: ListTileControlAffinity.leading,
                           contentPadding: EdgeInsets.zero,
                           dense: true,
-                          title: Text(
-                            "My parent/guardian has given consent",
-                            style: GoogleFonts.nunito(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                          title: Padding(
+                            padding: const EdgeInsets.only(left: 4.0),
+                            child: Text(
+                              "My parent/guardian has given consent",
+                              style: GoogleFonts.nunito(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                 ],
               ],
 

@@ -2,6 +2,7 @@
 import { useLocale } from '@/i18n';
 import type { TranslationKey } from '@/i18n';
 import AnimatedSection from './AnimatedSection';
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import styles from './Roles.module.css';
 
 const roleMeta: { emoji: string; idx: number }[] = [
@@ -33,16 +34,20 @@ export default function Roles() {
                         const perksKey = `roles.${r.idx}.perks` as TranslationKey;
                         return (
                             <AnimatedSection key={r.idx} animation="fadeUp" delay={`${i * 0.12}s`}>
-                                <div className={styles.card}>
+                                <Card className={styles.card}>
                                     <div className={styles.emoji}>{r.emoji}</div>
-                                    <h3>{t(titleKey)}</h3>
-                                    <p>{t(descKey)}</p>
-                                    <ul className={styles.perks}>
-                                        {t(perksKey).split(',').map((p) => (
-                                            <li className={styles.perk} key={p}>{p}</li>
-                                        ))}
-                                    </ul>
-                                </div>
+                                    <CardHeader className="p-0 space-y-2">
+                                        <h3 className="font-bold text-xl">{t(titleKey)}</h3>
+                                    </CardHeader>
+                                    <CardContent className="p-0 pt-2">
+                                        <p className="text-muted-foreground mb-4">{t(descKey)}</p>
+                                        <ul className={styles.perks}>
+                                            {t(perksKey).split(',').map((p) => (
+                                                <li className={styles.perk} key={p}>{p}</li>
+                                            ))}
+                                        </ul>
+                                    </CardContent>
+                                </Card>
                             </AnimatedSection>
                         );
                     })}

@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/resource_model.dart';
 
 class OfflineService {
@@ -15,6 +16,7 @@ class OfflineService {
   late Box _resourceBox;
   late Box _settingsBox;
   late Box _progressBox;
+  late SharedPreferences _prefs;
 
   bool _isInitialized = false;
 
@@ -24,12 +26,21 @@ class OfflineService {
     if (_isInitialized) return;
 
     try {
-      await Hive.initFlutter();
-      _resourceBox = await Hive.openBox(_resourceBoxName);
-      _settingsBox = await Hive.openBox(_settingsBoxName);
-      _progressBox = await Hive.openBox(_progressBoxName);
+      // 1. Initialize SharedPreferences (Works on ALL platforms, including Web)
+      _prefs = await SharedPreferences.getInstance();
+      debugPrint("✅ SharedPreferences Initialized");
+
+      // 2. Initialize Hive (Only on non-web to avoid hangs/issues)
+      if (!kIsWeb) {
+        await Hive.initFlutter();
+        _resourceBox = await Hive.openBox(_resourceBoxName);
+        _settingsBox = await Hive.openBox(_settingsBoxName);
+        _progressBox = await Hive.openBox(_progressBoxName);
+        debugPrint("✅ Hive Storage Initialized");
+      }
+
       _isInitialized = true;
-      debugPrint("✅ OfflineService Initialized");
+      debugPrint("✅ OfflineService Fully Initialized");
     } catch (e) {
       debugPrint("❌ Error initializing OfflineService: $e");
     }
@@ -44,6 +55,7 @@ class OfflineService {
     String path,
     List<ResourceModel> resources,
   ) async {
+    if (kIsWeb) return; // Skip Hive caching on web
     try {
       final List<Map<String, dynamic>> serialized =
           resources.map((r) => r.toMap()).toList();
@@ -55,7 +67,7 @@ class OfflineService {
 
   /// Retrieve cached resources. Returns empty list on error or empty cache.
   List<ResourceModel> getCachedResources(String path) {
-    if (!_isInitialized) return [];
+    if (!_isInitialized || kIsWeb) return [];
     try {
       final data = _resourceBox.get(path);
 
@@ -74,6 +86,7 @@ class OfflineService {
 
   /// Cache a single individual resource (e.g., for Recently Opened)
   Future<void> cacheSingleResource(ResourceModel resource) async {
+    if (kIsWeb) return;
     try {
       await _resourceBox.put('resource_${resource.id}', resource.toMap());
     } catch (e) {
@@ -83,6 +96,7 @@ class OfflineService {
 
   /// Retrieve a single resource
   ResourceModel? getCachedResource(String id) {
+    if (kIsWeb) return null;
     try {
       final data = _resourceBox.get('resource_$id');
       if (data != null && data is Map) {
@@ -97,6 +111,7 @@ class OfflineService {
 
   /// Clear all cached resources (useful for Pull-to-Refresh or Logout)
   Future<void> clearAllResources() async {
+    if (kIsWeb) return;
     await _resourceBox.clear();
   }
 
@@ -106,24 +121,30 @@ class OfflineService {
 
   Future<void> saveLiteMode(bool isEnabled) async {
     if (!_isInitialized) return;
-    await _settingsBox.put('lite_mode', isEnabled);
+    if (kIsWeb) {
+      await _prefs.setBool('lite_mode', isEnabled);
+    } else {
+      await _settingsBox.put('lite_mode', isEnabled);
+    }
   }
 
   bool getLiteMode() {
     if (!_isInitialized) return false;
+    if (kIsWeb) {
+      return _prefs.getBool('lite_mode') ?? false;
+    }
     return _settingsBox.get('lite_mode', defaultValue: false);
   }
 
   /// Generic String List Getter (SharedPreferences style)
+  /// Uses SharedPreferences as the primary storage for better cross-platform reliability.
   List<String> getStringList(String key) {
     if (!_isInitialized) {
-      return []; // Return empty list if not initialized (e.g., on web)
+      return [];
     }
     try {
-      final data = _settingsBox.get(key);
-      if (data != null && data is List) {
-        return data.cast<String>().toList();
-      }
+      // Prefer SharedPreferences for simple flag lists (onboarding, etc.)
+      return _prefs.getStringList(key) ?? [];
     } catch (e) {
       debugPrint("❌ Error getting string list for $key: $e");
     }
@@ -132,13 +153,17 @@ class OfflineService {
 
   /// Generic String List Setter
   Future<void> setStringList(String key, List<String> value) async {
-    if (!_isInitialized) return; // Skip if not initialized (e.g., on web)
-    await _settingsBox.put(key, value);
+    if (!_isInitialized) return;
+    await _prefs.setStringList(key, value);
   }
 
   /// Clear all settings
   Future<void> clearSettings() async {
-    await _settingsBox.clear();
+    if (!_isInitialized) return;
+    await _prefs.clear();
+    if (!kIsWeb) {
+      await _settingsBox.clear();
+    }
   }
 
   // ==========================================
@@ -147,7 +172,7 @@ class OfflineService {
 
   /// Cache user progress data (streak, topics covered, etc.)
   Future<void> cacheUserProgress(String uid, Map<String, dynamic> data) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || kIsWeb) return;
     try {
       await _progressBox.put('progress_$uid', data);
     } catch (e) {
@@ -157,7 +182,7 @@ class OfflineService {
 
   /// Retrieve cached user progress
   Map<String, dynamic>? getCachedUserProgress(String uid) {
-    if (!_isInitialized) return null;
+    if (!_isInitialized || kIsWeb) return null;
     try {
       final data = _progressBox.get('progress_$uid');
       if (data != null && data is Map) {
@@ -172,7 +197,7 @@ class OfflineService {
   /// Cache recent activity summary (for offline display)
   Future<void> cacheActivitySummary(
       String uid, Map<String, dynamic> summary) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || kIsWeb) return;
     try {
       await _progressBox.put('activity_$uid', summary);
     } catch (e) {
@@ -182,7 +207,7 @@ class OfflineService {
 
   /// Retrieve cached activity summary
   Map<String, dynamic>? getCachedActivitySummary(String uid) {
-    if (!_isInitialized) return null;
+    if (!_isInitialized || kIsWeb) return null;
     try {
       final data = _progressBox.get('activity_$uid');
       if (data != null && data is Map) {
@@ -196,12 +221,12 @@ class OfflineService {
 
   /// Cache current streak count for offline display.
   Future<void> cacheStreak(String uid, int streak) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || kIsWeb) return;
     await _progressBox.put('streak_$uid', streak);
   }
 
   int getCachedStreak(String uid) {
-    if (!_isInitialized) return 0;
+    if (!_isInitialized || kIsWeb) return 0;
     return _progressBox.get('streak_$uid', defaultValue: 0) as int;
   }
 }

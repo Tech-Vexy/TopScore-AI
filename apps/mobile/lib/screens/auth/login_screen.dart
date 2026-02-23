@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../providers/auth_provider.dart';
 import '../../constants/colors.dart';
@@ -200,10 +201,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     context,
                     listen: false,
                   ).signInWithGoogle();
-                  if (mounted) {
-                    Navigator.of(
-                      this.context,
-                    ).popUntil((route) => route.isFirst);
+                  if (context.mounted) {
+                    context.go('/home');
                   }
                 } catch (e) {
                   if (mounted) {
@@ -371,9 +370,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           );
                         } else {
-                          Navigator.of(
-                            this.context,
-                          ).popUntil((route) => route.isFirst);
+                          if (context.mounted) context.go('/home');
                         }
                       } catch (e) {
                         if (mounted) {

@@ -9,15 +9,15 @@ import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 
 export const metadata: Metadata = {
-  alternates: { canonical: 'https://topscore-ai.com' },
+  alternates: { canonical: 'https://topscoreapp.ai' },
 };
 
 const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'TopScore AI',
-  url: 'https://topscore-ai.com',
-  logo: 'https://topscore-ai.com/logo.png',
+  url: 'https://topscoreapp.ai',
+  logo: 'https://topscoreapp.ai/logo.png',
   sameAs: [],
   description:
     'AI-powered tutoring and study resources for Kenyan students — CBC, IGCSE & KCSE.',
@@ -25,14 +25,19 @@ const organizationSchema = {
 
 const softwareSchema = {
   '@context': 'https://schema.org',
-  '@type': 'MobileApplication',
+  '@type': 'SoftwareApplication',
   name: 'TopScore AI',
-  operatingSystem: 'Android, iOS',
-  applicationCategory: 'EducationApplication',
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'KES' },
-  description:
-    'AI tutor, study resources, parental controls, offline mode, and smart study tools for Kenyan students.',
-  screenshot: 'https://topscore-ai.com/og-image.png',
+  url: 'https://topscoreapp.ai',
+  logo: 'https://topscoreapp.ai/logo.png',
+  description: 'AI-powered tutoring, study resources, and smart study tools for Kenyan students.',
+  applicationCategory: 'EducationalApplication',
+  operatingSystem: 'iOS, Android, Web',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'KES',
+  },
+  screenshot: 'https://topscoreapp.ai/og-image.png',
 };
 
 export default function Home() {

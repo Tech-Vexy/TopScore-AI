@@ -122,15 +122,7 @@ class ChatMessageBubble extends StatelessWidget {
                       if (message.imageUrl != null) _buildImage(context),
                       if (!(message.audioUrl != null &&
                           message.text == '🎤 Audio Message'))
-                        SelectableText(
-                          message.text,
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            color: theme.colorScheme.onSurface,
-                            fontWeight: FontWeight.w400,
-                            height: 1.5,
-                          ),
-                        ),
+                        _buildMarkdown(context, theme, isDark),
                     ],
                   ),
                 ),
@@ -351,32 +343,33 @@ class ChatMessageBubble extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(right: 16, top: 0),
       child: isStreaming
-          ? Stack(
-              alignment: Alignment.center,
-              children: [
-                const SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.accentTeal,
+          ? TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(seconds: 2),
+              builder: (context, value, child) {
+                return Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: SweepGradient(
+                      transform: GradientRotation(value * 2 * 3.14159),
+                      colors: const [
+                        Color(0xFF4285F4),
+                        Color(0xFFEA4335),
+                        Color(0xFFFBBC05),
+                        Color(0xFF34A853),
+                        Color(0xFF4285F4),
+                      ],
                     ),
                   ),
-                ),
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Colors.white,
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 36,
-                      height: 36,
-                      fit: BoxFit.cover,
-                    ),
+                  child: const CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.auto_awesome,
+                        size: 20, color: Color(0xFF4285F4)),
                   ),
-                ),
-              ],
+                );
+              },
             )
           : CircleAvatar(
               radius: 18,
@@ -429,6 +422,28 @@ class ChatMessageBubble extends StatelessWidget {
       data: _cleanContent(message.text),
       selectable: true,
       softLineBreak: true,
+      sizedImageBuilder: (config) {
+        if (config.uri.scheme == 'http' || config.uri.scheme == 'https') {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: NetworkAwareImage(
+              imageUrl: config.uri.toString(),
+              fit: BoxFit.contain,
+              width: config.width,
+              height: config.height,
+            ),
+          );
+        }
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            config.uri.toString(),
+            fit: BoxFit.contain,
+            width: config.width,
+            height: config.height,
+          ),
+        );
+      },
       builders: {
         'latex': LatexElementBuilder(),
         'mermaid': MermaidElementBuilder(),

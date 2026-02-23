@@ -32,162 +32,170 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          // Banner for Parent View Mode
-          if (widget.viewAsUser != null)
-            SliverToBoxAdapter(
-              child: Container(
-                color: Colors.amber,
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.visibility, size: 16, color: Colors.black),
-                    const SizedBox(width: 8),
-                    Text(
-                      "Viewing as ${widget.viewAsUser!.displayName}",
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.black),
-                    ),
-                  ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await Provider.of<AuthProvider>(context, listen: false).reloadUser();
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // Banner for Parent View Mode
+            if (widget.viewAsUser != null)
+              SliverToBoxAdapter(
+                child: Container(
+                  color: Colors.amber,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.visibility,
+                          size: 16, color: Colors.black),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Viewing as ${widget.viewAsUser!.displayName}",
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.black),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+
+            // --- 1. APP BAR WITH PROFILE CONTROL ---
+            SliverAppBar(
+              expandedHeight: 120.0,
+              floating: false,
+              pinned: true,
+              backgroundColor: theme.scaffoldBackgroundColor,
+              elevation: 0,
+              flexibleSpace: FlexibleSpaceBar(
+                titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+                title: Text(
+                  "Hello, $displayName 👋",
+                  style: GoogleFonts.nunito(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+              actions: [
+                // --- PROFILE AVATAR BUTTON ---
+                Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const profile_page.ProfileScreen(),
+                        ),
+                      );
+                    },
+                    child: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: theme.colorScheme.primary.withValues(
+                        alpha: 0.1,
+                      ),
+                      backgroundImage: user?.photoURL != null
+                          ? CachedNetworkImageProvider(
+                              user!.photoURL!,
+                              cacheManager: ProfileImageCacheManager(),
+                            )
+                          : null,
+                      child: user?.photoURL == null
+                          ? Text(
+                              displayName.isNotEmpty
+                                  ? displayName[0].toUpperCase()
+                                  : "U",
+                              style: GoogleFonts.nunito(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
             ),
 
-          // --- 1. APP BAR WITH PROFILE CONTROL ---
-          SliverAppBar(
-            expandedHeight: 120.0,
-            floating: false,
-            pinned: true,
-            backgroundColor: theme.scaffoldBackgroundColor,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
-              title: Text(
-                "Hello, $displayName 👋",
-                style: GoogleFonts.nunito(
-                  color: theme.colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
+            // --- 2. MAIN CONTENT GRID ---
+            SliverPadding(
+              padding: const EdgeInsets.all(16.0),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: screenWidth > 600 ? 3 : 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.1,
                 ),
-              ),
-            ),
-            actions: [
-              // --- PROFILE AVATAR BUTTON ---
-              Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
+                delegate: SliverChildListDelegate([
+                  _buildFeatureCard(
+                    context,
+                    title: "AI Tutor",
+                    icon: FontAwesomeIcons.robot,
+                    color: const Color(0xFF6C63FF),
+                    onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            const profile_page.ProfileScreen(),
+                          builder: (context) => const ChatScreen()),
+                    ),
+                  ),
+                  _buildFeatureCard(
+                    context,
+                    title: "Resources",
+                    icon: FontAwesomeIcons.bookOpen,
+                    color: const Color(0xFFFF6B6B),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ResourcesScreen(),
                       ),
-                    );
-                  },
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: theme.colorScheme.primary.withValues(
-                      alpha: 0.1,
                     ),
-                    backgroundImage: user?.photoURL != null
-                        ? CachedNetworkImageProvider(
-                            user!.photoURL!,
-                            cacheManager: ProfileImageCacheManager(),
-                          )
-                        : null,
-                    child: user?.photoURL == null
-                        ? Text(
-                            displayName.isNotEmpty
-                                ? displayName[0].toUpperCase()
-                                : "U",
-                            style: GoogleFonts.nunito(
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.primary,
-                            ),
-                          )
-                        : null,
                   ),
-                ),
+                  _buildFeatureCard(
+                    context,
+                    title: "Smart Tools",
+                    icon: FontAwesomeIcons.toolbox,
+                    color: const Color(0xFF4ECDC4),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ToolsScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildFeatureCard(
+                    context,
+                    title: "Support",
+                    icon: FontAwesomeIcons.headset,
+                    color: const Color(0xFFFFA502),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SupportScreen(),
+                      ),
+                    ),
+                  ),
+                ]),
               ),
-            ],
-          ),
+            ),
 
-          // --- 2. MAIN CONTENT GRID ---
-          SliverPadding(
-            padding: const EdgeInsets.all(16.0),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: screenWidth > 600 ? 3 : 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.1,
+            // --- 3. PROMO / BANNER SECTION ---
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: _buildPremiumBanner(context),
               ),
-              delegate: SliverChildListDelegate([
-                _buildFeatureCard(
-                  context,
-                  title: "AI Tutor",
-                  icon: FontAwesomeIcons.robot,
-                  color: const Color(0xFF6C63FF),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ChatScreen()),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context,
-                  title: "Resources",
-                  icon: FontAwesomeIcons.bookOpen,
-                  color: const Color(0xFFFF6B6B),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ResourcesScreen(),
-                    ),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context,
-                  title: "Smart Tools",
-                  icon: FontAwesomeIcons.toolbox,
-                  color: const Color(0xFF4ECDC4),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ToolsScreen(),
-                    ),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context,
-                  title: "Support",
-                  icon: FontAwesomeIcons.headset,
-                  color: const Color(0xFFFFA502),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SupportScreen(),
-                    ),
-                  ),
-                ),
-              ]),
             ),
-          ),
 
-          // --- 3. PROMO / BANNER SECTION ---
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: _buildPremiumBanner(context),
-            ),
-          ),
-
-          // Add bottom padding for scrolling
-          const SliverToBoxAdapter(child: SizedBox(height: 80)),
-        ],
+            // Add bottom padding for scrolling
+            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          ],
+        ),
       ),
     );
   }
@@ -256,12 +264,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           gradient: LinearGradient(
             colors: [
               theme.colorScheme.primary,
-              theme.colorScheme.secondary.withValues(alpha: 0.8),
+              theme.colorScheme.primary.withRed(100), // Slightly warmer purple
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.1),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
               color: theme.colorScheme.primary.withValues(alpha: 0.3),

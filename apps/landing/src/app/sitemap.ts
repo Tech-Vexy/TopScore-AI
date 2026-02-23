@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 
-const siteUrl = 'https://topscore-ai.com';
+const siteUrl = 'https://topscoreapp.ai';
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const now = new Date();

@@ -114,115 +114,124 @@ class _CareerCompassScreenState extends State<CareerCompassScreen> {
           gradient: AppColors.heroGradient,
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // --- 1. THE RADAR CHART (COMPASS) ---
-                AppTheme.buildGlassContainer(
-                  context,
-                  borderRadius: 24,
-                  padding: const EdgeInsets.all(20),
-                  opacity: 0.1,
-                  child: Column(
-                    children: [
-                      Text(
-                        "Your Interest Map",
-                        style: GoogleFonts.nunito(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 240,
-                        child: CustomPaint(
-                          painter: RadarChartPainter(
-                            interests: interests,
-                            allDomains: _domainMapping,
-                            primaryColor: Colors.white,
+          child: RefreshIndicator(
+            onRefresh: () async {
+              await Provider.of<AuthProvider>(context, listen: false)
+                  .reloadUser();
+            },
+            color: Colors.white,
+            backgroundColor: AppColors.primaryPurple,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // --- 1. THE RADAR CHART (COMPASS) ---
+                  AppTheme.buildGlassContainer(
+                    context,
+                    borderRadius: 24,
+                    padding: const EdgeInsets.all(20),
+                    opacity: 0.1,
+                    child: Column(
+                      children: [
+                        Text(
+                          "Your Interest Map",
+                          style: GoogleFonts.nunito(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
                           ),
-                          child: Container(),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          height: 240,
+                          child: CustomPaint(
+                            painter: RadarChartPainter(
+                              interests: interests,
+                              allDomains: _domainMapping,
+                              primaryColor: Colors.white,
+                            ),
+                            child: Container(),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                Center(
-                  child: BounceWrapper(
-                    onTap: () {
-                      final gradeInfo = user?.grade != null
-                          ? "Grade ${user?.grade}"
-                          : "my grade";
-                      final curriculumInfo = user?.curriculum != null
-                          ? "the ${user?.curriculum} curriculum"
-                          : "my curriculum";
-                      final prompt =
-                          "I'm a student in $gradeInfo following $curriculumInfo. My interests are ${interests.join(', ')}. Based on my learning context, what career advice and study paths do you have for me?";
+                  Center(
+                    child: BounceWrapper(
+                      onTap: () {
+                        final gradeInfo = user?.grade != null
+                            ? "Grade ${user?.grade}"
+                            : "my grade";
+                        final curriculumInfo = user?.curriculum != null
+                            ? "the ${user?.curriculum} curriculum"
+                            : "my curriculum";
+                        final prompt =
+                            "I'm a student in $gradeInfo following $curriculumInfo. My interests are ${interests.join(', ')}. Based on my learning context, what career advice and study paths do you have for me?";
 
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatScreen(
-                            initialMessage: prompt,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const FaIcon(FontAwesomeIcons.robot,
-                              size: 18, color: AppColors.primaryPurple),
-                          const SizedBox(width: 10),
-                          Text(
-                            "Get AI Advice",
-                            style: GoogleFonts.nunito(
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.primaryPurple,
-                              fontSize: 16,
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatScreen(
+                              initialMessage: prompt,
                             ),
                           ),
-                        ],
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const FaIcon(FontAwesomeIcons.robot,
+                                size: 18, color: AppColors.primaryPurple),
+                            const SizedBox(width: 10),
+                            Text(
+                              "Get AI Advice",
+                              style: GoogleFonts.nunito(
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.primaryPurple,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 32),
+                  const SizedBox(height: 32),
 
-                // --- 2. AI CAREER SUGGESTIONS ---
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "Suggested Paths",
-                    style: GoogleFonts.nunito(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                  // --- 2. AI CAREER SUGGESTIONS ---
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Suggested Paths",
+                      style: GoogleFonts.nunito(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                _buildCareerSuggestions(interests),
-              ],
+                  const SizedBox(height: 16),
+                  _buildCareerSuggestions(interests),
+                ],
+              ),
             ),
           ),
         ),

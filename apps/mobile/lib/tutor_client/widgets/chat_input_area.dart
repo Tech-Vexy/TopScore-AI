@@ -59,7 +59,6 @@ class ChatInputArea extends StatefulWidget {
 class _ChatInputAreaState extends State<ChatInputArea> {
   late Timer _placeholderTimer;
   int _currentPlaceholderIndex = 0;
-  int _currentSuggestionIndex = 0;
 
   @override
   void initState() {
@@ -81,14 +80,6 @@ class _ChatInputAreaState extends State<ChatInputArea> {
           if (widget.textController.text.isEmpty) {
             _currentPlaceholderIndex = (_currentPlaceholderIndex + 1) %
                 widget.placeholderMessages.length;
-          }
-
-          // Rotate suggestions
-          if (widget.suggestions.isNotEmpty &&
-              !widget.isTyping &&
-              widget.textController.text.isEmpty) {
-            _currentSuggestionIndex =
-                (_currentSuggestionIndex + 1) % widget.suggestions.length;
           }
         });
       }
@@ -121,98 +112,22 @@ class _ChatInputAreaState extends State<ChatInputArea> {
               children: [
                 if (widget.pendingFileName != null)
                   _buildAttachmentPreview(theme, isDark),
-                if (widget.suggestions.isNotEmpty &&
-                    widget.textController.text.isEmpty &&
-                    !widget.isTyping)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            transitionBuilder: (
-                              Widget child,
-                              Animation<double> animation,
-                            ) {
-                              return FadeTransition(
-                                opacity: animation,
-                                child: SlideTransition(
-                                  position: Tween<Offset>(
-                                    begin: const Offset(0.0, 0.2),
-                                    end: Offset.zero,
-                                  ).animate(animation),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: Center(
-                              key: ValueKey<int>(_currentSuggestionIndex),
-                              child: _buildChip(
-                                widget.suggestions[_currentSuggestionIndex %
-                                    widget.suggestions.length],
-                                theme,
-                                isDark,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.05)
-                                : Colors.black.withValues(alpha: 0.05),
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.refresh_rounded,
-                              size: 16,
-                              color: theme.colorScheme.onSurface.withValues(
-                                alpha: 0.6,
-                              ),
-                            ),
-                            onPressed: () {
-                              widget.onShuffleQuestions();
-                              // Reset index when shuffling to start fresh
-                              setState(() {
-                                _currentSuggestionIndex = 0;
-                              });
-                            },
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(),
-                            tooltip: 'Shuffle suggestions',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 AnimatedBuilder(
                   animation: widget.messageFocusNode,
                   builder: (context, child) {
                     return Container(
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black
-                                .withValues(alpha: isDark ? 0.4 : 0.08),
-                            blurRadius: 15,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.1)
-                              : Colors.black.withValues(alpha: 0.05),
-                          width: 1.5,
-                        ),
+                        // 1. Gemini's signature flat background colors
+                        color: isDark
+                            ? const Color(0xFF1E1F22) // Deep grey for dark mode
+                            : const Color(
+                                0xFFF0F4F9), // Soft grey/blue for light mode
+                        borderRadius:
+                            BorderRadius.circular(28), // Perfect pill shape
+                        // Notice: boxShadow and border are completely removed!
                       ),
-                      padding: const EdgeInsets.fromLTRB(
-                          12, 10, 12, 10), // Increased internal padding
+                      // 2. Slightly tighter padding to hug the input pill
+                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                       child: child,
                     );
                   },
@@ -220,11 +135,12 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       IconButton(
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.add_rounded,
-                          color: theme.primaryColor,
                           size: 26,
                         ),
+                        // 3. Fixed: Use subtle grey instead of hardcoded white
+                        color: isDark ? Colors.white70 : Colors.black54,
                         onPressed: widget.onShowAttachmentMenu,
                         tooltip: 'Add attachment',
                         padding: const EdgeInsets.all(10),
@@ -233,7 +149,7 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
+                            horizontal: 4, // Reduced horizontal padding
                             vertical: 2,
                           ),
                           child: TextField(
@@ -258,7 +174,8 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                               );
                             },
                             style: GoogleFonts.outfit(
-                              color: theme.colorScheme.onSurface,
+                              // 4. Fixed: Text was hardcoded to white! Changed to adapt to theme
+                              color: isDark ? Colors.white : Colors.black87,
                               fontSize: 16,
                               height: 1.45,
                             ),
@@ -290,10 +207,10 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                                     })(),
                               border: InputBorder.none,
                               hintStyle: TextStyle(
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.4,
-                                ),
-                                fontWeight: FontWeight.w300,
+                                // 5. Fixed: Original logic had inverted colors (black in dark mode, white in light mode)
+                                color: (isDark ? Colors.white : Colors.black)
+                                    .withValues(alpha: 0.5),
+                                fontWeight: FontWeight.w400,
                               ),
                               contentPadding: const EdgeInsets.symmetric(
                                 vertical: 12,
@@ -320,9 +237,9 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                               IconButton(
                                 onPressed: widget.onStartLiveVoiceMode,
                                 icon: const Icon(Icons.graphic_eq_rounded),
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.6,
-                                ),
+                                // 6. Fixed: Inverted logic here too
+                                color: (isDark ? Colors.white : Colors.black)
+                                    .withValues(alpha: 0.6),
                                 tooltip: 'Live Voice Mode',
                                 visualDensity: VisualDensity.compact,
                               ),
@@ -336,59 +253,6 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChip(
-    Map<String, String> suggestion,
-    ThemeData theme,
-    bool isDark,
-  ) {
-    final emoji = suggestion['emoji'] ?? '✨';
-    final text = suggestion['title'] ?? '';
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          widget.onSendMessageWithText(text: text);
-        },
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : Colors.grey.withValues(alpha: 0.2),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 14)),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  text,
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.9)
-                        : Colors.black87,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -518,11 +382,11 @@ class _ChatInputAreaState extends State<ChatInputArea> {
 
     if (widget.isTyping) {
       return _buildCircleButton(
-        icon: Icons.stop_rounded,
-        color: isDark ? Colors.white : Colors.black,
-        iconColor: isDark ? Colors.black : Colors.white,
+        icon: Icons.square_rounded,
+        color: isDark ? const Color(0xFF2D2F31) : const Color(0xFFE3E3E3),
+        iconColor: isDark ? Colors.white : Colors.black87,
         onPressed: widget.onStopGeneration,
-        tooltip: 'Stop',
+        tooltip: 'Stop generating',
       );
     }
 
@@ -549,9 +413,9 @@ class _ChatInputAreaState extends State<ChatInputArea> {
     return _buildCircleButton(
       icon: Icons.mic_none_rounded,
       color: isDark
-          ? Colors.white.withValues(alpha: 0.1)
-          : Colors.black.withValues(alpha: 0.05),
-      iconColor: theme.colorScheme.onSurface,
+          ? Colors.black.withValues(alpha: 0.05)
+          : Colors.white.withValues(alpha: 0.1),
+      iconColor: isDark ? Colors.black87 : Colors.white,
       onPressed: widget.onDictation,
       tooltip: 'Dictate',
     );

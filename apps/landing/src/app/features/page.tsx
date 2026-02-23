@@ -14,16 +14,20 @@ export const metadata: Metadata = {
         url: 'https://topscore-ai.com/features',
         images: [{ url: '/og-image.png', width: 1200, height: 630 }],
     },
-    alternates: { canonical: 'https://topscore-ai.com/features' },
+    alternates: { canonical: 'https://topscoreapp.ai/features' },
 };
 
 const schema = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: 'TopScore AI Features',
-    url: 'https://topscore-ai.com/features',
+    name: 'Features | TopScore AI',
+    url: 'https://topscoreapp.ai/features',
     description: metadata.description,
-    isPartOf: { '@type': 'WebSite', name: 'TopScore AI', url: 'https://topscore-ai.com' },
+    alternates: { canonical: 'https://topscoreapp.ai/features' },
+    openGraph: {
+        url: 'https://topscoreapp.ai/features',
+    },
+    isPartOf: { '@type': 'WebSite', name: 'TopScore AI', url: 'https://topscoreapp.ai' },
 };
 
 export default function FeaturesPage() {

@@ -136,6 +136,8 @@ const sw: Record<TranslationKey, string> = {
     'footer.copy': '© {year} TopScore AI. Haki zote zimehifadhiwa.',
     'footer.privacy': 'Sera ya Faragha',
     'footer.terms': 'Masharti ya Huduma',
+    'footer.sitemap': 'Ramani ya Tovuti',
+    'footer.launchApp': 'Fungua Programu ya Mtandao',
 
     // ── Nav (new) ──
     'nav.pricing': 'Bei',

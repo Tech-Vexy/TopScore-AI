@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '@/i18n';
 import type { TranslationKey } from '@/i18n';
 import AnimatedSection from './AnimatedSection';
+import { Button } from '@/components/ui/button';
 import styles from './Hero.module.css';
 
 const stats: { end: number; suffix: string; key: TranslationKey }[] = [
@@ -68,12 +69,16 @@ export default function Hero() {
 
                 <AnimatedSection animation="fadeUp" delay="0.3s">
                     <div className={styles.actions}>
-                        <a href="https://app.topscoreapp.ai" className={styles.btnPrimary}>
-                            {t('hero.cta')}
-                        </a>
-                        <a href="/features" className={styles.btnSecondary}>
-                            {t('hero.explore')}
-                        </a>
+                        <Button asChild size="lg" className={styles.btnPrimary}>
+                            <a href="https://app.topscoreapp.ai">
+                                {t('hero.cta')}
+                            </a>
+                        </Button>
+                        <Button asChild variant="outline" size="lg" className={styles.btnSecondary}>
+                            <a href="/features">
+                                {t('hero.explore')}
+                            </a>
+                        </Button>
                     </div>
                 </AnimatedSection>
 

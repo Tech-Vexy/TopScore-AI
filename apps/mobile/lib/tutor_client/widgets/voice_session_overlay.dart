@@ -85,10 +85,10 @@ class _VoiceSessionOverlayState extends State<VoiceSessionOverlay>
                           builder: (context, child) {
                             final scale =
                                 widget.isRecording || widget.isAiSpeaking
-                                ? 1.0 +
-                                      (_pulseController.value * 0.2) +
-                                      (normalizedAmplitude * 0.3)
-                                : 1.0;
+                                    ? 1.0 +
+                                        (_pulseController.value * 0.1) +
+                                        (normalizedAmplitude * 0.4)
+                                    : 1.0;
                             return Transform.scale(
                               scale: scale,
                               child: Container(
@@ -96,33 +96,46 @@ class _VoiceSessionOverlayState extends State<VoiceSessionOverlay>
                                 height: 200,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: color.withValues(alpha: 0.2),
+                                  gradient: const SweepGradient(
+                                    colors: [
+                                      Color(0xFF4285F4), // Google Blue
+                                      Color(0xFF9B72CB), // Purple
+                                      Color(0xFFD96570), // Red/Pink
+                                      Color(
+                                          0xFF4285F4), // Back to Blue for smooth wrapping
+                                    ],
+                                    stops: [0.0, 0.33, 0.66, 1.0],
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: color.withValues(
-                                        alpha: 0.6 * _pulseController.value,
-                                      ),
-                                      blurRadius: 50,
-                                      spreadRadius: 10,
+                                      color: const Color(0xFF9B72CB).withValues(
+                                          alpha: 0.4 * _pulseController.value),
+                                      blurRadius: 60 * normalizedAmplitude + 20,
+                                      spreadRadius: 20 * normalizedAmplitude,
                                     ),
                                   ],
                                 ),
-                                child: Center(
+                                // Apply a blur to the gradient to make it look like a glowing orb
+                                child: BackdropFilter(
+                                  filter:
+                                      ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                                   child: Container(
-                                    width: 150,
-                                    height: 150,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: color,
+                                      color:
+                                          Colors.white.withValues(alpha: 0.1),
                                     ),
-                                    child: Icon(
-                                      widget.isAiSpeaking
-                                          ? Icons.graphic_eq
-                                          : (widget.isRecording
+                                    child: Center(
+                                      child: Icon(
+                                        widget.isAiSpeaking
+                                            ? Icons.graphic_eq
+                                            : (widget.isRecording
                                                 ? Icons.mic
                                                 : Icons.more_horiz),
-                                      size: 60,
-                                      color: Colors.white,
+                                        size: 60,
+                                        color:
+                                            Colors.white.withValues(alpha: 0.9),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -136,8 +149,7 @@ class _VoiceSessionOverlayState extends State<VoiceSessionOverlay>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: List.generate(5, (index) {
-                              final barHeight =
-                                  20.0 +
+                              final barHeight = 20.0 +
                                   (normalizedAmplitude *
                                       40.0 *
                                       (index % 2 == 0 ? 1.0 : 0.7));

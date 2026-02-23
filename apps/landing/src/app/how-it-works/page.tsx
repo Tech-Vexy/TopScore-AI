@@ -11,10 +11,10 @@ export const metadata: Metadata = {
     openGraph: {
         title: 'How It Works — TopScore AI',
         description: 'Get started in 4 easy steps — free to download, no credit card needed.',
-        url: 'https://topscore-ai.com/how-it-works',
+        url: 'https://topscoreapp.ai/how-it-works',
         images: [{ url: '/og-image.png', width: 1200, height: 630 }],
     },
-    alternates: { canonical: 'https://topscore-ai.com/how-it-works' },
+    alternates: { canonical: 'https://topscoreapp.ai/how-it-works' },
 };
 
 const schema = {

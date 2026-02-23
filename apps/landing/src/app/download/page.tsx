@@ -11,10 +11,10 @@ export const metadata: Metadata = {
     openGraph: {
         title: 'Download TopScore AI — Free on Android & iOS',
         description: 'Get TopScore AI free. No credit card required. Available on Google Play and the App Store.',
-        url: 'https://topscore-ai.com/download',
+        url: 'https://topscoreapp.ai/download',
         images: [{ url: '/og-image.png', width: 1200, height: 630 }],
     },
-    alternates: { canonical: 'https://topscore-ai.com/download' },
+    alternates: { canonical: 'https://topscoreapp.ai/download' },
 };
 
 const schema = {
@@ -24,7 +24,7 @@ const schema = {
     operatingSystem: 'Android, iOS',
     applicationCategory: 'EducationApplication',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'KES' },
-    downloadUrl: 'https://topscore-ai.com/download',
+    downloadUrl: 'https://topscoreapp.ai/download',
 };
 
 export default function DownloadPage() {

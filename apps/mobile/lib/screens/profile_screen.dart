@@ -73,91 +73,51 @@ class ProfileScreen extends StatelessWidget {
                     ),
             ),
 
-            const SizedBox(height: 24),
-
-            // --- PARENT LINKING (Student Only) ---
-            if (user?.role == 'student') ...[
-              _buildSectionHeader(context, "Family Link"),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: AppColors.primaryBlue.withValues(alpha: 0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Link with Parent",
-                      style: GoogleFonts.nunito(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Share this code with your parent to link accounts:",
-                      style:
-                          GoogleFonts.nunito(fontSize: 14, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryBlue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            user?.linkCode ?? "GEN-CODE",
-                            style: GoogleFonts.robotoMono(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
-                              color: AppColors.primaryBlue,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.copy, size: 20),
-                            onPressed: () {
-                              // Clipboard logic
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
+            const SizedBox(height: 32),
 
             // --- 3. PREFERENCES ---
             _buildSectionHeader(context, "Preferences"),
             Consumer<SettingsProvider>(
               builder: (context, settings, _) {
-                return _buildSettingsTile(
-                  context,
-                  icon: isDark ? FontAwesomeIcons.moon : FontAwesomeIcons.sun,
-                  title: "Dark Mode",
-                  iconColor: isDark ? Colors.deepPurple : Colors.orange,
-                  trailing: Switch.adaptive(
-                    value: isDark,
-                    activeTrackColor: AppColors.accentTeal,
-                    onChanged: (val) {
-                      settings.setThemeMode(
-                        val ? ThemeMode.dark : ThemeMode.light,
-                      );
-                    },
-                  ),
-                  onTap: () => settings.setThemeMode(
-                    isDark ? ThemeMode.light : ThemeMode.dark,
-                  ),
+                return Column(
+                  children: [
+                    _buildSettingsTile(
+                      context,
+                      icon: isDark
+                          ? FontAwesomeIcons.moon
+                          : FontAwesomeIcons.sun,
+                      title: "Dark Mode",
+                      iconColor: isDark ? Colors.deepPurple : Colors.orange,
+                      trailing: Switch.adaptive(
+                        value: isDark,
+                        activeTrackColor: AppColors.accentTeal,
+                        onChanged: (val) {
+                          settings.setThemeMode(
+                            val ? ThemeMode.dark : ThemeMode.light,
+                          );
+                        },
+                      ),
+                      onTap: () => settings.setThemeMode(
+                        isDark ? ThemeMode.light : ThemeMode.dark,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildSettingsTile(
+                      context,
+                      icon: FontAwesomeIcons.bolt,
+                      title: "Data Saver Mode",
+                      iconColor: Colors.orange,
+                      trailing: Switch.adaptive(
+                        value: settings.isLiteMode,
+                        activeTrackColor: AppColors.accentTeal,
+                        onChanged: (val) {
+                          settings.toggleLiteMode(val);
+                        },
+                      ),
+                      onTap: () =>
+                          settings.toggleLiteMode(!settings.isLiteMode),
+                    ),
+                  ],
                 );
               },
             ),
@@ -168,8 +128,8 @@ class ProfileScreen extends StatelessWidget {
               title: "Language",
               subtitle:
                   context.watch<SettingsProvider>().locale.languageCode == 'sw'
-                      ? 'Kiswahili'
-                      : 'English',
+                  ? 'Kiswahili'
+                  : 'English',
               iconColor: Colors.blueAccent,
               onTap: () => _showLanguageSelector(
                 context,
@@ -177,7 +137,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
             // --- 4. LEGAL ---
             _buildSectionHeader(context, "About"),
@@ -333,14 +293,14 @@ class ProfileScreen extends StatelessWidget {
                     ],
                     image:
                         (user?.photoURL != null && user!.photoURL!.isNotEmpty)
-                            ? DecorationImage(
-                                image: CachedNetworkImageProvider(
-                                  user.photoURL!,
-                                  cacheManager: ProfileImageCacheManager(),
-                                ),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
+                        ? DecorationImage(
+                            image: CachedNetworkImageProvider(
+                              user.photoURL!,
+                              cacheManager: ProfileImageCacheManager(),
+                            ),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
                   ),
                   child: (user?.photoURL == null || user!.photoURL!.isEmpty)
                       ? Center(
@@ -475,7 +435,8 @@ class ProfileScreen extends StatelessWidget {
                   style: GoogleFonts.nunito(fontSize: 13, color: Colors.grey),
                 )
               : null,
-          trailing: trailing ??
+          trailing:
+              trailing ??
               const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
         ),
       ),
@@ -613,8 +574,10 @@ class ProfileScreen extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Delete All Data",
-                style: TextStyle(color: Colors.white)),
+            child: const Text(
+              "Delete All Data",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),

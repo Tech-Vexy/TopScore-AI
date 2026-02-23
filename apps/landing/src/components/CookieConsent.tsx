@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useLocale } from '@/i18n';
+import { Button } from "@/components/ui/button";
 import styles from './CookieConsent.module.css';
 
 const CONSENT_KEY = 'topscore_cookie_consent';
@@ -35,13 +36,15 @@ export default function CookieConsent() {
     return (
         <div className={styles.banner}>
             <p className={styles.text}>{t('cookie.text')}</p>
+
+
             <div className={styles.actions}>
-                <button className={styles.accept} onClick={() => respond(true)}>
+                <Button variant="default" className={styles.accept} onClick={() => respond(true)}>
                     {t('cookie.accept')}
-                </button>
-                <button className={styles.decline} onClick={() => respond(false)}>
+                </Button>
+                <Button variant="ghost" className={styles.decline} onClick={() => respond(false)}>
                     {t('cookie.decline')}
-                </button>
+                </Button>
             </div>
         </div>
     );

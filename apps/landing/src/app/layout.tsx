@@ -15,7 +15,7 @@ const dmSans = DM_Sans({
   display: 'swap',
 });
 
-const siteUrl = 'https://topscore-ai.com';
+const siteUrl = 'https://topscoreapp.ai';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -33,6 +33,8 @@ export const metadata: Metadata = {
   authors: [{ name: 'TopScore AI' }],
   creator: 'TopScore AI',
   publisher: 'TopScore AI',
+  category: 'education',
+  classification: 'Education Application',
   robots: {
     index: true,
     follow: true,
@@ -43,23 +45,23 @@ export const metadata: Metadata = {
     locale: 'en_KE',
     url: siteUrl,
     siteName: 'TopScore AI',
-    title: 'TopScore AI — Smart Learning for Every Kenyan Student',
+    title: 'TopScore AI — Smart AI Learning platform for Kenyan Students',
     description:
-      'AI-powered tutoring, study resources, and smart tools built for Kenyan students. Free to download.',
+      'The #1 AI-powered tutoring and study platform for CBC & KCSE. Snap photos, chat with books, and ace your exams. Free to download.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'TopScore AI — Smart Learning for Every Kenyan Student',
+        alt: 'TopScore AI — Smart AI Learning platform for Kenyan Students',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TopScore AI — Smart Learning for Every Kenyan Student',
+    title: 'TopScore AI — Smart AI Learning platform for Kenyan Students',
     description:
-      'AI-powered tutoring, study resources, and smart tools built for Kenyan students. Free to download.',
+      'The #1 AI-powered tutoring and study platform for CBC & KCSE. Snap photos, chat with books, and ace your exams. Free to download.',
     images: ['/og-image.png'],
     creator: '@TopScoreAI',
   },

@@ -134,6 +134,8 @@ const en = {
     'footer.copy': '© {year} TopScore AI. All rights reserved.',
     'footer.privacy': 'Privacy Policy',
     'footer.terms': 'Terms of Service',
+    'footer.sitemap': 'Sitemap',
+    'footer.launchApp': 'Launch Web App',
 
     // ── Nav (new) ──
     'nav.pricing': 'Pricing',

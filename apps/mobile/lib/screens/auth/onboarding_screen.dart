@@ -20,19 +20,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<_OnboardingPage> _pages = const [
     _OnboardingPage(
-      imagePath: 'assets/images/onboarding_ai.png',
+      imagePath: 'assets/images/onboarding_ai_tutor.png',
       title: 'Meet Your AI Tutor',
       subtitle:
           'Ask any question. Get step-by-step explanations in Maths, Science, English, and more — available 24/7.',
     ),
     _OnboardingPage(
-      imagePath: 'assets/images/onboarding_library.png',
+      imagePath: 'assets/images/onboarding_digital_library.png',
       title: 'Access Your Resources',
       subtitle:
           'All your CBC and 8-4-4 study materials, past papers, and notes — organised by subject and grade.',
     ),
     _OnboardingPage(
-      imagePath: 'assets/images/onboarding_tools.png',
+      imagePath: 'assets/images/onboarding_smart_tools.png',
       title: 'Smart Study Tools',
       subtitle:
           'Smart Scanner, Flashcards, Calculator, and more — everything you need to excel in one app.',

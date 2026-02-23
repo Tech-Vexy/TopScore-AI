@@ -21,6 +21,7 @@ import 'screens/home_screen.dart';
 import 'screens/landing_page.dart';
 import 'screens/subscription/subscription_screen.dart';
 import 'screens/auth/email_verification_screen.dart';
+import 'screens/auth/auth_screen.dart';
 
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
@@ -99,15 +100,13 @@ void main() async {
   }
   debugPrint('[TOPSCORE] 9. Notifications done (skipped on web)');
 
-  // Init Offline Storage (skip on web - Hive can hang)
-  if (!kIsWeb) {
-    try {
-      await OfflineService().init();
-    } catch (e) {
-      debugPrint("Offline Init Error: $e");
-    }
+  // Init Offline Storage (Initializes SharedPreferences on web, Hive on mobile)
+  try {
+    await OfflineService().init();
+  } catch (e) {
+    debugPrint("Offline Init Error: $e");
   }
-  debugPrint('[TOPSCORE] 10. Offline storage done (skipped on web)');
+  debugPrint('[TOPSCORE] 10. Offline storage done');
 
   debugPrint('[TOPSCORE] 11. Calling runApp()...');
 
@@ -326,7 +325,7 @@ class AuthWrapper extends StatelessWidget {
     }
 
     if (authProvider.userModel == null) {
-      return const LandingPage();
+      return const AuthScreen();
     }
 
     // Always route to student home screen - teacher and parent screens disabled

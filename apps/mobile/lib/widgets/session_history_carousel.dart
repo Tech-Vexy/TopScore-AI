@@ -103,7 +103,7 @@ class SessionHistoryCarousel extends StatelessWidget {
 
     return BounceWrapper(
       onTap: () {
-        context.push('/chat', extra: {
+        context.push('/ai-tutor', extra: {
           'thread_id': chat['thread_id'],
           'title': chat['title'],
         });

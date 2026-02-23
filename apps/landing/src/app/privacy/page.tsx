@@ -6,7 +6,7 @@ import styles from '@/components/LegalPage.module.css';
 export const metadata: Metadata = {
     title: 'Privacy Policy',
     description: 'TopScore AI Privacy Policy — how we collect, use, and protect your data.',
-    alternates: { canonical: 'https://topscore-ai.com/privacy' },
+    alternates: { canonical: 'https://topscoreapp.ai/privacy' },
 };
 
 export default function PrivacyPage() {

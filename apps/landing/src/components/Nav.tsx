@@ -4,6 +4,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useLocale } from '@/i18n';
+import { Button } from '@/components/ui/button';
+import { Menu } from 'lucide-react';
+import {
+    Sheet,
+    SheetContent,
+    SheetTrigger,
+} from "@/components/ui/sheet";
 import styles from './Nav.module.css';
 
 import type { TranslationKey } from '@/i18n';
@@ -48,37 +55,45 @@ export default function Nav() {
                                 {t(key)}
                             </Link>
                         ))}
-                        <Link href="https://app.topscoreapp.ai" className={styles.cta}>
-                            {t('nav.download')}
-                        </Link>
+                        <Button asChild className={styles.cta}>
+                            <Link href="https://app.topscoreapp.ai">
+                                {t('nav.download')}
+                            </Link>
+                        </Button>
                     </nav>
 
-                    {/* Mobile hamburger */}
-                    <button
-                        className={`${styles.burger} ${open ? styles.burgerOpen : ''}`}
-                        onClick={() => setOpen((o) => !o)}
-                        aria-label={open ? 'Close menu' : 'Open menu'}
-                        aria-expanded={open}
-                    >
-                        <span /><span /><span />
-                    </button>
+                    {/* Mobile menu using Shadcn Sheet */}
+                    <div className="md:hidden">
+                        <Sheet open={open} onOpenChange={setOpen}>
+                            <SheetTrigger asChild>
+                                <Button variant="ghost" size="icon" className={styles.burger}>
+                                    <Menu className="h-6 w-6" />
+                                    <span className="sr-only">Toggle menu</span>
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent side="right" className={styles.drawer}>
+                                <nav className={styles.drawerLinks}>
+                                    {linkKeys.map(({ href, key }) => (
+                                        <Link
+                                            key={href}
+                                            href={href}
+                                            className={`${styles.drawerLink} ${pathname === href ? styles.drawerActive : ''}`}
+                                            onClick={() => setOpen(false)}
+                                        >
+                                            {t(key)}
+                                        </Link>
+                                    ))}
+                                    <Button asChild className={styles.drawerCta}>
+                                        <Link href="https://app.topscoreapp.ai" onClick={() => setOpen(false)}>
+                                            {t('nav.downloadMobile')}
+                                        </Link>
+                                    </Button>
+                                </nav>
+                            </SheetContent>
+                        </Sheet>
+                    </div>
                 </div>
             </header>
-
-            {/* Mobile drawer */}
-            <div className={`${styles.drawer} ${open ? styles.drawerOpen : ''}`} aria-hidden={!open}>
-                <nav className={styles.drawerLinks}>
-                    {linkKeys.map(({ href, key }) => (
-                        <Link key={href} href={href} className={`${styles.drawerLink} ${pathname === href ? styles.drawerActive : ''}`}>
-                            {t(key)}
-                        </Link>
-                    ))}
-                    <Link href="https://app.topscoreapp.ai" className={styles.drawerCta}>
-                        {t('nav.downloadMobile')}
-                    </Link>
-                </nav>
-            </div>
-            {open && <div className={styles.overlay} onClick={() => setOpen(false)} />}
         </>
     );
 }

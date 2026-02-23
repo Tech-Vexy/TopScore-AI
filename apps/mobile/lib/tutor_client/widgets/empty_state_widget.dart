@@ -6,6 +6,7 @@ class EmptyStateWidget extends StatefulWidget {
   final ThemeData theme;
   final void Function(String prompt)? onSuggestionTap;
   final List<Map<String, String>>? suggestions;
+  final String? userName;
 
   const EmptyStateWidget({
     super.key,
@@ -13,6 +14,7 @@ class EmptyStateWidget extends StatefulWidget {
     required this.theme,
     this.onSuggestionTap,
     this.suggestions,
+    this.userName,
   });
 
   @override
@@ -28,121 +30,24 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Animated gradient background
-        TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(seconds: 20),
-          builder: (context, value, child) {
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: widget.isDark
-                      ? [
-                          Color.lerp(
-                            const Color(0xFF0A0A0A),
-                            const Color(0xFF1A1A2E),
-                            value,
-                          )!,
-                          Color.lerp(
-                            const Color(0xFF16213E),
-                            const Color(0xFF0F3460),
-                            value,
-                          )!,
-                          Color.lerp(
-                            const Color(0xFF1A1A2E),
-                            const Color(0xFF0A0A0A),
-                            value,
-                          )!,
-                        ]
-                      : [
-                          Color.lerp(
-                            const Color(0xFFF8F9FA),
-                            const Color(0xFFE9ECEF),
-                            value,
-                          )!,
-                          Color.lerp(
-                            const Color(0xFFDEE2E6),
-                            const Color(0xFFF8F9FA),
-                            value,
-                          )!,
-                        ],
-                  stops: const [0.0, 0.5, 1.0],
-                ),
-              ),
-            );
-          },
-          onEnd: () {
-            if (mounted) {
-              setState(() {});
-            }
-          },
+        // Static background gradient instead of animation
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: widget.isDark
+                  ? const [
+                      Color(0xFF0A0A0A),
+                      Color(0xFF16213E),
+                    ]
+                  : const [
+                      Color(0xFFF8F9FA),
+                      Color(0xFFE9ECEF),
+                    ],
+            ),
+          ),
         ),
-
-        // Floating particles/orbs effect
-        if (widget.isDark) ...[
-          Positioned(
-            top: 100,
-            left: 100,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.0, end: 20.0),
-              duration: const Duration(seconds: 4),
-              curve: Curves.easeInOut,
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(0, value),
-                  child: Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          Colors.blue.withValues(alpha: 0.1),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-              onEnd: () {
-                if (mounted) setState(() {});
-              },
-            ),
-          ),
-          Positioned(
-            bottom: 150,
-            right: 150,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0.0, end: -15.0),
-              duration: const Duration(seconds: 5),
-              curve: Curves.easeInOut,
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(value, 0),
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          Colors.purple.withValues(alpha: 0.08),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-              onEnd: () {
-                if (mounted) setState(() {});
-              },
-            ),
-          ),
-        ],
 
         // Content overlay - Centered
         Center(
@@ -156,66 +61,67 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> {
                 children: [
                   const SizedBox(height: 40),
 
-                  // Icon
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: widget.isDark
-                            ? [const Color(0xFF6C63FF), const Color(0xFF9B59B6)]
-                            : [
-                                const Color(0xFF7C4DFF),
-                                const Color(0xFFAB47BC),
-                              ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.auto_awesome,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
+                  // Removed auto_awesome icon.
 
                   const SizedBox(height: 20),
 
-                  // Title
-                  Text(
-                    'What would you like to learn?',
-                    style: GoogleFonts.inter(
-                      fontSize: isCompact ? 22 : 26,
-                      fontWeight: FontWeight.w700,
-                      color: widget.isDark
-                          ? Colors.white
-                          : const Color(0xFF1A1A2E),
-                      height: 1.2,
+                  // Gradient Greeting
+                  ShaderMask(
+                    shaderCallback: (bounds) => LinearGradient(
+                      colors: widget.isDark
+                          ? [
+                              const Color(0xFF9B72CB),
+                              const Color(0xFFD96570),
+                            ]
+                          : [
+                              const Color(0xFF4285F4),
+                              const Color(0xFF9B72CB),
+                            ],
+                    ).createShader(bounds),
+                    child: Text(
+                      widget.userName != null && widget.userName!.isNotEmpty
+                          ? 'Hello, ${widget.userName}'
+                          : 'Hello, Learner',
+                      style: GoogleFonts.outfit(
+                        fontSize: isCompact ? 32 : 40,
+                        fontWeight: FontWeight.w600,
+                        color:
+                            Colors.white, // Color is ignored due to ShaderMask
+                        height: 1.2,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
 
                   // Subtitle
                   Text(
-                    'Ask me anything to get started',
+                    'What can I help you learn today?',
                     style: GoogleFonts.inter(
-                      fontSize: isCompact ? 14 : 15,
+                      fontSize: isCompact ? 16 : 18,
                       fontWeight: FontWeight.w400,
                       color: widget.isDark
-                          ? Colors.white.withValues(alpha: 0.5)
-                          : const Color(0xFF6C757D),
+                          ? Colors.white.withValues(alpha: 0.7)
+                          : const Color(0xFF4A4A4A),
                       height: 1.4,
                     ),
                     textAlign: TextAlign.center,
                   ),
+
+                  const SizedBox(height: 48),
+
+                  // Central Suggestions Wrap
+                  if (widget.suggestions != null &&
+                      widget.suggestions!.isNotEmpty)
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
+                      children: widget.suggestions!.map((suggestion) {
+                        return _buildStaggeredChip(suggestion);
+                      }).toList(),
+                    ),
 
                   const SizedBox(height: 32),
                 ],
@@ -224,6 +130,65 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStaggeredChip(Map<String, String> suggestion) {
+    final emoji = suggestion['emoji'] ?? '✨';
+    final text = suggestion['title'] ?? '';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          if (widget.onSuggestionTap != null) {
+            widget.onSuggestionTap!(text);
+          }
+        },
+        borderRadius: BorderRadius.circular(24),
+        hoverColor: widget.isDark
+            ? const Color(0xFF4285F4).withValues(alpha: 0.1)
+            : const Color(0xFF4285F4).withValues(alpha: 0.05),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: widget.isDark ? const Color(0xFF1E1F22) : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: widget.isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.grey.withValues(alpha: 0.2),
+              width: 1,
+            ),
+            boxShadow: widget.isDark
+                ? []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              Text(
+                text,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: widget.isDark
+                      ? Colors.white.withValues(alpha: 0.9)
+                      : const Color(0xFF2C2C2C),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
