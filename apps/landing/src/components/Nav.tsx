@@ -11,8 +11,6 @@ import {
     SheetContent,
     SheetTrigger,
 } from "@/components/ui/sheet";
-import { ThemeToggle } from "./ThemeToggle";
-import LanguageSwitcher from "./LanguageSwitcher";
 import styles from './Nav.module.css';
 
 import type { TranslationKey } from '@/i18n';
@@ -21,6 +19,7 @@ const linkKeys: { href: string; key: TranslationKey }[] = [
     { href: '/features', key: 'nav.features' },
     { href: '/how-it-works', key: 'nav.howItWorks' },
     { href: '/tools', key: 'nav.tools' },
+    { href: '/pricing', key: 'nav.pricing' },
 ];
 
 
@@ -58,10 +57,8 @@ export default function Nav() {
                             </Link>
                         ))}
                         <div className="flex items-center gap-3 ml-4 border-l pl-4 border-border/50">
-                            <LanguageSwitcher />
-                            <ThemeToggle />
                             <Button asChild className={styles.cta}>
-                                <Link href="https://app.topscoreapp.ai">
+                                <Link href="/download">
                                     {t('nav.download')}
                                 </Link>
                             </Button>
@@ -90,7 +87,7 @@ export default function Nav() {
                                         </Link>
                                     ))}
                                     <Button asChild className={styles.drawerCta}>
-                                        <Link href="https://app.topscoreapp.ai" onClick={() => setOpen(false)}>
+                                        <Link href="/download" onClick={() => setOpen(false)}>
                                             {t('nav.downloadMobile')}
                                         </Link>
                                     </Button>

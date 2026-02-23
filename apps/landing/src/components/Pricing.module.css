@@ -93,7 +93,7 @@
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
+    gap: 32px;
 }
 
 .card {
@@ -144,6 +144,7 @@
     margin-bottom: 24px;
     background: var(--gradient);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 

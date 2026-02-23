@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   keywords: [
     'TopScore AI', 'Kenya education app', 'CBC learning', 'KCSE revision',
     'AI tutor Kenya', 'study app Kenya', 'past papers', 'IGCSE Kenya',
-    'online tutoring', 'student app', 'smart revision tools',
+    'online tutoring', 'student app', 'smart revision tools','Revision','Revision app','Revision app for KCSE','Revision app for CBC','Revision app for IGCSE ','Artificial Intelligence','AI tutor','AI in Education','AI in Learning','AI in Tutoring','AI in Study','AI in Revision','AI in Past Papers','AI in IGCSE','AI in CBC','AI in KCSE '
   ],
   authors: [{ name: 'TopScore AI' }],
   creator: 'TopScore AI',

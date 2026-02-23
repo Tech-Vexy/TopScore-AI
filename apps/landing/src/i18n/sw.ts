@@ -15,7 +15,7 @@ const sw: Record<TranslationKey, string> = {
     'hero.h1Grad': 'Kujifunza kwa AI',
     'hero.h1b': 'Kila Wakati',
     'hero.sub': 'TopScore AI inachanganya mwalimu mwerevu wa AI, maktaba kamili ya masomo, na zana bora za kusoma katika programu moja nzuri — ikisaidia wanafunzi kutoka Darasa la 1 hadi Kidato cha 4 kufaulu kila siku.',
-    'hero.cta': '📱 Pakua Programu',
+    'hero.cta': '📱 Jaribu TopScore AI',
     'hero.explore': 'Gundua Vipengele →',
     'hero.stat.resources': 'Rasilimali za Masomo',
     'hero.stat.tutor': 'Ufikiaji wa Mwalimu AI',

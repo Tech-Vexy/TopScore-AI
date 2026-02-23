@@ -9,8 +9,8 @@
         android:shortcutLongLabel="@string/shortcut_ai_tutor_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.elimisha.elimisha"
-            android:targetClass="com.elimisha.elimisha.MainActivity"
+            android:targetPackage="com.topscoreapp.ai"
+            android:targetClass="com.topscoreapp.ai.MainActivity"
             android:data="topscore://app/ai-tutor" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
@@ -24,8 +24,8 @@
         android:shortcutLongLabel="@string/shortcut_scanner_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.elimisha.elimisha"
-            android:targetClass="com.elimisha.elimisha.MainActivity"
+            android:targetPackage="com.topscoreapp.ai"
+            android:targetClass="com.topscoreapp.ai.MainActivity"
             android:data="topscore://app/tools/scanner" />
     </shortcut>
 
@@ -38,8 +38,8 @@
         android:shortcutLongLabel="@string/shortcut_calculator_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.elimisha.elimisha"
-            android:targetClass="com.elimisha.elimisha.MainActivity"
+            android:targetPackage="com.topscoreapp.ai"
+            android:targetClass="com.topscoreapp.ai.MainActivity"
             android:data="topscore://app/tools/calculator" />
     </shortcut>
 
@@ -52,8 +52,8 @@
         android:shortcutLongLabel="@string/shortcut_library_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.elimisha.elimisha"
-            android:targetClass="com.elimisha.elimisha.MainActivity"
+            android:targetPackage="com.topscoreapp.ai"
+            android:targetClass="com.topscoreapp.ai.MainActivity"
             android:data="topscore://app/library" />
     </shortcut>
 </shortcuts>

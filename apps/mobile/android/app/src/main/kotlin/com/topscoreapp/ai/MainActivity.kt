@@ -1,4 +1,4 @@
-package com.elimisha.elimisha
+package com.topscoreapp.ai
 
 import io.flutter.embedding.android.FlutterActivity
 

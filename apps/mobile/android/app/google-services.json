@@ -8,20 +8,12 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:974459699084:android:26d53a933598930a68a0a9",
+        "mobilesdk_app_id": "1:974459699084:android:af7b6d0c3b9f29ed68a0a9",
         "android_client_info": {
-          "package_name": "com.elimisha.elimisha"
+          "package_name": "com.topscoreapp.ai"
         }
       },
       "oauth_client": [
-        {
-          "client_id": "974459699084-tsl2k03d62c6vaqac16luk6pogql04ib.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.elimisha.elimisha",
-            "certificate_hash": "5a8f810bde83df05964f8d781ed2ba4eeee66387"
-          }
-        },
         {
           "client_id": "974459699084-3upotvccrivu1qcvneft7fi0op2ljnte.apps.googleusercontent.com",
           "client_type": 3

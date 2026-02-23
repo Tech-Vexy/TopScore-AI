@@ -1,11 +1,8 @@
 import type { Metadata } from 'next';
 import Nav from '@/components/Nav';
 import Hero from '@/components/Hero';
-import Features from '@/components/Features';
-import HowItWorks from '@/components/HowItWorks';
 import Screenshots from '@/components/Screenshots';
 import Testimonials from '@/components/Testimonials';
-import Pricing from '@/components/Pricing';
 import VideoDemo from '@/components/VideoDemo';
 import FAQ from '@/components/FAQ';
 import Newsletter from '@/components/Newsletter';
@@ -53,11 +50,8 @@ export default function Home() {
       <Nav />
       <Hero />
       <Screenshots />
-      <Features />
-      <HowItWorks />
-      <Testimonials />
-      <Pricing />
       <VideoDemo />
+      <Testimonials />
       <FAQ />
       <Newsletter />
       <CtaBanner />

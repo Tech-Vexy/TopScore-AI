@@ -13,7 +13,7 @@ const en = {
     'hero.h1Grad': 'AI-Powered',
     'hero.h1b': 'Learning Companion',
     'hero.sub': 'TopScore AI combines an intelligent tutor, a full resource library, and powerful study tools into one beautiful app — helping students from Grade 1 through Form 4 excel every day.',
-    'hero.cta': '📱 Download the App',
+    'hero.cta': '📱 Try TopScore AI',
     'hero.explore': 'Explore Features →',
     'hero.stat.resources': 'Study Resources',
     'hero.stat.tutor': 'AI Tutor Access',

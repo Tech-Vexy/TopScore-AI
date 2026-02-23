@@ -14,10 +14,10 @@ interface Screen {
 }
 
 const screens: Screen[] = [
-    { idx: 0, gradient: 'linear-gradient(135deg, #7C6EEA 0%, #a855f7 100%)', emoji: '🤖' },
-    { idx: 1, gradient: 'linear-gradient(135deg, #34D9CB 0%, #3b82f6 100%)', emoji: '📚' },
-    { idx: 2, gradient: 'linear-gradient(135deg, #FF6B6B 0%, #f7971e 100%)', emoji: '🔥' },
-    { idx: 3, gradient: 'linear-gradient(135deg, #a8edea 0%, #15803d 100%)', emoji: '👨‍👩‍👧' },
+    { idx: 0, gradient: 'linear-gradient(135deg, #7C6EEA 0%, #a855f7 100%)', emoji: '🤖', image: '/screenshots/screen-0.png' },
+    { idx: 1, gradient: 'linear-gradient(135deg, #34D9CB 0%, #3b82f6 100%)', emoji: '📚', image: '/screenshots/screen-1.png' },
+    { idx: 2, gradient: 'linear-gradient(135deg, #FF6B6B 0%, #f7971e 100%)', emoji: '🔥', image: '/screenshots/screen-2.png' },
+    { idx: 3, gradient: 'linear-gradient(135deg, #a8edea 0%, #15803d 100%)', emoji: '👨‍👩‍👧', image: '/screenshots/screen-3.png' },
 ];
 
 export default function Screenshots() {

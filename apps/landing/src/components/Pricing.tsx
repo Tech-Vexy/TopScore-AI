@@ -1,12 +1,11 @@
 'use client';
-import { useState } from 'react';
+
 import { useLocale } from '@/i18n';
 import type { TranslationKey } from '@/i18n';
 import { cn } from "@/lib/utils";
 import AnimatedSection from './AnimatedSection';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Check } from "lucide-react";
 import styles from './Pricing.module.css';
 
@@ -17,7 +16,6 @@ const plans: { idx: number; featured: boolean }[] = [
 
 export default function Pricing() {
     const { t } = useLocale();
-    const [annual, setAnnual] = useState(false);
 
     return (
         <section id="pricing" className={styles.wrapper}>
@@ -29,29 +27,12 @@ export default function Pricing() {
                     </h2>
                     <p className={styles.sub}>{t('pricing.sub')}</p>
 
-                    <div className="flex items-center justify-center gap-4 mt-8">
-                        <span className={cn("text-sm transition-colors", !annual ? "text-foreground font-semibold" : "text-muted-foreground")}>
-                            {t('pricing.monthly')}
-                        </span>
-                        <Switch
-                            checked={annual}
-                            onCheckedChange={setAnnual}
-                            aria-label="Toggle billing period"
-                        />
-                        <span className={cn("text-sm transition-colors", annual ? "text-foreground font-semibold" : "text-muted-foreground")}>
-                            {t('pricing.annual')}
-                            <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                {t('pricing.save')}
-                            </span>
-                        </span>
-                    </div>
                 </AnimatedSection>
 
                 <div className={styles.grid}>
                     {plans.map((p, i) => {
                         const nameKey = `pricing.${p.idx}.name` as TranslationKey;
                         const priceMonthlyKey = `pricing.${p.idx}.priceMonthly` as TranslationKey;
-                        const priceAnnualKey = `pricing.${p.idx}.priceAnnual` as TranslationKey;
                         const periodKey = `pricing.${p.idx}.period` as TranslationKey;
                         const ctaKey = `pricing.${p.idx}.cta` as TranslationKey;
                         const featuresKey = `pricing.${p.idx}.features` as TranslationKey;
@@ -71,9 +52,9 @@ export default function Pricing() {
                                     )}
                                     <CardHeader>
                                         <CardTitle className="text-2xl font-bold">{t(nameKey)}</CardTitle>
-                                        <div className="mt-4 flex items-baseline gap-1">
+                                        <div className="mt-8 mb-4 flex items-baseline gap-1">
                                             <span className="text-4xl font-bold">
-                                                {t(annual ? priceAnnualKey : priceMonthlyKey)}
+                                                {t(priceMonthlyKey)}
                                             </span>
                                             <span className="text-muted-foreground">/{t(periodKey)}</span>
                                         </div>
