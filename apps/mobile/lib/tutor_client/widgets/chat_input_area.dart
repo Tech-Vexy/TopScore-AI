@@ -5,6 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:io' show Platform;
+import '../../services/subscription_service.dart';
+import '../../constants/colors.dart';
+import '../../screens/subscription/subscription_screen.dart';
 
 class ChatInputArea extends StatefulWidget {
   final TextEditingController textController;
@@ -139,9 +142,48 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                           Icons.add_rounded,
                           size: 26,
                         ),
-                        // 3. Fixed: Use subtle grey instead of hardcoded white
                         color: isDark ? Colors.white70 : Colors.black54,
-                        onPressed: widget.onShowAttachmentMenu,
+                        onPressed: () async {
+                          final isPremium = await SubscriptionService()
+                              .isSessionPremiumOrTrial();
+                          if (isPremium) {
+                            widget.onShowAttachmentMenu();
+                          } else {
+                            if (context.mounted) {
+                              showDialog(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('TopScore AI Pro Feature'),
+                                  content: const Text(
+                                    'Image and document attachments are available for Pro users. Upgrade now to unlock!',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.of(ctx).pop();
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const SubscriptionScreen(),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.googleBlue,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Upgrade'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                          }
+                        },
                         tooltip: 'Add attachment',
                         padding: const EdgeInsets.all(10),
                         visualDensity: VisualDensity.compact,

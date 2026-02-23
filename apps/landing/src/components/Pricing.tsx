@@ -2,7 +2,12 @@
 import { useState } from 'react';
 import { useLocale } from '@/i18n';
 import type { TranslationKey } from '@/i18n';
+import { cn } from "@/lib/utils";
 import AnimatedSection from './AnimatedSection';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Check } from "lucide-react";
 import styles from './Pricing.module.css';
 
 const plans: { idx: number; featured: boolean }[] = [
@@ -24,17 +29,20 @@ export default function Pricing() {
                     </h2>
                     <p className={styles.sub}>{t('pricing.sub')}</p>
 
-                    <div className={styles.toggle}>
-                        <span className={!annual ? styles.toggleActive : ''}>{t('pricing.monthly')}</span>
-                        <button
-                            className={styles.toggleBtn}
-                            onClick={() => setAnnual((a) => !a)}
+                    <div className="flex items-center justify-center gap-4 mt-8">
+                        <span className={cn("text-sm transition-colors", !annual ? "text-foreground font-semibold" : "text-muted-foreground")}>
+                            {t('pricing.monthly')}
+                        </span>
+                        <Switch
+                            checked={annual}
+                            onCheckedChange={setAnnual}
                             aria-label="Toggle billing period"
-                        >
-                            <span className={`${styles.toggleKnob} ${annual ? styles.toggleKnobRight : ''}`} />
-                        </button>
-                        <span className={annual ? styles.toggleActive : ''}>
-                            {t('pricing.annual')} <span className={styles.save}>{t('pricing.save')}</span>
+                        />
+                        <span className={cn("text-sm transition-colors", annual ? "text-foreground font-semibold" : "text-muted-foreground")}>
+                            {t('pricing.annual')}
+                            <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                {t('pricing.save')}
+                            </span>
                         </span>
                     </div>
                 </AnimatedSection>
@@ -52,24 +60,42 @@ export default function Pricing() {
 
                         return (
                             <AnimatedSection key={p.idx} animation="fadeUp" delay={`${i * 0.12}s`}>
-                                <div className={`${styles.card} ${p.featured ? styles.featured : ''}`}>
+                                <Card className={cn(
+                                    "relative flex flex-col h-full",
+                                    p.featured ? "border-primary shadow-xl scale-105 z-10" : "border-border"
+                                )}>
                                     {badge && badge !== badgeKey && (
-                                        <div className={styles.badge}>{badge}</div>
+                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                                            {badge}
+                                        </div>
                                     )}
-                                    <h3 className={styles.planName}>{t(nameKey)}</h3>
-                                    <div className={styles.price}>
-                                        {t(annual ? priceAnnualKey : priceMonthlyKey)}
-                                        <span className={styles.period}>/{t(periodKey)}</span>
-                                    </div>
-                                    <ul className={styles.features}>
-                                        {t(featuresKey).split('|').map((f) => (
-                                            <li key={f}><span className={styles.check}>✓</span> {f}</li>
-                                        ))}
-                                    </ul>
-                                    <a href="https://app.topscoreapp.ai" className={p.featured ? styles.ctaPrimary : styles.ctaSecondary}>
-                                        {t(ctaKey)}
-                                    </a>
-                                </div>
+                                    <CardHeader>
+                                        <CardTitle className="text-2xl font-bold">{t(nameKey)}</CardTitle>
+                                        <div className="mt-4 flex items-baseline gap-1">
+                                            <span className="text-4xl font-bold">
+                                                {t(annual ? priceAnnualKey : priceMonthlyKey)}
+                                            </span>
+                                            <span className="text-muted-foreground">/{t(periodKey)}</span>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="flex-grow">
+                                        <ul className="space-y-3">
+                                            {t(featuresKey).split('|').map((f) => (
+                                                <li key={f} className="flex items-start gap-3 text-sm">
+                                                    <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                                                    <span>{f}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </CardContent>
+                                    <CardFooter>
+                                        <Button asChild variant={p.featured ? "default" : "outline"} className="w-full">
+                                            <a href="https://app.topscoreapp.ai">
+                                                {t(ctaKey)}
+                                            </a>
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
                             </AnimatedSection>
                         );
                     })}

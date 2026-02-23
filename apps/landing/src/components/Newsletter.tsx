@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { useLocale } from '@/i18n';
 import AnimatedSection from './AnimatedSection';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import styles from './Newsletter.module.css';
 
 export default function Newsletter() {
@@ -44,7 +46,7 @@ export default function Newsletter() {
                         </div>
                     ) : (
                         <form className={styles.form} onSubmit={handleSubmit}>
-                            <input
+                            <Input
                                 type="email"
                                 className={styles.input}
                                 placeholder={t('newsletter.placeholder')}
@@ -52,9 +54,9 @@ export default function Newsletter() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                             />
-                            <button type="submit" className={styles.btn} disabled={loading}>
+                            <Button type="submit" className={styles.btn} disabled={loading} size="lg">
                                 {loading ? '...' : t('newsletter.cta')}
-                            </button>
+                            </Button>
                         </form>
                     )}
                 </AnimatedSection>

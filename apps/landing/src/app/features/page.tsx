@@ -7,10 +7,10 @@ import JsonLd from '@/components/JsonLd';
 export const metadata: Metadata = {
     title: 'Features',
     description:
-        'Explore TopScore AI features: AI Tutor available 24/7, full CBC & KCSE resource library, daily streak tracker, Family Link parental controls, offline mode, and real-time global search.',
+        'Explore TopScore AI features: AI Tutor available 24/7, full CBC & KCSE resource library, daily streak tracker, smart study reports, offline mode, and real-time global search.',
     openGraph: {
         title: 'Features — TopScore AI',
-        description: 'AI Tutor, resource library, streaks, parental controls, offline mode, and global search — all in one app.',
+        description: 'AI Tutor, resource library, streaks, study reports, offline mode, and global search — all in one app.',
         url: 'https://topscore-ai.com/features',
         images: [{ url: '/og-image.png', width: 1200, height: 630 }],
     },

@@ -1,55 +1,24 @@
-# TopScore AI - Robots.txt
-# Kenya's #1 AI-Powered Learning Platform
-# https://topscoreapp.ai
+# TopScore AI App - Robots.txt
+# Focus crawl budget on the Next.js landing page instead.
 
 User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /*.json$
+# Allow the root (login/signup)
+Allow: /$
+
+# Prevent bots from crawling auth-gated paths
+Disallow: /auth/
+Disallow: /dashboard/
+Disallow: /chat/
+Disallow: /library/
+Disallow: /pdf/
+Disallow: /profile/
+Disallow: /settings/
+
+# Prevent bots from indexing Flutter/WebAssembly engine files
 Disallow: /flutter_service_worker.js
 Disallow: /flutter_bootstrap.js
-Disallow: /version.json
-Disallow: /assets/packages/
+Disallow: /*.json$
 Disallow: /assets/shaders/
 
-# Sitemap
-Sitemap: https://topscoreapp.ai/sitemap.xml
-
-# Crawl-delay for well-behaved bots
-Crawl-delay: 1
-
-# Search engine specific rules
-User-agent: Googlebot
-Allow: /
-Crawl-delay: 0
-
-User-agent: Googlebot-Image
-Allow: /icons/
-Allow: /assets/images/
-
-User-agent: Bingbot
-Allow: /
-Crawl-delay: 1
-
-User-agent: Slurp
-Allow: /
-
-User-agent: DuckDuckBot
-Allow: /
-
-# Social media crawlers
-User-agent: facebookexternalhit
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: LinkedInBot
-Allow: /
-
-User-agent: WhatsApp
-Allow: /
-
-User-agent: TelegramBot
-Allow: /
+# Point to the app's minimal sitemap
+Sitemap: https://app.topscore.co.ke/sitemap.xml

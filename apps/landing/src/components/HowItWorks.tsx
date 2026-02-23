@@ -28,13 +28,13 @@ export default function HowItWorks() {
 
                         // ... (in the mapping loop)
                         return (
-                            <AnimatedSection key={num} animation="fadeUp" delay={`${i * 0.1}s`}>
+                            <AnimatedSection key={num} animation="fadeUp" delay={`${i * 0.1}s`} className={styles.stepWrapper}>
                                 <Card className={styles.step}>
                                     <div className={styles.num}>{num}</div>
                                     <CardHeader className="p-0 space-y-2">
                                         <h3 className="font-bold text-xl">{t(titleKey)}</h3>
                                     </CardHeader>
-                                    <CardContent className="p-0 pt-2">
+                                    <CardContent className="p-0 pt-2 flex-grow">
                                         <p className="text-muted-foreground">{t(descKey)}</p>
                                     </CardContent>
                                 </Card>

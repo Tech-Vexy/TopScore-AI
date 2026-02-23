@@ -24,11 +24,11 @@ export const metadata: Metadata = {
     template: '%s | TopScore AI',
   },
   description:
-    'AI-powered tutoring, CBC & KCSE study resources, past papers, smart study tools, parental insights, and offline mode — all in one free app for Kenyan students.',
+    'AI-powered tutoring, CBC & KCSE study resources, past papers, smart study tools, detailed progress tracking, and offline mode — all in one free app for Kenyan learners.',
   keywords: [
     'TopScore AI', 'Kenya education app', 'CBC learning', 'KCSE revision',
     'AI tutor Kenya', 'study app Kenya', 'past papers', 'IGCSE Kenya',
-    'online tutoring', 'student app', 'parental controls learning',
+    'online tutoring', 'student app', 'smart revision tools',
   ],
   authors: [{ name: 'TopScore AI' }],
   creator: 'TopScore AI',
@@ -103,10 +103,11 @@ const breadcrumbSchema = {
 import BackToTop from '@/components/BackToTop';
 import CookieConsent from '@/components/CookieConsent';
 import Analytics from '@/components/Analytics';
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${plusJakarta.variable} ${dmSans.variable}`}>
+    <html lang="en" className={`${plusJakarta.variable} ${dmSans.variable}`} suppressHydrationWarning>
       <head>
         <script
           type="application/ld+json"
@@ -141,10 +142,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}</style>
       </head>
       <body>
-        <LocaleProvider>
-          {children}
-          <CookieConsent />
-        </LocaleProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <LocaleProvider>
+            {children}
+            <CookieConsent />
+          </LocaleProvider>
+        </ThemeProvider>
         <BackToTop />
         <Analytics />
       </body>

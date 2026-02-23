@@ -11,6 +11,8 @@ import {
     SheetContent,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import { ThemeToggle } from "./ThemeToggle";
+import LanguageSwitcher from "./LanguageSwitcher";
 import styles from './Nav.module.css';
 
 import type { TranslationKey } from '@/i18n';
@@ -18,9 +20,9 @@ import type { TranslationKey } from '@/i18n';
 const linkKeys: { href: string; key: TranslationKey }[] = [
     { href: '/features', key: 'nav.features' },
     { href: '/how-it-works', key: 'nav.howItWorks' },
-    { href: '/roles', key: 'nav.forYou' },
     { href: '/tools', key: 'nav.tools' },
 ];
+
 
 export default function Nav() {
     const [scrolled, setScrolled] = useState(false);
@@ -55,11 +57,15 @@ export default function Nav() {
                                 {t(key)}
                             </Link>
                         ))}
-                        <Button asChild className={styles.cta}>
-                            <Link href="https://app.topscoreapp.ai">
-                                {t('nav.download')}
-                            </Link>
-                        </Button>
+                        <div className="flex items-center gap-3 ml-4 border-l pl-4 border-border/50">
+                            <LanguageSwitcher />
+                            <ThemeToggle />
+                            <Button asChild className={styles.cta}>
+                                <Link href="https://app.topscoreapp.ai">
+                                    {t('nav.download')}
+                                </Link>
+                            </Button>
+                        </div>
                     </nav>
 
                     {/* Mobile menu using Shadcn Sheet */}

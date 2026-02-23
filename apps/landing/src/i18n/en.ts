@@ -38,9 +38,9 @@ const en = {
     'features.2.desc': 'Build consistent study habits with a daily learning streak tracker. Hit milestones, unlock achievements, and stay motivated with visual progress indicators.',
     'features.2.tags': 'Streaks,Achievements,Progress,Motivation',
 
-    'features.3.title': 'Family Link — Parental Insights',
-    'features.3.desc': "Parents get a dedicated dashboard to link with their child's account, view weekly activity reports, set daily time limits, and define subject focus areas.",
-    'features.3.tags': 'Weekly Reports,Time Limits,Activity Graph,Parent Mode',
+    'features.3.title': 'Smart Study Reports',
+    'features.3.desc': 'Track your progress with detailed activity reports, visualize your learning habits over time, and focus on areas that need the most improvement.',
+    'features.3.tags': 'Weekly Reports,Progress Tracker,Activity Graph,Learning Insights',
 
     'features.4.title': 'Offline Mode',
     'features.4.desc': 'Downloaded resources, cached progress, and streak data are all available without an internet connection. A sleek offline banner alerts you when you lose connectivity.',
@@ -56,31 +56,23 @@ const en = {
     'howItWorks.sub': 'Getting started with TopScore AI is simple — no subscription required for core features.',
 
     'howItWorks.0.title': 'Download & Sign Up',
-    'howItWorks.0.desc': 'Install TopScore AI on Android or iOS. Create your free account and select your role — Student, Parent, or Teacher.',
-    'howItWorks.1.title': 'Pick Your Grade & Subjects',
-    'howItWorks.1.desc': 'Set your curriculum (CBC or 8-4-4), grade level, and subjects. The app personalises your resource feed instantly.',
+    'howItWorks.0.desc': 'Install TopScore AI on Android or iOS and create your free account in seconds.',
+    'howItWorks.1.title': 'Explore subjects & resources',
+    'howItWorks.1.desc': 'Instantly access thousands of CBC, 8-4-4, and IGCSE materials. The app makes it easy to find exactly what you need to study.',
     'howItWorks.2.title': 'Study with AI',
     'howItWorks.2.desc': 'Chat with your AI tutor about any topic, get step-by-step solutions, or access your curated resource library.',
     'howItWorks.3.title': 'Build Your Streak',
     'howItWorks.3.desc': 'Study every day to build a streak, unlock achievements, and track your progress on your personalised dashboard.',
 
     // ── Roles ──
-    'roles.label': '👥 Who It\'s For',
-    'roles.title': 'A dedicated experience',
-    'roles.titleBr': 'for every role.',
-    'roles.sub': 'TopScore AI adapts to who you are — delivering a tailored interface and features for students, parents, and teachers.',
+    'roles.label': '🎓 For Every Learner',
+    'roles.title': 'Smart learning tailored',
+    'roles.titleBr': 'to your curriculum.',
+    'roles.sub': 'TopScore AI adapts to your needs — delivering a personalized interface and features for students and lifelong learners alike.',
 
-    'roles.0.title': 'Students',
+    'roles.0.title': 'All-in-One Learning',
     'roles.0.desc': 'Your personal AI tutor, everywhere. Access your full resource library, take notes, build streaks, and get help with any topic — any time.',
     'roles.0.perks': 'AI Tutor with subject expertise,Past papers & revision notes,Smart study tools,Daily streak tracker,Offline resource downloads',
-
-    'roles.1.title': 'Parents',
-    'roles.1.desc': "Stay informed and in control with the Family Link system. Monitor progress, set healthy study limits, and get weekly snapshots of your child's learning.",
-    'roles.1.perks': 'Link to child via unique code,Weekly activity reports,Set daily time limits,Define subject focus areas,Activity bar chart & stats',
-
-    'roles.2.title': 'Teachers',
-    'roles.2.desc': 'Manage resources, track student engagement, and upload materials directly to the platform — giving your class a curated, structured library.',
-    'roles.2.perks': 'Upload & manage resources,Teacher-specific dashboard,Student analytics overview,Class resource management,Direct upload to library',
 
     // ── Tools ──
     'tools.label': '🛠️ Study Tools',
@@ -108,20 +100,20 @@ const en = {
     // ── Testimonials ──
     'testimonials.label': '💬 What People Say',
     'testimonials.title': 'Loved by students,',
-    'testimonials.titleBr': 'parents & teachers.',
+    'testimonials.titleBr': 'students & learners.',
 
     'testimonials.0.name': 'Amina K.',
     'testimonials.0.role': 'Form 3 Student, Nairobi',
     'testimonials.0.quote': 'TopScore AI completely changed how I revise for KCSE. The AI tutor explains concepts better than any YouTube video — and it is always available at midnight when I am cramming!',
     'testimonials.1.name': 'Mr. Otieno',
-    'testimonials.1.role': 'Secondary School Teacher, Kisumu',
-    'testimonials.1.quote': 'I can upload class notes and past papers directly, and my students get a curated library. The analytics dashboard shows me who is actually studying. It is brilliant.',
+    'testimonials.1.role': 'Life-long Learner, Kisumu',
+    'testimonials.1.quote': 'I can organize my study notes and past papers directly for my personalized library. The analytics dashboard shows exactly where I need to improve. It is brilliant.',
     'testimonials.2.name': 'Grace M.',
-    'testimonials.2.role': 'Parent, Mombasa',
-    'testimonials.2.quote': 'The Family Link feature is a game-changer. I can see exactly how long my daughter studies each day, what subjects she is focusing on, and set time limits when needed.',
+    'testimonials.2.role': 'Learner, Mombasa',
+    'testimonials.2.quote': 'The progress tracking feature is a game-changer. I can see exactly how long I study each day, what subjects I am focusing on, and stay motivated to beat my previous records.',
     'testimonials.3.name': 'Brian O.',
     'testimonials.3.role': 'Grade 7 Student, Eldoret',
-    'testimonials.3.quote': 'The Smart Scanner is insane — I just point my phone at a maths problem and it solves it step by step. My parents think I am better at maths now.',
+    'testimonials.3.quote': 'The Smart Scanner is insane — I just point my phone at a maths problem and it solves it step by step. It has made my daily revision so much faster.',
 
     // ── CTA Banner ──
     'cta.label': '📲 Get the App',
@@ -130,7 +122,7 @@ const en = {
     'cta.sub': 'Download TopScore AI on Android or iOS. Core features are completely free. No credit card required.',
 
     // ── Footer ──
-    'footer.tagline': 'Built with ❤️ for Kenyan students — CBC, IGCSE & KCSE.',
+    'footer.tagline': 'Empowering Kenyan learners — CBC, IGCSE & KCSE.',
     'footer.copy': '© {year} TopScore AI. All rights reserved.',
     'footer.privacy': 'Privacy Policy',
     'footer.terms': 'Terms of Service',
@@ -151,8 +143,8 @@ const en = {
     'screenshots.1.desc': 'Past papers, notes, and exercises organised by subject and grade.',
     'screenshots.2.name': 'Dashboard',
     'screenshots.2.desc': 'Track streaks, achievements, and daily progress at a glance.',
-    'screenshots.3.name': 'Family Link',
-    'screenshots.3.desc': 'Parents see study activity, set limits, and get weekly reports.',
+    'screenshots.3.name': 'Smart Revision',
+    'screenshots.3.desc': 'Access specialized revision notes and mock exams for every subject.',
 
     // ── Pricing ──
     'pricing.label': '💰 Pricing',
@@ -163,21 +155,21 @@ const en = {
     'pricing.annual': 'Annual',
     'pricing.save': 'Save 20%',
 
-    'pricing.0.name': 'Free',
+    'pricing.0.name': 'Basic (Freemium)',
     'pricing.0.priceMonthly': 'KES 0',
     'pricing.0.priceAnnual': 'KES 0',
     'pricing.0.period': 'forever',
     'pricing.0.cta': 'Get Started Free',
     'pricing.0.badge': '',
-    'pricing.0.features': 'AI Tutor — 10 questions/day|Full resource library|Daily streak tracker|Offline downloads|Global search|1 linked parent account',
+    'pricing.0.features': 'Access to 5 Documents only|5 daily AI chat messages|Productivity tool use',
 
-    'pricing.1.name': 'Pro',
-    'pricing.1.priceMonthly': 'KES 500',
-    'pricing.1.priceAnnual': 'KES 4,800',
+    'pricing.1.name': 'TopScore AI Pro',
+    'pricing.1.priceMonthly': 'KES 1,000',
+    'pricing.1.priceAnnual': 'KES 10,000',
     'pricing.1.period': 'month',
     'pricing.1.cta': 'Start 7-Day Free Trial',
-    'pricing.1.badge': 'Most Popular',
-    'pricing.1.features': 'Unlimited AI Tutor questions|Everything in Free|Smart Scanner — solve by photo|AI Flashcard Generator|Advanced analytics|Priority support|Family Link — unlimited accounts',
+    'pricing.1.badge': 'Recommended',
+    'pricing.1.features': 'Unlimited tool calling|Web search|Image Upload|Graph Generation|Standard document chat|Everything in Basic',
 
     // ── FAQ ──
     'faq.label': '❓ FAQ',
@@ -190,10 +182,10 @@ const en = {
     'faq.1.a': 'TopScore AI supports the Competency-Based Curriculum (CBC) for Grades 1–9, the 8-4-4 system (KCSE) for Forms 1–4, and IGCSE for international schools in Kenya.',
     'faq.2.q': 'Does TopScore AI work offline?',
     'faq.2.a': 'Yes. You can download resources, past papers, and notes for offline access. Your streak data and progress also sync automatically when you reconnect.',
-    'faq.3.q': 'How does Family Link work?',
-    'faq.3.a': 'Parents create an account, then link to their child using a unique code. Once linked, parents can view weekly study reports, set daily time limits, and define subject focus areas.',
-    'faq.4.q': 'Is the AI safe for children?',
-    'faq.4.a': 'Absolutely. TopScore AI uses content moderation to ensure all AI responses are age-appropriate and educational. Parents can monitor chat activity through Family Link.',
+    'faq.3.q': 'Do you have progress tracking?',
+    'faq.3.a': 'Yes. TopScore AI provides detailed study reports where you can view your weekly activity, track subject focus, and analyze your learning patterns over time.',
+    'faq.4.q': 'Is the AI content moderated?',
+    'faq.4.a': 'Absolutely. TopScore AI uses advanced content moderation to ensure all AI responses are educational, safe, and age-appropriate for all learners.',
     'faq.5.q': 'Can I cancel my Pro subscription?',
     'faq.5.a': 'Yes, you can cancel anytime through Google Play or the App Store. Your Pro features remain active until the end of the current billing period.',
     'faq.6.q': 'What subjects does the AI Tutor cover?',
@@ -204,7 +196,7 @@ const en = {
     // ── Video Demo ──
     'video.label': '🎥 See It In Action',
     'video.title': 'Watch TopScore AI in action',
-    'video.sub': 'See how students, parents, and teachers use TopScore AI to transform their learning experience.',
+    'video.sub': 'See how students and learners across Kenya use TopScore AI to transform their educational experience.',
 
     // ── Newsletter ──
     'newsletter.label': '📧 Stay Updated',

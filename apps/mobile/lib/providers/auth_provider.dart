@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/offline_service.dart';
+import '../services/subscription_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -22,9 +23,6 @@ class AuthProvider with ChangeNotifier {
   bool _isGuest = false;
   bool get isGuest => _isGuest;
 
-  int _guestMessageCount = 0;
-  int _guestDocumentCount = 0;
-
   static const int kGuestMessageLimit = 5;
   static const int kGuestDocumentLimit = 3;
 
@@ -35,25 +33,101 @@ class AuthProvider with ChangeNotifier {
   }
 
   bool get canSendMessage {
-    if (_userModel != null) return true;
-    return _guestMessageCount < kGuestMessageLimit;
+    if (_userModel == null) return false;
+
+    // Check if we need to reset the count (new day)
+    if (_userModel!.lastMessageDate != null) {
+      final now = DateTime.now();
+      final lastDate = _userModel!.lastMessageDate!;
+      if (now.year != lastDate.year ||
+          now.month != lastDate.month ||
+          now.day != lastDate.day) {
+        // It's a new day, so effectively count is 0
+        return true;
+      }
+    }
+
+    // Limit to 5 per day for Freemium
+    return _userModel!.dailyMessageCount < 5;
   }
 
-  void incrementGuestMessage() {
-    if (_isGuest) {
-      _guestMessageCount++;
+  Future<void> incrementDailyMessage() async {
+    if (_userModel == null) return;
+
+    final now = DateTime.now();
+    int newCount = 1;
+
+    if (_userModel!.lastMessageDate != null) {
+      final lastDate = _userModel!.lastMessageDate!;
+      if (now.year == lastDate.year &&
+          now.month == lastDate.month &&
+          now.day == lastDate.day) {
+        newCount = _userModel!.dailyMessageCount + 1;
+      }
+    }
+
+    try {
+      await _authService.firestore
+          .collection('users')
+          .doc(_userModel!.uid)
+          .update({
+        'dailyMessageCount': newCount,
+        'lastMessageDate': now.millisecondsSinceEpoch,
+      });
+
+      _userModel = _userModel!.copyWith(
+        dailyMessageCount: newCount,
+        lastMessageDate: now,
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error incrementing daily message: $e");
     }
   }
 
+  // Used by UI to check without side-effects
   bool get canOpenDocument {
-    if (_userModel != null) return true;
-    return _guestDocumentCount < kGuestDocumentLimit;
+    if (_userModel == null) return false;
+    return _userModel!.accessedDocuments.length < 5;
   }
 
-  void incrementGuestDocument() {
-    if (_isGuest) {
-      _guestDocumentCount++;
+  Future<bool> tryAccessDocument(String docId) async {
+    if (_userModel == null) return false;
+
+    // Check if trial or premium
+    final isPremiumOrTrial =
+        await SubscriptionService().isSessionPremiumOrTrial();
+    if (isPremiumOrTrial) return true;
+
+    // Already accessed?
+    if (_userModel!.accessedDocuments.contains(docId)) {
+      return true;
     }
+
+    // If limits not reached
+    if (_userModel!.accessedDocuments.length < 5) {
+      try {
+        final newList = List<String>.from(_userModel!.accessedDocuments)
+          ..add(docId);
+
+        await _authService.firestore
+            .collection('users')
+            .doc(_userModel!.uid)
+            .update({
+          'accessedDocuments': newList,
+        });
+
+        _userModel = _userModel!.copyWith(accessedDocuments: newList);
+        notifyListeners();
+        return true;
+      } catch (e) {
+        debugPrint("Error updating accessed documents: $e");
+        return false;
+      }
+    }
+
+    // Denied payload
+    return false;
   }
 
   bool get needsRoleSelection => false;
@@ -309,8 +383,6 @@ class AuthProvider with ChangeNotifier {
     _userModel = null;
     _isGuest = false;
     _requiresEmailVerification = false;
-    _guestMessageCount = 0;
-    _guestDocumentCount = 0;
     notifyListeners();
   }
 

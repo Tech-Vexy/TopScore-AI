@@ -1,56 +1,60 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
-  /* ── Logo-derived palette ── */
-  /*   Navy blue  : logo book/shield  #1e3a8a  */
-  /*   Kenya green: logo ring         #15803d  */
-  /*   Kenya red  : logo ring         #b91c1c  */
+  --background: 226 100% 97%;
+  --foreground: 226 66% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 226 66% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 226 66% 15%;
+  --primary: 226 64% 33%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 142 72% 29%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 226 30% 90%;
+  --muted-foreground: 226 30% 40%;
+  --accent: 0 74% 42%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 226 64% 90%;
+  --input: 226 64% 90%;
+  --ring: 226 64% 33%;
   --radius: 0.5rem;
-  --primary: #1e3a8a;
-  --primary-dark: #162d6e;
-  --secondary: #15803d;
-  --accent: #b91c1c;
 
-  /* Navy → green (mirrors the logo ring sweep) */
+  /* Legacy variables for compatibility */
+  --bg: #f0f4ff;
+  --text: #0d1a40;
+  --primary-raw: #1e3a8a;
+  --secondary-raw: #15803d;
+  --accent-raw: #b91c1c;
   --gradient: linear-gradient(135deg, #1e3a8a 0%, #15803d 100%);
-  /* Red  → navy */
   --gradient2: linear-gradient(135deg, #b91c1c 0%, #1e3a8a 100%);
-
-  /* ── Display & body fonts (loaded via Next/font) ── */
-  --font-display: var(--font-display, 'Plus Jakarta Sans', sans-serif);
-  --font-body: var(--font-body, 'DM Sans', sans-serif);
-
-  /* ── Dark theme ── */
-  --bg: #05080f;
-  /* near-black with navy tint */
-  --bg-card: #0b1120;
-  /* navy-dark card */
-  --bg-card2: #111e36;
-  /* slightly lighter navy */
-  --border: rgba(30, 58, 138, 0.25);
-  --text: #e8eeff;
-  /* cool lavender-white */
-  --text-muted: #7d93c4;
-  /* desaturated navy-blue */
-  --text-dim: #4a5f8a;
-  --glow: 0 0 80px rgba(30, 58, 138, 0.3);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f0f4ff;
-    /* soft navy-tinted white */
-    --bg-card: #ffffff;
-    --bg-card2: #e4ebff;
-    --border: rgba(30, 58, 138, 0.1);
-    --text: #0d1a40;
-    /* deep navy text */
-    --text-muted: #2d4a8a;
-    --text-dim: #7d93c4;
-    --glow: 0 0 80px rgba(30, 58, 138, 0.12);
-  }
+.dark {
+  --background: 222 47% 4%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 8%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 8%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 226 64% 43%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 142 72% 39%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 0 74% 52%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 226 64% 43%;
+
+  --bg: #05080f;
+  --text: #e8eeff;
 }
 
 *,

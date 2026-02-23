@@ -42,8 +42,15 @@
     margin-top: 56px;
 }
 
+.stepWrapper {
+    height: 100%;
+}
+
 .step {
     text-align: center;
+    height: 100% !important;
+    display: flex;
+    flex-direction: column;
 }
 
 .num {
@@ -73,5 +80,3 @@
     font-size: 13px;
     color: var(--text-muted);
 }
-
-

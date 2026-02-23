@@ -20,7 +20,7 @@ export default function PrivacyPage() {
                 <h2>1. Introduction</h2>
                 <p>
                     TopScore AI (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting the
-                    privacy of students, parents, teachers, and all users of our educational platform. This
+                    privacy of all users of our educational platform. This
                     Privacy Policy explains how we collect, use, store, and share information when you use the
                     TopScore AI mobile application and website.
                 </p>
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
                 <h2>2. Information We Collect</h2>
                 <p>We may collect the following types of information:</p>
                 <ul>
-                    <li><strong>Account Information:</strong> Name, email address, phone number, user role (student, parent, teacher), and school information.</li>
+                    <li><strong>Account Information:</strong> Name, email address, phone number, and school information.</li>
                     <li><strong>Usage Data:</strong> Study activity, streak data, subjects accessed, time spent, and interactions with the AI tutor.</li>
                     <li><strong>Device Information:</strong> Device type, operating system, unique device identifiers, and mobile network information.</li>
                     <li><strong>Content:</strong> Messages sent to the AI tutor, uploaded documents, and notes saved within the app.</li>
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
                     <li>Provide and improve our AI tutoring services</li>
                     <li>Personalise learning experiences and recommendations</li>
                     <li>Track study progress and generate performance reports</li>
-                    <li>Enable parental oversight through Family Link features</li>
+                    <li>Enable progress tracking and study insights</li>
                     <li>Communicate important updates and notifications</li>
                     <li>Ensure platform safety and prevent misuse</li>
                 </ul>
@@ -49,15 +49,14 @@ export default function PrivacyPage() {
                 <p>
                     We do not sell your personal data. We may share information with trusted third-party service
                     providers (such as cloud hosting, analytics, and authentication services) solely to operate
-                    and improve our platform. Parents/guardians may access their linked children&apos;s study data
-                    through the Family Link feature.
+                    and improve our platform.
                 </p>
 
                 <h2>5. Children&apos;s Privacy</h2>
                 <p>
-                    TopScore AI is designed for use by students, including those under 18 years of age. We
-                    implement safeguards including AI content moderation, parental controls, and limited data
-                    collection to protect young users. Parental consent is required for users under 13.
+                    educational materials. We
+                    implement safeguards including AI content moderation and limited data
+                    collection to protect all users. Consent is required for users under the age of majority.
                 </p>
 
                 <h2>6. Data Security</h2>

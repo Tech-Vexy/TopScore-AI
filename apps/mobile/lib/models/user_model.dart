@@ -24,6 +24,11 @@ class UserModel {
   final DateTime? dateOfBirth;
   final Map<String, double>? competencyScores; // CBC seven core competencies
 
+  // Freemium tracking limits
+  final int dailyMessageCount;
+  final DateTime? lastMessageDate;
+  final List<String> accessedDocuments;
+
   UserModel({
     required this.uid,
     required this.email,
@@ -47,6 +52,9 @@ class UserModel {
     this.parentalConsentGiven = false,
     this.dateOfBirth,
     this.competencyScores,
+    this.dailyMessageCount = 0,
+    this.lastMessageDate,
+    this.accessedDocuments = const [],
   });
 
   /// Whether this user is under 18 based on dateOfBirth (Kenya DPA 2019 Section 33)
@@ -86,6 +94,9 @@ class UserModel {
       'parental_consent_given': parentalConsentGiven,
       'date_of_birth': dateOfBirth?.millisecondsSinceEpoch,
       'competency_scores': competencyScores,
+      'dailyMessageCount': dailyMessageCount,
+      'lastMessageDate': lastMessageDate?.millisecondsSinceEpoch,
+      'accessedDocuments': accessedDocuments,
     };
   }
 
@@ -138,6 +149,11 @@ class UserModel {
               ),
             )
           : null,
+      dailyMessageCount: map['dailyMessageCount'] ?? 0,
+      lastMessageDate: getDateTime(map['lastMessageDate']),
+      accessedDocuments: map['accessedDocuments'] != null
+          ? List<String>.from(map['accessedDocuments'])
+          : [],
     );
   }
 
@@ -164,6 +180,9 @@ class UserModel {
     bool? parentalConsentGiven,
     DateTime? dateOfBirth,
     Map<String, double>? competencyScores,
+    int? dailyMessageCount,
+    DateTime? lastMessageDate,
+    List<String>? accessedDocuments,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -188,6 +207,9 @@ class UserModel {
       parentalConsentGiven: parentalConsentGiven ?? this.parentalConsentGiven,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       competencyScores: competencyScores ?? this.competencyScores,
+      dailyMessageCount: dailyMessageCount ?? this.dailyMessageCount,
+      lastMessageDate: lastMessageDate ?? this.lastMessageDate,
+      accessedDocuments: accessedDocuments ?? this.accessedDocuments,
     );
   }
 

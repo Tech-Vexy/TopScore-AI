@@ -23,6 +23,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import '../screens/auth/auth_screen.dart';
+import '../screens/subscription/subscription_screen.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
@@ -35,6 +36,7 @@ import 'widgets/empty_state_widget.dart';
 import 'widgets/voice_session_overlay.dart';
 import 'widgets/session_rating_dialog.dart';
 import '../config/app_theme.dart';
+import '../../constants/colors.dart';
 
 import '../models/video_result.dart';
 
@@ -252,7 +254,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Initial check for guest limit
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkGuestAccess();
+      _checkFreemiumAccess();
     });
 
     // Start dynamic placeholder rotation
@@ -1605,13 +1607,12 @@ class _ChatScreenState extends State<ChatScreen> {
         _pendingFileType ?? 'image'; // Default to image if null
 
     if (messageText.trim().isNotEmpty || fileUrlToSend != null) {
-      if (authProvider.isGuest) {
-        authProvider.incrementGuestMessage();
-      }
+      await authProvider.incrementDailyMessage();
     }
 
     // Validation: Require text when sending an image
     if (messageText.trim().isEmpty && fileUrlToSend != null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please add a message to accompany your image'),
@@ -1663,6 +1664,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
+      if (!mounted) return;
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final settings = Provider.of<SettingsProvider>(context, listen: false);
 
@@ -2457,28 +2459,37 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  /// Checks if guest user has exceeded their message limit
-  void _checkGuestAccess() {
+  /// Checks if Freemium user has exceeded their daily message limit
+  void _checkFreemiumAccess() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    if (authProvider.isGuest && !authProvider.canSendMessage) {
-      // Show dialog prompting user to sign up
+    if (!authProvider.canSendMessage) {
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          title: const Text('Free Limit Reached'),
+          title: const Text('Daily Limit Reached'),
           content: const Text(
-            'You\'ve used all your free messages. Sign up for unlimited access!',
+            'You\'ve used your 5 free messages for today. Upgrade to TopScore AI Pro for unlimited access!',
           ),
           actions: [
             TextButton(
               onPressed: () {
+                Navigator.of(ctx).pop(); // Close dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
                 Navigator.of(ctx).pop();
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const AuthScreen()),
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
                 );
               },
-              child: const Text('Sign Up'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.googleBlue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Upgrade'),
             ),
           ],
         ),

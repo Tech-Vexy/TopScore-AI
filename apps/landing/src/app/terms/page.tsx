@@ -27,8 +27,8 @@ export default function TermsPage() {
                 <h2>2. Description of Service</h2>
                 <p>
                     TopScore AI is an AI-powered educational platform providing tutoring assistance, study
-                    resources, past papers, smart study tools, and parental oversight features for Kenyan
-                    students following the CBC, KCSE, and IGCSE curricula.
+                    resources, past papers, and smart study tools for Kenyan
+                    learners following the CBC, KCSE, and IGCSE curricula.
                 </p>
 
                 <h2>3. User Accounts</h2>
@@ -54,7 +54,7 @@ export default function TermsPage() {
                     TopScore AI uses artificial intelligence to provide tutoring assistance. While we strive
                     for accuracy, AI-generated content may occasionally contain errors. The App is intended as
                     a supplementary educational tool and should not be the sole source of academic guidance.
-                    Always verify important information with qualified teachers and official resources.
+                    Always verify important information with official educational resources.
                 </p>
 
                 <h2>6. Subscriptions &amp; Payments</h2>

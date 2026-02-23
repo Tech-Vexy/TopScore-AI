@@ -18,6 +18,7 @@ import 'package:pasteboard/pasteboard.dart';
 
 import 'package:provider/provider.dart';
 import '../providers/navigation_provider.dart';
+import '../providers/auth_provider.dart';
 import '../tutor_client/chat_screen.dart';
 
 class PdfViewerScreen extends StatefulWidget {
@@ -203,6 +204,21 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   /// --- 1. LOADING LOGIC ---
   Future<void> _loadPdfData() async {
     try {
+      final docId =
+          widget.storagePath ?? widget.url ?? widget.assetPath ?? widget.title;
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final canAccess = await authProvider.tryAccessDocument(docId);
+
+      if (!canAccess) {
+        if (mounted) {
+          setState(() {
+            _isSubscriptionError = true;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
       Uint8List? loadedBytes;
 
       if (widget.bytes != null) {

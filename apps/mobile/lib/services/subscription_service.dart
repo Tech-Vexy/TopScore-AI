@@ -33,6 +33,26 @@ class SubscriptionService {
     }
   }
 
+  /// Checks if the current session has premium access OR is within the 7-day trial
+  Future<bool> isSessionPremiumOrTrial() async {
+    User? user = _auth.currentUser;
+    if (user == null) return false;
+
+    // 1. Check strict premium status
+    if (await isSessionPremium()) return true;
+
+    // 2. Check 7-day trial status
+    if (user.metadata.creationTime != null) {
+      final now = DateTime.now();
+      final difference = now.difference(user.metadata.creationTime!);
+      if (difference.inDays < 7) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /// Call this immediately after M-Pesa payment success
   Future<void> refreshSubscriptionStatus() async {
     await isSessionPremium();
