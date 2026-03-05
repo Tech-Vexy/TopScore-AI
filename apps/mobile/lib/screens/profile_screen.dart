@@ -335,7 +335,9 @@ class ProfileScreen extends StatelessWidget {
         if (user?.email != null)
           Text(
             user!.email!,
-            style: GoogleFonts.nunito(fontSize: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+            style: GoogleFonts.nunito(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
           ),
       ],
     );
@@ -418,11 +420,16 @@ class ProfileScreen extends StatelessWidget {
           subtitle: subtitle != null
               ? Text(
                   subtitle,
-                  style: GoogleFonts.nunito(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                  style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                 )
               : null,
           trailing: trailing ??
-              Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withValues(alpha: 0.4), size: 20),
+              Icon(Icons.chevron_right,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  size: 20),
         ),
       ),
     );
@@ -482,7 +489,10 @@ class ProfileScreen extends StatelessWidget {
           border: Border.all(
             color: isSelected
                 ? AppColors.accentTeal
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
+                : Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.15),
           ),
         ),
         child: Row(

@@ -244,7 +244,9 @@ class _NavBarButtonState extends State<_NavBarButton>
     if (widget.isSelected) {
       return widget.isDark ? Colors.white : AppColors.primary;
     }
-    return widget.isDark ? AppColors.textSecondaryDark : AppColors.textSecondary;
+    return widget.isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondary;
   }
 
   Color get _bgColor {
