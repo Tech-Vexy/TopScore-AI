@@ -24,7 +24,7 @@ class CollapsedSidebar extends StatelessWidget {
           right: BorderSide(
             color: isDark
                 ? Colors.white.withValues(alpha: 0.06)
-                : Colors.black.withValues(alpha: 0.06),
+                : Colors.black.withValues(alpha: 0.1),
           ),
         ),
       ),

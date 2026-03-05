@@ -244,7 +244,7 @@ class _NavBarButtonState extends State<_NavBarButton>
     if (widget.isSelected) {
       return widget.isDark ? Colors.white : AppColors.primary;
     }
-    return widget.isDark ? Colors.grey[500]! : Colors.grey[500]!;
+    return widget.isDark ? AppColors.textSecondaryDark : AppColors.textSecondary;
   }
 
   Color get _bgColor {
@@ -300,7 +300,7 @@ class _NavBarButtonState extends State<_NavBarButton>
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: const BoxDecoration(
-                            color: Colors.red,
+                            color: AppColors.error,
                             shape: BoxShape.circle,
                           ),
                           constraints: const BoxConstraints(

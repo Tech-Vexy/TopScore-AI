@@ -54,42 +54,6 @@
         ]
       },
       {
-        "source": "/version.json",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "max-age=0, no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "/flutter_service_worker.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "max-age=0, no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "/flutter_bootstrap.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "max-age=0, no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "/firebase-messaging-sw.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "max-age=0, no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
         "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
         "headers": [
           {
@@ -122,6 +86,42 @@
           {
             "key": "Cache-Control",
             "value": "public, max-age=3600"
+          }
+        ]
+      },
+      {
+        "source": "/version.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=0, no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/flutter_service_worker.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=0, no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/flutter_bootstrap.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=0, no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/firebase-messaging-sw.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=0, no-cache, no-store, must-revalidate"
           }
         ]
       },

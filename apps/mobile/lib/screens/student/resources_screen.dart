@@ -22,7 +22,6 @@ class ResourcesScreen extends StatefulWidget {
 class _ResourcesScreenState extends State<ResourcesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
 
   final List<String> _categories = [
@@ -39,7 +38,6 @@ class _ResourcesScreenState extends State<ResourcesScreen>
     super.initState();
     _tabController = TabController(length: _categories.length, vsync: this);
     _tabController.addListener(_handleTabChange);
-    _scrollController.addListener(_onScroll);
 
     // Initial fetch
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -56,14 +54,11 @@ class _ResourcesScreenState extends State<ResourcesScreen>
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      final authProvider = context.read<AuthProvider>();
-      if (authProvider.userModel != null) {
-        context
-            .read<ResourcesProvider>()
-            .fetchFiles(user: authProvider.userModel!);
-      }
+    final authProvider = context.read<AuthProvider>();
+    if (authProvider.userModel != null) {
+      context
+          .read<ResourcesProvider>()
+          .fetchFiles(user: authProvider.userModel!);
     }
   }
 
@@ -78,21 +73,31 @@ class _ResourcesScreenState extends State<ResourcesScreen>
   }
 
   void _onSearchChanged(String query) {
+    setState(() {}); // Refresh to show/hide clear icon
     EasyDebounce.debounce(
       'resource-search',
       const Duration(milliseconds: 500),
       () {
-        context.read<ResourcesProvider>().setSearchQuery(query);
+        final provider = context.read<ResourcesProvider>();
+        provider.setSearchQuery(query);
         _fetchInitial(isRefresh: true);
       },
     );
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    EasyDebounce.cancel('resource-search');
+    final provider = context.read<ResourcesProvider>();
+    provider.setSearchQuery('');
+    _fetchInitial(isRefresh: true);
+    setState(() {});
   }
 
   @override
   void dispose() {
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
-    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -177,6 +182,13 @@ class _ResourcesScreenState extends State<ResourcesScreen>
                   onChanged: _onSearchChanged,
                   decoration: AppTheme.searchFieldDecoration(
                     hint: 'Search notes, papers...',
+                  ).copyWith(
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: _clearSearch,
+                          )
+                        : null,
                   ),
                 ),
               ),
@@ -244,8 +256,16 @@ class _ResourcesScreenState extends State<ResourcesScreen>
         return RefreshIndicator(
           onRefresh: () async => _fetchInitial(isRefresh: true),
           color: AppColors.primary,
-          child: ListView.separated(
-            controller: _scrollController,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollEndNotification &&
+                  notification.metrics.pixels >=
+                      notification.metrics.maxScrollExtent - 200) {
+                _onScroll();
+              }
+              return false;
+            },
+            child: ListView.separated(
             padding: const EdgeInsets.all(20),
             itemCount: files.length + (provider.hasMore ? 1 : 0),
             separatorBuilder: (_, __) => const SizedBox(height: 16),
@@ -265,6 +285,7 @@ class _ResourcesScreenState extends State<ResourcesScreen>
                 onTap: () => _openFile(file),
               );
             },
+          ),
           ),
         );
       },

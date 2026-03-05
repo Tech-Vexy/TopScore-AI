@@ -245,7 +245,7 @@ class _HomeTabState extends State<HomeTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Error opening file: $e"),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -516,7 +516,7 @@ class _HomeTabState extends State<HomeTab> {
         icon = Icons.description;
         break;
       default:
-        color = Colors.grey;
+        color = AppColors.textSecondary;
         icon = Icons.insert_drive_file;
     }
 
@@ -532,7 +532,6 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _buildHeader(BuildContext context, String name, int streak) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final user = Provider.of<AuthProvider>(context, listen: false).userModel;
     final photoURL = user?.photoURL;
     final hasPhoto = photoURL != null && photoURL.isNotEmpty;
@@ -553,14 +552,17 @@ class _HomeTabState extends State<HomeTab> {
                 height: 48,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF4285F4), Color(0xFF34A853)],
+                  gradient: LinearGradient(
+                    colors: [
+                      theme.colorScheme.primary,
+                      AppColors.accentTeal,
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF4285F4).withValues(alpha: 0.25),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.25),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -569,8 +571,7 @@ class _HomeTabState extends State<HomeTab> {
                 padding: const EdgeInsets.all(2),
                 child: CircleAvatar(
                   radius: 22,
-                  backgroundColor:
-                      isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                  backgroundColor: theme.colorScheme.surface,
                   backgroundImage:
                       hasPhoto ? CachedNetworkImageProvider(photoURL) : null,
                   child: hasPhoto
@@ -580,7 +581,7 @@ class _HomeTabState extends State<HomeTab> {
                           style: GoogleFonts.outfit(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF4285F4),
+                            color: theme.colorScheme.primary,
                           ),
                         ),
                 ),
@@ -643,7 +644,7 @@ class _HomeTabState extends State<HomeTab> {
                   },
                   icon: Icon(
                     Icons.notifications_none_rounded,
-                    color: isDark ? Colors.white70 : Colors.black54,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
                     size: 26,
                   ),
                 ),
@@ -657,7 +658,7 @@ class _HomeTabState extends State<HomeTab> {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
-                        color: Colors.red,
+                        color: AppColors.error,
                         shape: BoxShape.circle,
                       ),
                       constraints: const BoxConstraints(

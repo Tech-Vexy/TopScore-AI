@@ -44,9 +44,14 @@ class ResourcesProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
 
   void setSearchQuery(String query) {
-    _searchQuery = query;
-    // When searching, we might wants to clear results or handle differently.
-    // For now, let's just trigger a re-fetch.
+    final trimmed = query.trim();
+    if (_searchQuery == trimmed) return;
+    _searchQuery = trimmed;
+    // Clear cached results for all tabs so the new query fetches fresh data.
+    _tabCache.clear();
+    _lastDocumentCache.clear();
+    _hasMoreCache.clear();
+    _state = ResourceState.initial;
     notifyListeners();
   }
 
@@ -69,12 +74,12 @@ class ResourcesProvider extends ChangeNotifier {
     required UserModel user,
     bool isRefresh = false,
   }) async {
-    // Avoid multiple simultaneous loads for the same category
-    if (_state == ResourceState.loading) {
+    // Avoid multiple simultaneous loads for the same category (unless refreshing)
+    if (_state == ResourceState.loading && !isRefresh) {
       return;
     }
 
-    // If not refreshing and no more data, stop
+    // If not refreshing and no more data, stop (only applies to pagination, not search)
     if (!isRefresh &&
         _hasMoreCache[_currentCategory] == false &&
         _searchQuery.isEmpty) {
@@ -90,11 +95,14 @@ class ResourcesProvider extends ChangeNotifier {
     _state = ResourceState.loading;
     notifyListeners();
 
+    // Snapshot the query at the start so we can detect if it changed mid-flight.
+    final queryAtStart = _searchQuery;
+
     try {
       List<FirebaseFile> newFiles;
 
       if (_searchQuery.isNotEmpty) {
-        // Search logic
+        // Search logic — always replaces results (no pagination)
         newFiles = await StorageService.searchFiles(
           _searchQuery,
           curriculum: user.educationLevel ?? user.curriculum,
@@ -104,7 +112,7 @@ class ResourcesProvider extends ChangeNotifier {
         );
         _hasMoreCache[_currentCategory] = false;
       } else {
-        // Pagination logic
+        // Pagination logic — appends to existing results
         newFiles = await StorageService.getPaginatedFiles(
           curriculum: user.educationLevel ?? user.curriculum,
           grade: user.grade,
@@ -120,10 +128,17 @@ class ResourcesProvider extends ChangeNotifier {
         }
       }
 
-      if (_tabCache[_currentCategory] == null) {
-        _tabCache[_currentCategory] = [];
+      // Discard results if the query changed while we were fetching.
+      if (_searchQuery != queryAtStart) return;
+
+      if (queryAtStart.isNotEmpty) {
+        // Search: replace results entirely
+        _tabCache[_currentCategory] = newFiles;
+      } else {
+        // Pagination: append
+        _tabCache[_currentCategory] ??= [];
+        _tabCache[_currentCategory]!.addAll(newFiles);
       }
-      _tabCache[_currentCategory]!.addAll(newFiles);
 
       _state = (_tabCache[_currentCategory] ?? []).isEmpty
           ? ResourceState.empty

@@ -256,12 +256,12 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                                     ? Icons.mic_off_rounded
                                     : Icons.mic_rounded,
                                 size: 22,
-                                color: widget.isRecording
-                                    ? Colors.redAccent
-                                    : isDark
-                                        ? Colors.white
-                                        : Colors.black,
                               ),
+                              color: widget.isRecording
+                                  ? Colors.redAccent
+                                  : isDark
+                                      ? Colors.white
+                                      : Colors.black,
                               tooltip: widget.isRecording
                                   ? 'Stop & send'
                                   : 'Voice input',

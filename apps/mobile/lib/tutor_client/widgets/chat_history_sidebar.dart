@@ -258,7 +258,7 @@ class ChatHistorySidebar extends StatelessWidget {
         style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w700,
-          color: Colors.grey[600],
+          color: isDark ? Colors.grey[600] : Colors.grey[700],
           letterSpacing: 0.6,
         ),
       ),

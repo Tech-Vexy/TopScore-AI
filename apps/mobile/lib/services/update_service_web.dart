@@ -27,10 +27,10 @@ class UpdateService {
   void startAutoCheck() {
     // Capture initial version immediately
     _captureInitialVersion();
-    // Periodic check every 60 seconds
+    // Periodic check every 30 seconds
     _timer?.cancel();
     _timer = Timer.periodic(
-      const Duration(minutes: 1),
+      const Duration(seconds: 30),
       (_) => checkForUpdate(),
     );
   }

@@ -9,8 +9,6 @@ import '../../providers/settings_provider.dart';
 import '../../constants/colors.dart';
 import '../../services/clipboard_service.dart';
 import '../../services/haptics_service.dart';
-import '../../services/onboarding_tooltip_service.dart';
-import '../../widgets/coach_mark.dart';
 import '../../widgets/network_aware_image.dart';
 import '../../widgets/gemini_reasoning_view.dart';
 import '../../widgets/math_markdown.dart';
@@ -88,26 +86,6 @@ class ChatMessageBubble extends StatefulWidget {
 
 class _ChatMessageBubbleState extends State<ChatMessageBubble> {
   bool isPlaybackError = false;
-  bool _showCopyCoachMark = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkCoachMark();
-  }
-
-  Future<void> _checkCoachMark() async {
-    if (widget.message.isUser) return;
-    final seen = OnboardingTooltipService().shouldShow('chat_long_press');
-    if (seen && mounted) {
-      setState(() => _showCopyCoachMark = true);
-    }
-  }
-
-  void _dismissCoachMark() {
-    setState(() => _showCopyCoachMark = false);
-    OnboardingTooltipService().markAsSeen('chat_long_press');
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,22 +115,9 @@ class _ChatMessageBubbleState extends State<ChatMessageBubble> {
       ),
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
-          return GestureDetector(
-            onLongPress: () {
-              if (_showCopyCoachMark) {
-                _dismissCoachMark();
-              }
-              widget.onLongPress();
-            },
-            child: CoachMark(
-              text: 'Long-press to copy',
-              show: _showCopyCoachMark,
-              onDismiss: _dismissCoachMark,
-              child: widget.message.isUser
-                  ? _buildUserBubble(context, theme, isDark, settings)
-                  : _buildAiBubble(context, theme, isDark, settings),
-            ),
-          );
+          return widget.message.isUser
+              ? _buildUserBubble(context, theme, isDark, settings)
+              : _buildAiBubble(context, theme, isDark, settings);
         },
       ),
     );
@@ -247,7 +212,7 @@ class _ChatMessageBubbleState extends State<ChatMessageBubble> {
                         border: Border.all(
                           color: isDark
                               ? Colors.white.withValues(alpha: 0.1)
-                              : Colors.black.withValues(alpha: 0.08),
+                              : Colors.black.withValues(alpha: 0.15),
                         ),
                       ),
                       child: ClipOval(
@@ -539,8 +504,8 @@ class _ChatMessageBubbleState extends State<ChatMessageBubble> {
           fontSize: 14,
           backgroundColor: isDark
               ? Colors.white.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.05),
-          color: isDark ? Colors.tealAccent : Colors.teal.shade700,
+              : Colors.black.withValues(alpha: 0.08),
+          color: isDark ? Colors.tealAccent : Colors.teal.shade800,
         ),
         codeblockPadding: EdgeInsets.zero,
         codeblockDecoration: BoxDecoration(
@@ -592,7 +557,7 @@ class _ChatMessageBubbleState extends State<ChatMessageBubble> {
             margin: const EdgeInsets.symmetric(horizontal: 4),
             color: isDark
                 ? Colors.white.withValues(alpha: 0.1)
-                : Colors.black.withValues(alpha: 0.1),
+                : Colors.black.withValues(alpha: 0.2),
           ),
 
           // Feedback
@@ -679,7 +644,7 @@ class _ChatMessageBubbleState extends State<ChatMessageBubble> {
       label: tooltip ?? 'Small action button',
       button: true,
       child: IconButton(
-        icon: Icon(icon, size: 16, color: theme.disabledColor),
+        icon: Icon(icon, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
         onPressed: onTap,
         tooltip: tooltip,
         constraints: const BoxConstraints(),

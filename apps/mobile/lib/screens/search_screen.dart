@@ -184,7 +184,8 @@ class _SearchScreenState extends State<SearchScreen> {
                           _controller.text = s;
                           _search(s);
                         },
-                        backgroundColor: theme.primaryColor.withValues(alpha: 0.05),
+                        backgroundColor:
+                            theme.primaryColor.withValues(alpha: 0.05),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),

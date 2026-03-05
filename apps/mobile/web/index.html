@@ -73,7 +73,7 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png"> <!-- Performance Optimizations -->
-    <link rel="preload" href="flutter_bootstrap.js?v=2" as="script">
+    <link rel="preload" href="flutter_bootstrap.js" as="script">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
@@ -134,7 +134,7 @@
         </div>
     </noscript>
     <script>    // Force unregister service workers if corrupted or requested via ?force_update=true    if ('serviceWorker' in navigator) {      const forceUpdate = window.location.search.includes('force_update=true');      const hasAssetErrors = document.cookie.includes('clear_sw=true');      if (forceUpdate || hasAssetErrors) {        navigator.serviceWorker.getRegistrations().then(function (registrations) {          if (registrations.length === 0) {            console.log('No service workers found to unregister.');            return;          }          for (let registration of registrations) {            console.log('Unregistering Service Worker:', registration.scope);            registration.unregister().then(function (success) {              console.log('Unregistration ' + (success ? 'successful' : 'failed') + ' for:', registration.scope);            });          }          // Clear cookie and reload to ensure a clean slate          if (hasAssetErrors) {            document.cookie = "clear_sw=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";            console.log('Reloading page after service worker cleanup...');            setTimeout(() => window.location.reload(), 500);          }        });      }    }    // Global error listener to detect asset loading failures    window.addEventListener('error', function (e) {      // Ignore GA/GTM and other external scripts if they fail      const src = e.target && (e.target.src || e.target.href);      if (src && !src.includes('google-analytics') && !src.includes('googletagmanager')) {        console.warn('Asset load failed:', src);        // Only trigger SW clear for internal assets (same origin or assets folder)        if (src.includes(window.location.origin) || src.includes('assets/')) {          console.log('Marking service worker for cleanup on next reload.');          document.cookie = "clear_sw=true; path=/; max-age=60";        }      }    }, true);  </script>
-    <script src="flutter_bootstrap.js?v=2" async></script>
+    <script src="flutter_bootstrap.js" async></script>
 </body>
 
 </html>

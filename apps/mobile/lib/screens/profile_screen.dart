@@ -66,10 +66,10 @@ class ProfileScreen extends StatelessWidget {
                       color: Colors.green,
                       size: 20,
                     )
-                  : const Icon(
+                  : Icon(
                       Icons.arrow_forward_ios,
                       size: 14,
-                      color: Colors.grey,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
             ),
 
@@ -194,7 +194,7 @@ class ProfileScreen extends StatelessWidget {
                 child: Text(
                   "Delete Account",
                   style: GoogleFonts.nunito(
-                    color: Colors.grey,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                     fontSize: 13,
                     decoration: TextDecoration.underline,
                   ),
@@ -219,7 +219,7 @@ class ProfileScreen extends StatelessWidget {
             Text(
               "v1.0.0",
               style: GoogleFonts.nunito(
-                color: Colors.grey.withValues(alpha: 0.5),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                 fontSize: 11,
               ),
             ),
@@ -335,7 +335,7 @@ class ProfileScreen extends StatelessWidget {
         if (user?.email != null)
           Text(
             user!.email!,
-            style: GoogleFonts.nunito(fontSize: 14, color: Colors.grey),
+            style: GoogleFonts.nunito(fontSize: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
           ),
       ],
     );
@@ -418,11 +418,11 @@ class ProfileScreen extends StatelessWidget {
           subtitle: subtitle != null
               ? Text(
                   subtitle,
-                  style: GoogleFonts.nunito(fontSize: 13, color: Colors.grey),
+                  style: GoogleFonts.nunito(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                 )
               : null,
           trailing: trailing ??
-              const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withValues(alpha: 0.4), size: 20),
         ),
       ),
     );
@@ -482,7 +482,7 @@ class ProfileScreen extends StatelessWidget {
           border: Border.all(
             color: isSelected
                 ? AppColors.accentTeal
-                : Colors.grey.withValues(alpha: 0.2),
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
           ),
         ),
         child: Row(

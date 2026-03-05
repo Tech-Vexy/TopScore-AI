@@ -44,6 +44,7 @@ class AppTheme {
       secondary: AppColors.secondary,
       tertiary: AppColors.accent,
       surface: AppColors.surface,
+      onSurface: AppColors.text,
       error: AppColors.error,
     ),
 
@@ -259,6 +260,63 @@ class AppTheme {
       unselectedItemColor: AppColors.textSecondary,
       type: BottomNavigationBarType.fixed,
       elevation: 0,
+    ),
+
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: AppColors.surface,
+      indicatorColor: AppColors.primary.withValues(alpha: 0.12),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          );
+        }
+        return const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textSecondary,
+        );
+      }),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return const IconThemeData(color: AppColors.primary, size: 24);
+        }
+        return const IconThemeData(color: AppColors.textSecondary, size: 24);
+      }),
+    ),
+
+    dialogTheme: DialogThemeData(
+      backgroundColor: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusLg),
+      ),
+      titleTextStyle: const TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: AppColors.text,
+      ),
+      contentTextStyle: const TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: AppColors.textSecondary,
+      ),
+    ),
+
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      dragHandleColor: AppColors.textSecondary.withValues(alpha: 0.3),
+      dragHandleSize: const Size(36, 4),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(radiusLg)),
+      ),
     ),
 
     floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -520,6 +578,64 @@ class AppTheme {
       unselectedItemColor: AppColors.textSecondaryDark,
       type: BottomNavigationBarType.fixed,
       elevation: 0,
+    ),
+
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: AppColors.surfaceDark,
+      indicatorColor: AppColors.accentTeal.withValues(alpha: 0.15),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.accentTeal,
+          );
+        }
+        return const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textSecondaryDark,
+        );
+      }),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return const IconThemeData(color: AppColors.accentTeal, size: 24);
+        }
+        return const IconThemeData(
+            color: AppColors.textSecondaryDark, size: 24);
+      }),
+    ),
+
+    dialogTheme: DialogThemeData(
+      backgroundColor: AppColors.surfaceElevatedDark,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusLg),
+      ),
+      titleTextStyle: const TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textDark,
+      ),
+      contentTextStyle: const TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: AppColors.textSecondaryDark,
+      ),
+    ),
+
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: AppColors.surfaceElevatedDark,
+      surfaceTintColor: Colors.transparent,
+      dragHandleColor: AppColors.textSecondaryDark.withValues(alpha: 0.3),
+      dragHandleSize: const Size(36, 4),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(radiusLg)),
+      ),
     ),
 
     floatingActionButtonTheme: FloatingActionButtonThemeData(

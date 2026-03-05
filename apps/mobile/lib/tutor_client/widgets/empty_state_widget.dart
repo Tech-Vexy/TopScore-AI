@@ -194,14 +194,14 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> {
             border: Border.all(
               color: widget.isDark
                   ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.grey.withValues(alpha: 0.2),
+                  : Colors.black.withValues(alpha: 0.12),
               width: 1,
             ),
             boxShadow: widget.isDark
                 ? []
                 : [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
